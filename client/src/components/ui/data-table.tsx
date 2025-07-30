@@ -1,0 +1,190 @@
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Check, Trash2, Edit, Scale } from "lucide-react";
+import type { Case, User } from "@shared/schema";
+
+interface DataTableProps {
+  cases: (Case & { reportedUser: User; reporterUser: User; staffUser?: User })[];
+  onViewCase: (caseId: string) => void;
+  onApproveCase?: (caseId: string) => void;
+  onDeleteCase?: (caseId: string) => void;
+  onEditCase?: (caseId: string) => void;
+  onReviewAppeal?: (caseId: string) => void;
+}
+
+const getStatusBadgeVariant = (status: string) => {
+  switch (status) {
+    case "pending": return "oa-badge-pending";
+    case "verified": return "oa-badge-verified";
+    case "resolved": return "oa-badge-resolved";
+    case "appealed": return "oa-badge-appealed";
+    case "rejected": return "oa-badge-rejected";
+    case "archived": return "oa-badge-archived";
+    default: return "oa-badge-pending";
+  }
+};
+
+const getTypeBadgeVariant = (type: string) => {
+  switch (type) {
+    case "financial_scam": return "oa-badge-rejected";
+    case "fake_services": return "bg-orange-900 text-orange-200";
+    case "identity_theft": return "bg-purple-900 text-purple-200";
+    case "account_fraud": return "bg-blue-900 text-blue-200";
+    default: return "oa-badge-pending";
+  }
+};
+
+const formatCaseType = (type: string) => {
+  return type.split("_").map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(" ");
+};
+
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString();
+};
+
+const getUserInitial = (username: string) => {
+  return username.charAt(username.startsWith("@") ? 1 : 0).toUpperCase();
+};
+
+export default function DataTable({
+  cases,
+  onViewCase,
+  onApproveCase,
+  onDeleteCase,
+  onEditCase,
+  onReviewAppeal,
+}: DataTableProps) {
+  return (
+    <div className="oa-card rounded-lg border border-oa-surface">
+      <div className="px-6 py-4 border-b border-oa-surface">
+        <h3 className="text-lg font-semibold">Recent Cases</h3>
+      </div>
+      
+      <div className="overflow-x-auto">
+        <Table className="oa-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Case ID</TableHead>
+              <TableHead>Reported User</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Reporter</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cases.map((caseItem) => (
+              <TableRow key={caseItem.id} className="hover:bg-oa-surface transition-colors">
+                <TableCell>
+                  <span className="text-sm font-mono text-blue-400">
+                    {caseItem.caseNumber}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-8 w-8">
+                      <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center text-white text-sm font-semibold">
+                        {getUserInitial(caseItem.reportedUser.username)}
+                      </div>
+                    </div>
+                    <div className="ml-3">
+                      <div className="text-sm font-medium">
+                        {caseItem.reportedUser.username.startsWith("@") 
+                          ? caseItem.reportedUser.username 
+                          : `@${caseItem.reportedUser.username}`}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        ID: {caseItem.reportedUser.id.slice(-8)}
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge className={`oa-badge ${getTypeBadgeVariant(caseItem.type)}`}>
+                    {formatCaseType(caseItem.type)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={`oa-badge ${getStatusBadgeVariant(caseItem.status)}`}>
+                    {caseItem.status.charAt(0).toUpperCase() + caseItem.status.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-gray-400">
+                  {caseItem.reporterUser.username.startsWith("@") 
+                    ? caseItem.reporterUser.username 
+                    : `@${caseItem.reporterUser.username}`}
+                </TableCell>
+                <TableCell className="text-gray-400">
+                  {formatDate(caseItem.createdAt.toString())}
+                </TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewCase(caseItem.id)}
+                      className="text-blue-400 hover:text-blue-300 p-1"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {caseItem.status === "pending" && onApproveCase && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onApproveCase(caseItem.id)}
+                        className="text-green-400 hover:text-green-300 p-1"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {caseItem.status === "appealed" && onReviewAppeal && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onReviewAppeal(caseItem.id)}
+                        className="text-orange-400 hover:text-orange-300 p-1"
+                      >
+                        <Scale className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {(caseItem.status === "verified" || caseItem.status === "resolved") && onEditCase && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditCase(caseItem.id)}
+                        className="text-yellow-400 hover:text-yellow-300 p-1"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onDeleteCase && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteCase(caseItem.id)}
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
