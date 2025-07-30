@@ -46,7 +46,7 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
+            {error && !error.includes("Database not configured") && (
               <Alert className="border-red-500 bg-red-900/20">
                 <AlertDescription className="text-red-400">{error}</AlertDescription>
               </Alert>
