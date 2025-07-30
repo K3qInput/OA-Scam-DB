@@ -8,11 +8,15 @@ export default function SimpleLogin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("=== LOGIN FORM SUBMITTED ===");
+    console.log("Username:", username);
+    console.log("Password length:", password.length);
+    
     setIsLoading(true);
-    setMessage("");
+    setMessage("Attempting login...");
 
     try {
-      console.log("Starting login process...");
+      console.log("Making API request to /api/login");
       
       const response = await fetch("/api/login", {
         method: "POST",
@@ -22,27 +26,40 @@ export default function SimpleLogin() {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log("Response status:", response.status);
+      console.log("Response received:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
       
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Login failed: ${error}`);
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
       }
 
-      const data = await response.json();
-      console.log("Login success:", data);
+      const data = JSON.parse(responseText);
+      console.log("Parsed response data:", data);
+
+      if (!data.token) {
+        throw new Error("No token received from server");
+      }
 
       // Store token and redirect
       localStorage.setItem("auth_token", data.token);
-      setMessage("Login successful! Redirecting...");
+      console.log("Token stored in localStorage");
+      
+      setMessage("Login successful! Redirecting to dashboard...");
       
       setTimeout(() => {
+        console.log("Redirecting to dashboard");
         window.location.href = "/dashboard";
-      }, 1000);
+      }, 500);
 
     } catch (error: any) {
-      console.error("Login error:", error);
-      setMessage(error.message || "Login failed");
+      console.error("=== LOGIN ERROR ===", error);
+      setMessage(`Login failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +135,7 @@ export default function SimpleLogin() {
           <button
             type="submit"
             disabled={isLoading}
+            onClick={() => console.log("Button clicked!")}
             style={{
               width: "100%",
               padding: "0.75rem",

@@ -12,37 +12,29 @@ import NewCase from "@/pages/new-case";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  // Skip all authentication checks for now - just show simple login
+  console.log("Router: Using simple login for all routes");
 
-  console.log("Router state:", { isAuthenticated, isLoading, hasUser: !!user });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-oa-black">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Check if user has token and redirect accordingly
+  const hasToken = typeof window !== 'undefined' && localStorage.getItem("auth_token");
+  console.log("Has token:", !!hasToken);
 
   return (
     <Switch>
       <Route path="/login">
-        {isAuthenticated ? <Dashboard /> : <SimpleLogin />}
+        <SimpleLogin />
       </Route>
       <Route path="/">
-        {isAuthenticated ? <Dashboard /> : <SimpleLogin />}
+        <SimpleLogin />
       </Route>
       <Route path="/dashboard">
-        {isAuthenticated ? <Dashboard /> : <Login />}
+        {hasToken ? <Dashboard /> : <SimpleLogin />}
       </Route>
       <Route path="/cases/:id">
-        {isAuthenticated ? <CaseDetails /> : <Login />}
+        {hasToken ? <CaseDetails /> : <SimpleLogin />}
       </Route>
       <Route path="/new-case">
-        {isAuthenticated ? <NewCase /> : <Login />}
+        {hasToken ? <NewCase /> : <SimpleLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>
