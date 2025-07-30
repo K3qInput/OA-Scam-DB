@@ -1,0 +1,88 @@
+The Netlify deploy errored, with the following guidance provided:
+
+### Diagnosis
+The build is failing due to a missing script "build:client" while trying to execute `npm run build:client` at line [86](#L86) of the build logs.
+
+### Solution
+1. Verify that the "build:client" script is correctly defined in your `package.json` file or your project's build configuration.
+2. If the script is missing, add the "build:client" script to your `package.json` file under "scripts" section.
+   
+```json
+"scripts": {
+  "build:client": "your build client command here"
+}
+```
+
+3. After adding the script, commit the changes and trigger the build again.
+
+The relevant error logs are:
+
+Line 76:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Line 77: [32m✓[39m 1742 modules transformed.
+Line 78: rendering chunks...
+Line 79: computing gzip size...
+Line 80: [2m../dist/public/[22m[32mindex.html                 [39m[1m[2m  0.63 kB[22m[1m[22m[2m │ gzip:   0.38 kB[22m
+Line 81: [2m../dist/public/[22m[2massets/[22m[35mindex-9YDR-MY2.css  [39m[1m[2m 87.08 kB[22m[1m[22m[2m │ gzip:  13.94 kB[22m
+Line 82: [2m../dist/public/[22m[2massets/[22m[36mindex-C25ai5eL.js   [39m[1m[2m485.69 kB[22m[1m[22m[2m │ gzip: 147.01 kB[22m
+Line 83: [32m✓ built in 2.91s[39m
+Line 84: Building for Netlify deployment...
+Line 85: Building client...
+Line 86: npm error Missing script: "build:client"
+Line 87: npm error
+Line 88: npm error To see a list of scripts, run:
+Line 89: npm error   npm run
+Line 90: npm error A complete log of this run can be found in: /opt/buildhome/.npm/_logs/2025-07-30T16_34_54_493Z-debug-0.log
+Line 91: node:internal/errors:984
+Line 92:   const err = new Error(message);
+Line 93:               ^
+Line 94: Error: Command failed: npm run build:client
+Line 95: [90m    at genericNodeError (node:internal/errors:984:15)[39m
+Line 96: [90m    at wrappedFn (node:internal/errors:538:14)[39m
+Line 97: [90m    at checkExecSyncError (node:child_process:891:11)[39m
+Line 98: [90m    at execSync (node:child_process:963:15)[39m
+Line 99:     at [90mfile:///opt/build/repo/[39mbuild-netlify.js:12:1
+Line 100: [90m    at ModuleJob.run (node:internal/modules/esm/module_job:263:25)[39m
+Line 101: [90m    at async ModuleLoader.import (node:internal/modules/esm/loader:540:24)[39m
+Line 102: [90m    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)[39m {
+Line 103:   status: [33m1[39m,
+Line 104:   signal: [1mnull[22m,
+Line 105:   output: [ [1mnull[22m, [1mnull[22m, [1mnull[22m ],
+Line 106:   pid: [33m2178[39m,
+Line 107:   stdout: [1mnull[22m,
+Line 108:   stderr: [1mnull[22m
+Line 109: }
+Line 110: Node.js v20.19.4
+Line 111: [91m[1m​[22m[39m
+Line 112: [91m[1m"build.command" failed                                        [22m[39m
+Line 113: [91m[1m────────────────────────────────────────────────────────────────[22m[39m
+Line 114: ​
+Line 115:   [31m[1mError message[22m[39m
+Line 116:   Command failed with exit code 1: vite build && node build-netlify.js
+Line 117: ​
+Line 118:   [31m[1mError location[22m[39m
+Line 119:   In build.command from netlify.toml:
+Line 120:   vite build && node build-netlify.js
+Line 121: ​
+Line 122:   [31m[1mResolved config[22m[39m
+Line 123:   build:
+Line 124:     command: vite build && node build-netlify.js
+Line 125:     commandOrigin: config
+Line 126:     environment:
+Line 127:       - NODE_VERSION
+Line 128:     publish: /opt/build/repo/dist/public
+Line 129:     publishOrigin: config
+Line 130:   functions:
+Line 131:     "*":
+Line 132:       node_bundler: esbuild
+Line 133:   functionsDirectory: /opt/build/repo/netlify/functions
+Line 134:   redirects:
+Line 135: Failed during stage 'building site': Build script returned non-zero exit code: 2
+Line 136:     - from: /api/*
+      status: 200
+      to: /.netlify/functions/api/:splat
+    - from: /*
+      status: 200
+      to: /index.
+Line 137: Build failed due to a user error: Build script returned non-zero exit code: 2
+Line 138: Failing build: Failed to build site
+Line 139: Finished processing build request in 25.351s

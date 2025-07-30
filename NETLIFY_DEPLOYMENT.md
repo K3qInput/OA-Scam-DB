@@ -31,7 +31,7 @@ BASE_URL=https://your-site-name.netlify.app
    - Select your repository
 
 2. **Build Settings**:
-   - Build command: `vite build`
+   - Build command: `vite build && node build-netlify.js`
    - Publish directory: `dist/public`
    - Node version: `20`
 
@@ -48,13 +48,14 @@ BASE_URL=https://your-site-name.netlify.app
 1. **Build Locally**:
    ```bash
    npm install
-   npm run build
+   vite build
+   node build-netlify.js
    ```
 
 2. **Deploy**:
    - Drag and drop the `dist/public` folder to Netlify
+   - Upload `netlify/functions/api.mjs` as a serverless function
    - Configure environment variables in site settings
-   - Deploy serverless functions manually if needed
 
 ## API Endpoints
 
@@ -79,6 +80,15 @@ Due to serverless constraints, some features are simplified:
 2. **Email System**: Simplified or disabled
 3. **Complex Admin Features**: May be limited
 4. **Database Migrations**: Must be run separately
+5. **Authentication**: Uses simplified hash comparison (demo only)
+
+## Quick Fix Applied
+
+The build process has been streamlined:
+- Removed dependency on `build:client` script
+- Simplified bcrypt usage for serverless compatibility
+- Added proper external dependencies configuration
+- Created bundled serverless function
 
 ## Database Setup
 

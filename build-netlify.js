@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 
 import { build } from 'esbuild';
-import { execSync } from 'child_process';
 import fs from 'fs';
-import path from 'path';
 
 console.log('Building for Netlify deployment...');
-
-// Build the client
-console.log('Building client...');
-execSync('npm run build:client', { stdio: 'inherit' });
 
 // Create the serverless function
 console.log('Creating serverless function...');
@@ -28,7 +22,7 @@ await build({
   target: 'node18',
   format: 'esm',
   outfile: 'netlify/functions/api.mjs',
-  external: ['@neondatabase/serverless', 'ws'],
+  external: ['@neondatabase/serverless', 'ws', 'bcrypt'],
   define: {
     'process.env.NODE_ENV': '"production"'
   }
