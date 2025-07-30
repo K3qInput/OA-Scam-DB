@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize admin user if not exists
   const initializeAdmin = async () => {
     try {
-      const adminUser = await storage.getUserByEmail("admin@oa.com");
+      const adminUser = await storage.getUserByUsername("admin");
       if (!adminUser) {
         await storage.createUser({
           username: "admin",
@@ -111,10 +111,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await initializeAdmin();
 
   // Authentication routes
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/login", async (req, res) => {
     try {
-      const { email, password } = loginSchema.parse(req.body);
-      const user = await storage.authenticateUser(email, password);
+      const { username, password } = loginSchema.parse(req.body);
+      const user = await storage.authenticateUser(username, password);
       
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -131,11 +131,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } 
       });
     } catch (error) {
+      console.error("Login error:", error);
       res.status(400).json({ message: "Invalid request data" });
     }
   });
 
-  app.get("/api/auth/me", authenticateToken, (req: any, res) => {
+  app.get("/api/me", authenticateToken, (req: any, res) => {
     const { passwordHash, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });

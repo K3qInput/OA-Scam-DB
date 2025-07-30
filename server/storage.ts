@@ -31,7 +31,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
-  authenticateUser(email: string, password: string): Promise<User | null>;
+  authenticateUser(username: string, password: string): Promise<User | null>;
+  getUserByUsername(username: string): Promise<User | undefined>;
 
   // Case operations
   getCase(id: string): Promise<(Case & { reportedUser: User; reporterUser: User; staffUser?: User; evidence: Evidence[] }) | undefined>;
@@ -91,6 +92,11 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
   async createUser(userData: InsertUser): Promise<User> {
     const hashedPassword = await bcrypt.hash(userData.passwordHash, 10);
     const [user] = await db
@@ -112,8 +118,8 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async authenticateUser(email: string, password: string): Promise<User | null> {
-    const user = await this.getUserByEmail(email);
+  async authenticateUser(username: string, password: string): Promise<User | null> {
+    const user = await this.getUserByUsername(username);
     if (!user || !user.isActive) return null;
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
