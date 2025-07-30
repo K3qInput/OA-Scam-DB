@@ -113,14 +113,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/login", async (req, res) => {
     try {
+      console.log("=== LOGIN REQUEST ===");
+      console.log("Body:", req.body);
+      
       const { username, password } = loginSchema.parse(req.body);
+      console.log("Parsed credentials:", { username, passwordLength: password.length });
+      
       const user = await storage.authenticateUser(username, password);
+      console.log("Authentication result:", !!user);
       
       if (!user) {
+        console.log("Authentication failed - returning 401");
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "24h" });
+      console.log("Token generated, sending response");
+      
       res.json({ 
         token, 
         user: { 
@@ -132,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(400).json({ message: "Invalid request data" });
+      res.status(500).json({ message: "Database error", error: error.message });
     }
   });
 
