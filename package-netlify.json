@@ -1,0 +1,16 @@
+{
+  "name": "ownersalliance-netlify",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build-netlify.js",
+    "build:client": "vite build"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "drizzle-orm": "^0.39.1",
+    "express": "^4.21.2",
+    "serverless-http": "^3.2.0",
+    "ws": "^8.18.0"
+  }
+}

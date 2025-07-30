@@ -118,4 +118,19 @@ The application uses PostgreSQL with the following key entities:
 └── dist/           # Production build output
 ```
 
-The application is designed for deployment on platforms like Replit, with database migrations handled via `npm run db:push` and the production server starting with `npm start`.
+The application is designed for deployment on platforms like Replit and Netlify, with database migrations handled via `npm run db:push` and the production server starting with `npm start`.
+
+## Netlify Deployment
+
+The project includes Netlify-ready configuration:
+- `netlify.toml`: Build and redirect configuration
+- `netlify/functions/api.js`: Serverless function for API endpoints
+- `NETLIFY_DEPLOYMENT.md`: Complete deployment guide
+- `.env.example`: Environment variables template
+
+### Netlify Features
+- Serverless API functions with Express.js
+- PostgreSQL database support via Neon
+- JWT authentication system
+- CORS configured for cross-origin requests
+- Health check endpoints for monitoring
