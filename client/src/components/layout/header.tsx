@@ -3,6 +3,7 @@ import { Search, Settings, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import type { User } from "@shared/schema";
 import PasswordResetModal from "@/components/password-reset-modal";
 
 interface HeaderProps {
@@ -13,6 +14,7 @@ export default function Header({ onSearch }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const { user, logout } = useAuth();
+  const currentUser = user as User | undefined;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +47,9 @@ export default function Header({ onSearch }: HeaderProps) {
             
             <div className="flex items-center space-x-2 bg-oa-surface px-4 py-2 rounded-lg">
               <Shield className="h-4 w-4 text-red-500" />
-              <span className="text-sm capitalize">{user?.role}</span>
+              <span className="text-sm capitalize">{currentUser?.role || 'User'}</span>
               <span className="text-gray-400">|</span>
-              <span className="text-sm text-gray-300">{user?.email}</span>
+              <span className="text-sm text-gray-300">{currentUser?.email || 'Loading...'}</span>
             </div>
             
             <Button
