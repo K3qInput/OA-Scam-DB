@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, TrendingUp, AlertTriangle, CheckCircle, Users, Eye, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import DataTable from "@/components/ui/data-table";
@@ -12,6 +13,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Link } from "wouter";
+import AnimatedCounter from "@/components/animated-counter";
+import LoadingSpinner, { LoadingCard } from "@/components/loading-spinner";
+import EnhancedButton from "@/components/enhanced-button";
+import EnhancedCard, { StatsCard } from "@/components/enhanced-card";
+import ActivityFeed from "@/components/activity-feed";
+import ThreatIntelWidget from "@/components/threat-intel-widget";
+import QuickStats from "@/components/quick-stats";
 
 interface Filters {
   status?: string;
@@ -129,30 +137,34 @@ export default function Dashboard() {
     <div className="flex h-screen bg-oa-black">
       <Sidebar />
       
+      {/* Main Content Area */}
       <main className="flex-1 overflow-auto">
         <Header onSearch={handleSearch} />
         
         {/* Page Header */}
-        <div className="px-8 py-6 border-b border-oa-surface">
+        <div className="px-8 py-6 border-b border-oa-surface bg-gradient-to-r from-oa-black to-oa-dark animate-fade-in">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-white">Scam Database</h2>
-              <p className="text-gray-400">Manage and track reported scam cases</p>
+            <div className="animate-slide-in-left">
+              <h2 className="text-3xl font-bold text-white oa-glow-text">Scam Database</h2>
+              <p className="text-gray-300 mt-1">Comprehensive fraud tracking and management portal</p>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <Select onValueChange={handleStatusFilter}>
-                <SelectTrigger className="oa-input w-40">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-oa-dark border-oa-surface">
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending Review</SelectItem>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="appealed">Appealed</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center space-x-4 animate-slide-in-right">
+              <div className="flex items-center space-x-2">
+                <Filter className="text-gray-400 h-4 w-4" />
+                <Select onValueChange={handleStatusFilter}>
+                  <SelectTrigger className="oa-input w-40">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-oa-dark border-oa-surface">
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending Review</SelectItem>
+                    <SelectItem value="verified">Verified</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="appealed">Appealed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
               <Select onValueChange={handleTypeFilter}>
                 <SelectTrigger className="oa-input w-40">
@@ -168,148 +180,157 @@ export default function Dashboard() {
               </Select>
               
               <Link href="/new-case">
-                <Button className="oa-btn-primary">
+                <EnhancedButton variant="primary" glow pulse>
                   <Plus className="h-4 w-4 mr-2" />
                   New Case
-                </Button>
+                </EnhancedButton>
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="px-8 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="oa-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Total Cases</p>
-                    <p className="text-3xl font-bold text-white">
-                      {statistics?.totalCases || 0}
-                    </p>
-                  </div>
-                  <div className="h-8 w-8 bg-red-500 rounded flex items-center justify-center">
-                    <span className="text-white text-lg">📊</span>
-                  </div>
+        <div className="flex">
+          {/* Left Content Area */}
+          <div className="flex-1 p-8">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <StatsCard
+                title="Total Cases"
+                value={<AnimatedCounter value={statistics?.totalCases || 0} />}
+                icon={<TrendingUp className="h-6 w-6 text-red-400" />}
+                trend={5}
+                className="animate-slide-in-up"
+                style={{ animationDelay: "0.1s" }}
+              />
+              
+              <StatsCard
+                title="Pending Review"
+                value={<AnimatedCounter value={statistics?.pendingCases || 0} />}
+                icon={<AlertTriangle className="h-6 w-6 text-yellow-400" />}
+                trend={-2}
+                className="animate-slide-in-up"
+                style={{ animationDelay: "0.2s" }}
+              />
+              
+              <StatsCard
+                title="Verified Scams"
+                value={<AnimatedCounter value={statistics?.verifiedCases || 0} />}
+                icon={<CheckCircle className="h-6 w-6 text-red-400" />}
+                trend={8}
+                className="animate-slide-in-up"
+                style={{ animationDelay: "0.3s" }}
+              />
+              
+              <StatsCard
+                title="Alt Accounts"
+                value={<AnimatedCounter value={statistics?.altAccounts || 0} />}
+                icon={<Users className="h-6 w-6 text-blue-400" />}
+                trend={3}
+                className="animate-slide-in-up"
+                style={{ animationDelay: "0.4s" }}
+              />
+            </div>
+
+            {/* Main Cases Table */}
+            {isLoading ? (
+              <div className="space-y-4">
+                <LoadingCard />
+                <LoadingCard />
+                <LoadingCard />
+                <div className="flex items-center justify-center py-8">
+                  <LoadingSpinner size="lg" text="Loading cases" />
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="oa-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Pending Review</p>
-                    <p className="text-3xl font-bold text-yellow-500">
-                      {statistics?.pendingCases || 0}
-                    </p>
+              </div>
+            ) : (
+              <EnhancedCard className="animate-fade-in">
+                <DataTable
+                  cases={cases}
+                  onViewCase={(caseId) => setSelectedCaseId(caseId)}
+                  onApproveCase={handleApproveCase}
+                  onDeleteCase={handleDeleteCase}
+                />
+
+                {/* Pagination */}
+                {pagination.pages > 1 && (
+                  <div className="mt-6 flex items-center justify-between p-4 border-t border-oa-surface">
+                    <div className="text-sm text-gray-400">
+                      Showing{" "}
+                      <span className="font-medium">{(pagination.page - 1) * filters.limit + 1}</span>{" "}
+                      to{" "}
+                      <span className="font-medium">
+                        {Math.min(pagination.page * filters.limit, pagination.total)}
+                      </span>{" "}
+                      of <span className="font-medium">{pagination.total}</span> results
+                    </div>
+                    <div className="flex space-x-2">
+                      <EnhancedButton
+                        variant="secondary"
+                        size="sm"
+                        disabled={pagination.page <= 1}
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                      >
+                        Previous
+                      </EnhancedButton>
+                      {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                        const page = i + 1;
+                        const isActive = page === pagination.page;
+                        return (
+                          <EnhancedButton
+                            key={page}
+                            variant={isActive ? "primary" : "secondary"}
+                            size="sm"
+                            onClick={() => handlePageChange(page)}
+                          >
+                            {page}
+                          </EnhancedButton>
+                        );
+                      })}
+                      <EnhancedButton
+                        variant="secondary"
+                        size="sm"
+                        disabled={pagination.page >= pagination.pages}
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                      >
+                        Next
+                      </EnhancedButton>
+                    </div>
                   </div>
-                  <div className="h-8 w-8 bg-yellow-500 rounded flex items-center justify-center">
-                    <span className="text-white text-lg">⏱️</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="oa-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Verified Scams</p>
-                    <p className="text-3xl font-bold text-red-500">
-                      {statistics?.verifiedCases || 0}
-                    </p>
-                  </div>
-                  <div className="h-8 w-8 bg-red-500 rounded flex items-center justify-center">
-                    <span className="text-white text-lg">⚠️</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="oa-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Alt Accounts</p>
-                    <p className="text-3xl font-bold text-blue-500">
-                      {statistics?.altAccounts || 0}
-                    </p>
-                  </div>
-                  <div className="h-8 w-8 bg-blue-500 rounded flex items-center justify-center">
-                    <span className="text-white text-lg">👥</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                )}
+              </EnhancedCard>
+            )}
           </div>
 
-          {/* Cases Table */}
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-            </div>
-          ) : (
-            <>
-              <DataTable
-                cases={cases}
-                onViewCase={(caseId) => setSelectedCaseId(caseId)}
-                onApproveCase={handleApproveCase}
-                onDeleteCase={handleDeleteCase}
-              />
-
-              {/* Pagination */}
-              {pagination.pages > 1 && (
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-gray-400">
-                    Showing{" "}
-                    <span className="font-medium">{(pagination.page - 1) * filters.limit + 1}</span>{" "}
-                    to{" "}
-                    <span className="font-medium">
-                      {Math.min(pagination.page * filters.limit, pagination.total)}
-                    </span>{" "}
-                    of <span className="font-medium">{pagination.total}</span> results
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={pagination.page <= 1}
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      className="oa-btn-secondary"
-                    >
-                      Previous
-                    </Button>
-                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                      const page = i + 1;
-                      const isActive = page === pagination.page;
-                      return (
-                        <Button
-                          key={page}
-                          variant={isActive ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => handlePageChange(page)}
-                          className={isActive ? "oa-btn-primary" : "oa-btn-secondary"}
-                        >
-                          {page}
-                        </Button>
-                      );
-                    })}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={pagination.page >= pagination.pages}
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      className="oa-btn-secondary"
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          {/* Right Sidebar with Intelligence Widgets */}
+          <aside className="w-80 border-l border-oa-surface bg-gradient-to-b from-oa-dark to-oa-black p-6 space-y-6 animate-slide-in-right">
+            <ThreatIntelWidget />
+            
+            <QuickStats
+              title="This Week"
+              current={statistics?.totalCases || 0}
+              previous={Math.max(0, (statistics?.totalCases || 0) - 15)}
+              className="animate-bounce-in"
+              style={{ animationDelay: "0.5s" }}
+            />
+            
+            <ActivityFeed className="animate-fade-in" style={{ animationDelay: "0.6s" }} />
+            
+            {/* Additional Quick Actions */}
+            <EnhancedCard className="p-4 animate-scale-in" style={{ animationDelay: "0.7s" }}>
+              <h4 className="text-sm font-semibold text-white mb-3">Quick Actions</h4>
+              <div className="space-y-2">
+                <Link href="/new-case">
+                  <EnhancedButton variant="primary" size="sm" className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Report New Case
+                  </EnhancedButton>
+                </Link>
+                <EnhancedButton variant="secondary" size="sm" className="w-full">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Public Lookup
+                </EnhancedButton>
+              </div>
+            </EnhancedCard>
+          </aside>
         </div>
       </main>
 

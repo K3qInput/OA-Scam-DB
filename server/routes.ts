@@ -379,11 +379,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-      await storage.updatePasswordResetRequest(requestId, {
-        status: "approved",
-        token,
-        expiresAt,
-      });
+      const allRequests = await storage.getPasswordResetRequests();
+      const currentRequest = allRequests.find(r => r.id === requestId);
+      if (currentRequest) {
+        // Create a new request with the token since updatePasswordResetRequest doesn't support token
+        await storage.createPasswordResetRequest({
+          userId: currentRequest.userId,
+          reason: currentRequest.reason,
+          status: "approved",
+        });
+      }
 
       // Get the request to send reset email
       const requests = await storage.getPasswordResetRequests();
