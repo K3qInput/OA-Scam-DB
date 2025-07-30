@@ -19,12 +19,17 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
-    try {
-      await login({ username, password });
-      setLocation("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-    }
+    login({ username, password }, {
+      onSuccess: () => {
+        // Small delay to ensure auth state is updated
+        setTimeout(() => {
+          setLocation("/dashboard");
+        }, 100);
+      },
+      onError: (err: any) => {
+        setError(err.message || "Login failed");
+      }
+    });
   };
 
   return (

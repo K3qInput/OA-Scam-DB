@@ -26,19 +26,21 @@ function Router() {
 
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <>
-          <Route path="/login" component={Login} />
-          <Route path="/" component={Login} />
-        </>
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/cases/:id" component={CaseDetails} />
-          <Route path="/new-case" component={NewCase} />
-        </>
-      )}
+      <Route path="/login">
+        {isAuthenticated ? <Dashboard /> : <Login />}
+      </Route>
+      <Route path="/">
+        {isAuthenticated ? <Dashboard /> : <Login />}
+      </Route>
+      <Route path="/dashboard">
+        {isAuthenticated ? <Dashboard /> : <Login />}
+      </Route>
+      <Route path="/cases/:id">
+        {isAuthenticated ? <CaseDetails /> : <Login />}
+      </Route>
+      <Route path="/new-case">
+        {isAuthenticated ? <NewCase /> : <Login />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

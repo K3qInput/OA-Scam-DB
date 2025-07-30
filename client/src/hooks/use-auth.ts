@@ -24,6 +24,7 @@ export function useAuth() {
     onSuccess: (data) => {
       localStorage.setItem("auth_token", data.token);
       queryClient.setQueryData(["/api/me"], data.user);
+      // Force a refetch to update authentication state
       queryClient.invalidateQueries({ queryKey: ["/api/me"] });
     },
     onError: (error) => {
