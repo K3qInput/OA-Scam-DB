@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
+import Footer from "@/components/layout/footer";
 import DataTable from "@/components/ui/data-table";
 import CaseModal from "@/components/case-modal";
 import { apiRequest } from "@/lib/queryClient";
@@ -332,6 +333,8 @@ export default function Dashboard() {
             </EnhancedCard>
           </aside>
         </div>
+        
+        <Footer />
       </main>
 
       {/* Case Detail Modal */}

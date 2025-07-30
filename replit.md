@@ -7,6 +7,7 @@ This is a full-stack web application built for OwnersAlliance, a case management
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Credits: Made by Kiro.java - "I was too lazy 💀" (Copyright 2025)
 
 ## System Architecture
 
