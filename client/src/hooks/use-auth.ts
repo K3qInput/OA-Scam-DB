@@ -18,8 +18,11 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData): Promise<AuthResponse> => {
+      console.log("Attempting login with:", { username: credentials.username });
       const response = await apiRequest("POST", "/api/login", credentials);
-      return response.json();
+      const data = await response.json();
+      console.log("Login successful:", { user: data.user?.username, hasToken: !!data.token });
+      return data;
     },
     onSuccess: (data) => {
       localStorage.setItem("auth_token", data.token);
@@ -27,8 +30,9 @@ export function useAuth() {
       // Force a refetch to update authentication state
       queryClient.invalidateQueries({ queryKey: ["/api/me"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Login failed:", error);
+      console.error("Error details:", error.message);
     },
   });
 
