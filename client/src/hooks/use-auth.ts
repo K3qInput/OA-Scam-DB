@@ -15,7 +15,7 @@ export function useAuth() {
     retry: false,
     enabled: !!localStorage.getItem("auth_token"),
     staleTime: 0,
-    cacheTime: 0,
+    gcTime: 0,
   });
 
   const loginMutation = useMutation({

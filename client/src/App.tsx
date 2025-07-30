@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import Login from "@/pages/login";
+import SimpleLogin from "@/pages/simple-login";
 import Dashboard from "@/pages/dashboard";
 import CaseDetails from "@/pages/case-details";
 import NewCase from "@/pages/new-case";
@@ -29,10 +30,10 @@ function Router() {
   return (
     <Switch>
       <Route path="/login">
-        {isAuthenticated ? <Dashboard /> : <Login />}
+        {isAuthenticated ? <Dashboard /> : <SimpleLogin />}
       </Route>
       <Route path="/">
-        {isAuthenticated ? <Dashboard /> : <Login />}
+        {isAuthenticated ? <Dashboard /> : <SimpleLogin />}
       </Route>
       <Route path="/dashboard">
         {isAuthenticated ? <Dashboard /> : <Login />}
