@@ -14,6 +14,8 @@ export function useAuth() {
     queryKey: ["/api/me"],
     retry: false,
     enabled: !!localStorage.getItem("auth_token"),
+    staleTime: 0,
+    cacheTime: 0,
   });
 
   const loginMutation = useMutation({
@@ -47,7 +49,7 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    login: loginMutation.mutate,
+    login: loginMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
     logout,
   };

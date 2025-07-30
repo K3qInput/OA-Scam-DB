@@ -19,17 +19,18 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
-    login({ username, password }, {
-      onSuccess: () => {
-        // Small delay to ensure auth state is updated
-        setTimeout(() => {
-          setLocation("/dashboard");
-        }, 100);
-      },
-      onError: (err: any) => {
-        setError(err.message || "Login failed");
-      }
-    });
+    try {
+      console.log("Submitting login form with:", { username });
+      await login({ username, password });
+      console.log("Login successful, redirecting to dashboard");
+      // Small delay to ensure auth state is updated
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 100);
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message || "Login failed");
+    }
   };
 
   return (
