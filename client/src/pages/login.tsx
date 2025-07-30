@@ -9,7 +9,7 @@ import { Shield } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const { login, isLoggingIn } = useAuth();
@@ -20,7 +20,7 @@ export default function Login() {
     setError("");
 
     try {
-      await login({ email, password });
+      await login({ username, password });
       setLocation("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");
@@ -48,13 +48,13 @@ export default function Login() {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Email</Label>
+              <Label htmlFor="username" className="text-gray-300">Username</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@oa.com"
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
                 required
                 className="oa-input"
               />
@@ -84,7 +84,7 @@ export default function Login() {
           
           <div className="mt-4 text-center text-sm text-gray-400">
             <p>Staff access only</p>
-            <p className="text-xs mt-1">Default: admin@oa.com / admin123</p>
+            <p className="text-xs mt-1">Default: admin / admin123</p>
           </div>
         </CardContent>
       </Card>

@@ -281,7 +281,7 @@ export const insertCaseUpdateSchema = createInsertSchema(caseUpdates).omit({
 
 // Login schema
 export const loginSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1),
 });
 

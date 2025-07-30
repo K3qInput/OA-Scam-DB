@@ -11,20 +11,20 @@ export function useAuth() {
   const queryClient = useQueryClient();
 
   const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/auth/me"],
+    queryKey: ["/api/me"],
     retry: false,
     enabled: !!localStorage.getItem("auth_token"),
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData): Promise<AuthResponse> => {
-      const response = await apiRequest("POST", "/api/auth/login", credentials);
+      const response = await apiRequest("POST", "/api/login", credentials);
       return response.json();
     },
     onSuccess: (data) => {
       localStorage.setItem("auth_token", data.token);
-      queryClient.setQueryData(["/api/auth/me"], data.user);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.setQueryData(["/api/me"], data.user);
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
     },
     onError: (error) => {
       console.error("Login failed:", error);
@@ -33,7 +33,7 @@ export function useAuth() {
 
   const logout = () => {
     localStorage.removeItem("auth_token");
-    queryClient.setQueryData(["/api/auth/me"], null);
+    queryClient.setQueryData(["/api/me"], null);
     queryClient.clear();
     window.location.href = "/login";
   };

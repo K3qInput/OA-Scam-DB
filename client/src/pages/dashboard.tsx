@@ -62,6 +62,12 @@ export default function Dashboard() {
   // Fetch statistics
   const { data: statistics } = useQuery({
     queryKey: ["/api/statistics"],
+    initialData: {
+      totalCases: 0,
+      pendingCases: 0,
+      verifiedCases: 0,
+      altAccounts: 0
+    }
   });
 
   // Update case mutation
@@ -197,38 +203,34 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatsCard
                 title="Total Cases"
-                value={<AnimatedCounter value={statistics?.totalCases || 0} />}
+                value={statistics?.totalCases || 0}
                 icon={<TrendingUp className="h-6 w-6 text-red-400" />}
                 trend={5}
                 className="animate-slide-in-up"
-                style={{ animationDelay: "0.1s" }}
               />
               
               <StatsCard
                 title="Pending Review"
-                value={<AnimatedCounter value={statistics?.pendingCases || 0} />}
+                value={statistics?.pendingCases || 0}
                 icon={<AlertTriangle className="h-6 w-6 text-yellow-400" />}
                 trend={-2}
                 className="animate-slide-in-up"
-                style={{ animationDelay: "0.2s" }}
               />
               
               <StatsCard
                 title="Verified Scams"
-                value={<AnimatedCounter value={statistics?.verifiedCases || 0} />}
+                value={statistics?.verifiedCases || 0}
                 icon={<CheckCircle className="h-6 w-6 text-red-400" />}
                 trend={8}
                 className="animate-slide-in-up"
-                style={{ animationDelay: "0.3s" }}
               />
               
               <StatsCard
                 title="Alt Accounts"
-                value={<AnimatedCounter value={statistics?.altAccounts || 0} />}
+                value={statistics?.altAccounts || 0}
                 icon={<Users className="h-6 w-6 text-blue-400" />}
                 trend={3}
                 className="animate-slide-in-up"
-                style={{ animationDelay: "0.4s" }}
               />
             </div>
 
@@ -310,13 +312,12 @@ export default function Dashboard() {
               current={statistics?.totalCases || 0}
               previous={Math.max(0, (statistics?.totalCases || 0) - 15)}
               className="animate-bounce-in"
-              style={{ animationDelay: "0.5s" }}
             />
             
-            <ActivityFeed className="animate-fade-in" style={{ animationDelay: "0.6s" }} />
+            <ActivityFeed className="animate-fade-in" />
             
             {/* Additional Quick Actions */}
-            <EnhancedCard className="p-4 animate-scale-in" style={{ animationDelay: "0.7s" }}>
+            <EnhancedCard className="p-4 animate-scale-in">
               <h4 className="text-sm font-semibold text-white mb-3">Quick Actions</h4>
               <div className="space-y-2">
                 <Link href="/new-case">
