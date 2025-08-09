@@ -54,9 +54,19 @@ export default function DiscordLogin() {
     setError("");
 
     try {
-      await login({ username, password });
-      setLocation("/dashboard");
+      console.log("Starting traditional login...");
+      const result = await login({ username, password });
+      console.log("Login successful, redirecting to dashboard");
+      
+      // Small delay to ensure token is saved
+      setTimeout(() => {
+        setLocation("/dashboard");
+        // Force page reload to update authentication state
+        window.location.href = "/dashboard";
+      }, 100);
+      
     } catch (err: any) {
+      console.error("Login error:", err);
       setError(err.message || "Login failed");
     }
   };

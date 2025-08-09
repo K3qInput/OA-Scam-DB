@@ -13,12 +13,9 @@ import NewCase from "@/pages/new-case";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  // Skip all authentication checks for now - just show simple login
-  console.log("Router: Using simple login for all routes");
-
   // Check if user has token and redirect accordingly
   const hasToken = typeof window !== 'undefined' && localStorage.getItem("auth_token");
-  console.log("Has token:", !!hasToken);
+  console.log("Router: Has token:", !!hasToken);
 
   return (
     <Switch>
