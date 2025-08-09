@@ -19,10 +19,10 @@ import { Plus, Gavel, Calendar, Users, FileText, Clock, CheckCircle, XCircle, Al
 const createProceedingSchema = z.object({
   caseId: z.string().min(1, "Case is required"),
   proceedingType: z.enum(["hearing", "review", "appeal", "final_decision"]),
-  scheduledDate: z.string().optional(),
-  panelMembers: z.array(z.string()).optional(),
-  decisionReason: z.string().optional(),
-  nextSteps: z.string().optional(),
+  scheduledDate: z.string().min(1, "Scheduled date is required"),
+  panelMembers: z.array(z.string()).default([]),
+  decisionReason: z.string().default(""),
+  nextSteps: z.string().default(""),
   isPublic: z.boolean().default(false),
 });
 
@@ -151,13 +151,13 @@ export default function TribunalProceedings() {
                 Schedule Proceeding
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-oa-dark border-oa-border text-white max-w-2xl">
+            <DialogContent className="bg-gray-900/95 border-gray-600 text-white max-w-2xl">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Gavel className="h-5 w-5" />
                   Schedule New Proceeding
                 </DialogTitle>
-                <DialogDescription className="text-oa-gray">
+                <DialogDescription className="text-gray-300">
                   Schedule a new tribunal proceeding for a case
                 </DialogDescription>
               </DialogHeader>
@@ -172,14 +172,14 @@ export default function TribunalProceedings() {
                           <FormLabel className="text-white">Case</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                              <SelectTrigger className="bg-oa-light border-oa-border text-white">
+                              <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white">
                                 <SelectValue placeholder="Select case" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-oa-dark border-oa-border">
+                            <SelectContent className="bg-gray-800 border-gray-600">
                               {cases.cases?.map((caseItem: any) => (
-                                <SelectItem key={caseItem.id} value={caseItem.id} className="text-white hover:bg-oa-light">
-                                  {caseItem.caseNumber} - {caseItem.title}
+                                <SelectItem key={caseItem.id} value={caseItem.id} className="text-white hover:bg-gray-700">
+                                  {caseItem.caseNumber} - {caseItem.title || caseItem.description || "Case"}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -196,15 +196,15 @@ export default function TribunalProceedings() {
                           <FormLabel className="text-white">Proceeding Type</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                              <SelectTrigger className="bg-oa-light border-oa-border text-white">
+                              <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white">
                                 <SelectValue placeholder="Select type" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-oa-dark border-oa-border">
-                              <SelectItem value="hearing" className="text-white hover:bg-oa-light">Hearing</SelectItem>
-                              <SelectItem value="review" className="text-white hover:bg-oa-light">Review</SelectItem>
-                              <SelectItem value="appeal" className="text-white hover:bg-oa-light">Appeal</SelectItem>
-                              <SelectItem value="final_decision" className="text-white hover:bg-oa-light">Final Decision</SelectItem>
+                            <SelectContent className="bg-gray-800 border-gray-600">
+                              <SelectItem value="hearing" className="text-white hover:bg-gray-700">Hearing</SelectItem>
+                              <SelectItem value="review" className="text-white hover:bg-gray-700">Review</SelectItem>
+                              <SelectItem value="appeal" className="text-white hover:bg-gray-700">Appeal</SelectItem>
+                              <SelectItem value="final_decision" className="text-white hover:bg-gray-700">Final Decision</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage className="text-red-400" />
@@ -222,7 +222,6 @@ export default function TribunalProceedings() {
                         <FormControl>
                           <Input
                             type="datetime-local"
-                            className="bg-oa-light border-oa-border text-white"
                             {...field}
                           />
                         </FormControl>
@@ -240,7 +239,6 @@ export default function TribunalProceedings() {
                         <FormControl>
                           <Textarea
                             placeholder="Reason for scheduling this proceeding..."
-                            className="bg-oa-light border-oa-border text-white"
                             {...field}
                           />
                         </FormControl>
@@ -258,7 +256,6 @@ export default function TribunalProceedings() {
                         <FormControl>
                           <Textarea
                             placeholder="What should happen after this proceeding..."
-                            className="bg-oa-light border-oa-border text-white"
                             {...field}
                           />
                         </FormControl>
@@ -272,14 +269,14 @@ export default function TribunalProceedings() {
                       type="button"
                       variant="outline"
                       onClick={() => setIsCreateDialogOpen(false)}
-                      className="flex-1 border-oa-border text-white hover:bg-oa-light"
+                      className="flex-1 border-gray-600 text-white hover:bg-gray-700"
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
                       disabled={createProceedingMutation.isPending}
-                      className="flex-1 bg-oa-red hover:bg-oa-red/80"
+                      className="flex-1 bg-red-600 hover:bg-red-700"
                     >
                       {createProceedingMutation.isPending ? "Scheduling..." : "Schedule Proceeding"}
                     </Button>
