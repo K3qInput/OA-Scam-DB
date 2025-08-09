@@ -95,17 +95,19 @@ export default function DataTable({
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-8 w-8">
                       <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center text-white text-sm font-semibold">
-                        {getUserInitial(caseItem.reportedUser.username)}
+                        {getUserInitial(caseItem.reportedUser?.username || caseItem.reportedUserId || "Unknown")}
                       </div>
                     </div>
                     <div className="ml-3">
                       <div className="text-sm font-medium">
-                        {caseItem.reportedUser.username.startsWith("@") 
-                          ? caseItem.reportedUser.username 
-                          : `@${caseItem.reportedUser.username}`}
+                        {caseItem.reportedUser?.username 
+                          ? (caseItem.reportedUser.username.startsWith("@") 
+                              ? caseItem.reportedUser.username 
+                              : `@${caseItem.reportedUser.username}`)
+                          : caseItem.reportedUserId || "Unknown User"}
                       </div>
                       <div className="text-sm text-gray-400">
-                        ID: {caseItem.reportedUser.id.slice(-8)}
+                        ID: {caseItem.reportedUser?.id?.slice(-8) || caseItem.reportedUserId?.slice(-8) || "N/A"}
                       </div>
                     </div>
                   </div>
@@ -121,9 +123,11 @@ export default function DataTable({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-gray-400">
-                  {caseItem.reporterUser.username.startsWith("@") 
-                    ? caseItem.reporterUser.username 
-                    : `@${caseItem.reporterUser.username}`}
+                  {caseItem.reporterUser?.username 
+                    ? (caseItem.reporterUser.username.startsWith("@") 
+                        ? caseItem.reporterUser.username 
+                        : `@${caseItem.reporterUser.username}`)
+                    : caseItem.reporterUserId || "Unknown Reporter"}
                 </TableCell>
                 <TableCell className="text-gray-400">
                   {formatDate(caseItem.createdAt.toString())}
