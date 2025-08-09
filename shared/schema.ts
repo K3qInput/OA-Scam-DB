@@ -48,12 +48,17 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: varchar("username").notNull().unique(),
   email: varchar("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text("password_hash"),
   role: userRoleEnum("role").default("user").notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   isActive: boolean("is_active").default(true).notNull(),
+  // Discord OAuth fields
+  discordId: varchar("discord_id").unique(),
+  discordUsername: varchar("discord_username"),
+  discordDiscriminator: varchar("discord_discriminator"),
+  discordAvatar: varchar("discord_avatar"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

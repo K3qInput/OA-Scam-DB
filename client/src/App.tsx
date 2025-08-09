@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import Login from "@/pages/login";
 import SimpleLogin from "@/pages/simple-login";
+import DiscordLogin from "@/pages/discord-login";
 import Dashboard from "@/pages/dashboard";
 import CaseDetails from "@/pages/case-details";
 import NewCase from "@/pages/new-case";
@@ -22,19 +23,19 @@ function Router() {
   return (
     <Switch>
       <Route path="/login">
-        <SimpleLogin />
+        <DiscordLogin />
       </Route>
       <Route path="/">
-        <SimpleLogin />
+        <DiscordLogin />
       </Route>
       <Route path="/dashboard">
-        {hasToken ? <Dashboard /> : <SimpleLogin />}
+        {hasToken ? <Dashboard /> : <DiscordLogin />}
       </Route>
       <Route path="/cases/:id">
-        {hasToken ? <CaseDetails /> : <SimpleLogin />}
+        {hasToken ? <CaseDetails /> : <DiscordLogin />}
       </Route>
       <Route path="/new-case">
-        {hasToken ? <NewCase /> : <SimpleLogin />}
+        {hasToken ? <NewCase /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>

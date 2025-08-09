@@ -29,6 +29,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByDiscordId(discordId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
   authenticateUser(username: string, password: string): Promise<User | null>;
@@ -97,11 +98,21 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByDiscordId(discordId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.discordId, discordId));
+    return user || undefined;
+  }
+
   async createUser(userData: InsertUser): Promise<User> {
-    const hashedPassword = await bcrypt.hash(userData.passwordHash, 10);
+    // Only hash password if it's provided (for Discord OAuth users, password might not be set)
+    let processedData = { ...userData };
+    if (userData.passwordHash) {
+      processedData.passwordHash = await bcrypt.hash(userData.passwordHash, 10);
+    }
+    
     const [user] = await db
       .insert(users)
-      .values({ ...userData, passwordHash: hashedPassword })
+      .values(processedData)
       .returning();
     return user;
   }
@@ -126,6 +137,12 @@ export class DatabaseStorage implements IStorage {
       
       if (!user || !user.isActive) {
         console.log("User not found or inactive");
+        return null;
+      }
+
+      // If user doesn't have a password (Discord OAuth user), deny password login
+      if (!user.passwordHash) {
+        console.log("User has no password (Discord OAuth user)");
         return null;
       }
 
