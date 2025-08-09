@@ -46,7 +46,7 @@ export default function DiscordLogin() {
   }, [setLocation]);
 
   const handleDiscordLogin = () => {
-    window.location.href = "/api/auth/discord";
+    window.location.href = "/auth/discord";
   };
 
   const handleTraditionalLogin = async (e: React.FormEvent) => {

@@ -113,8 +113,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Discord OAuth routes
   app.get("/api/auth/discord", passport.authenticate("discord"));
+  app.get("/auth/discord", passport.authenticate("discord"));
 
   app.get("/api/auth/discord/callback", 
+    passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
+    async (req: any, res) => {
+      try {
+        // Generate JWT token for the authenticated user
+        const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, { expiresIn: "24h" });
+        
+        // Redirect to frontend with token
+        res.redirect(`/login?token=${token}&discord_success=true`);
+      } catch (error) {
+        console.error("Discord callback error:", error);
+        res.redirect("/login?error=auth_failed");
+      }
+    }
+  );
+
+  app.get("/auth/discord/callback", 
     passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
     async (req: any, res) => {
       try {

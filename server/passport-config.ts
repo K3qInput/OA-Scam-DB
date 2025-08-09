@@ -31,7 +31,7 @@ passport.deserializeUser(async (id: string, done) => {
 passport.use(new DiscordStrategy({
   clientID: DISCORD_CLIENT_ID!,
   clientSecret: DISCORD_CLIENT_SECRET!,
-  callbackURL: `${BASE_URL}/api/auth/discord/callback`,
+  callbackURL: "https://ownersalliance.org/auth/discord/callback",
   scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
   try {
