@@ -10,6 +10,11 @@ import DiscordLogin from "@/pages/discord-login";
 import Dashboard from "@/pages/dashboard";
 import CaseDetails from "@/pages/case-details";
 import NewCase from "@/pages/new-case";
+import Contact from "@/pages/contact";
+import StaffManagement from "@/pages/staff-management";
+import TribunalProceedings from "@/pages/tribunal-proceedings";
+import ContactManagement from "@/pages/contact-management";
+import StaffAssignments from "@/pages/staff-assignments";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +38,21 @@ function Router() {
       </Route>
       <Route path="/new-case">
         {hasToken ? <NewCase /> : <DiscordLogin />}
+      </Route>
+      <Route path="/contact">
+        <Contact />
+      </Route>
+      <Route path="/staff-management">
+        {hasToken ? <StaffManagement /> : <DiscordLogin />}
+      </Route>
+      <Route path="/tribunal-proceedings">
+        {hasToken ? <TribunalProceedings /> : <DiscordLogin />}
+      </Route>
+      <Route path="/contact-management">
+        {hasToken ? <ContactManagement /> : <DiscordLogin />}
+      </Route>
+      <Route path="/staff-assignments">
+        {hasToken ? <StaffAssignments /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>

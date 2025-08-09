@@ -34,7 +34,7 @@ export const caseTypeEnum = pgEnum("case_type", [
 
 export const priorityEnum = pgEnum("priority", ["low", "medium", "high", "critical"]);
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "staff", "user"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "tribunal_head", "senior_staff", "staff", "user"]);
 
 export const appealStatusEnum = pgEnum("appeal_status", [
   "pending",
@@ -54,6 +54,14 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   isActive: boolean("is_active").default(true).notNull(),
+  // Tribunal staff information
+  department: varchar("department"), // "investigation", "review", "appeals", "enforcement"
+  specialization: varchar("specialization"), // "financial_crimes", "identity_theft", "cyber_fraud"
+  staffId: varchar("staff_id").unique(),
+  phoneNumber: varchar("phone_number"),
+  officeLocation: varchar("office_location"),
+  emergencyContact: varchar("emergency_contact"),
+  certifications: text("certifications").array(),
   // Discord OAuth fields
   discordId: varchar("discord_id").unique(),
   discordUsername: varchar("discord_username"),
@@ -150,6 +158,55 @@ export const caseUpdates = pgTable("case_updates", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Contact messages table
+export const contactMessages = pgTable("contact_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  subject: varchar("subject").notNull(),
+  message: text("message").notNull(),
+  priority: priorityEnum("priority").default("medium").notNull(),
+  status: varchar("status").default("new").notNull(), // "new", "in_progress", "resolved", "closed"
+  assignedTo: varchar("assigned_to"), // staff member ID
+  tags: text("tags").array(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+// Staff assignments table
+export const staffAssignments = pgTable("staff_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  staffId: varchar("staff_id").notNull(),
+  caseId: varchar("case_id"),
+  contactId: varchar("contact_id"),
+  assignmentType: varchar("assignment_type").notNull(), // "primary", "secondary", "reviewer"
+  assignedBy: varchar("assigned_by").notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+// Tribunal proceedings table
+export const tribunalProceedings = pgTable("tribunal_proceedings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull(),
+  proceedingType: varchar("proceeding_type").notNull(), // "hearing", "review", "appeal", "final_decision"
+  scheduledDate: timestamp("scheduled_date"),
+  actualDate: timestamp("actual_date"),
+  chairperson: varchar("chairperson").notNull(), // tribunal_head user ID
+  panelMembers: text("panel_members").array(), // array of staff IDs
+  outcome: varchar("outcome"), // "approved", "rejected", "pending", "deferred"
+  decisionReason: text("decision_reason"),
+  nextSteps: text("next_steps"),
+  documents: text("documents").array(),
+  isPublic: boolean("is_public").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   reportedCases: many(cases, { relationName: "reportedUser" }),
@@ -243,6 +300,43 @@ export const caseUpdatesRelations = relations(caseUpdates, ({ one }) => ({
   }),
 }));
 
+export const contactMessagesRelations = relations(contactMessages, ({ one }) => ({
+  assignedToUser: one(users, {
+    fields: [contactMessages.assignedTo],
+    references: [users.id],
+  }),
+}));
+
+export const staffAssignmentsRelations = relations(staffAssignments, ({ one }) => ({
+  staff: one(users, {
+    fields: [staffAssignments.staffId],
+    references: [users.id],
+  }),
+  case: one(cases, {
+    fields: [staffAssignments.caseId],
+    references: [cases.id],
+  }),
+  contact: one(contactMessages, {
+    fields: [staffAssignments.contactId],
+    references: [contactMessages.id],
+  }),
+  assignedByUser: one(users, {
+    fields: [staffAssignments.assignedBy],
+    references: [users.id],
+  }),
+}));
+
+export const tribunalProceedingsRelations = relations(tribunalProceedings, ({ one }) => ({
+  case: one(cases, {
+    fields: [tribunalProceedings.caseId],
+    references: [cases.id],
+  }),
+  chairpersonUser: one(users, {
+    fields: [tribunalProceedings.chairperson],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -284,6 +378,23 @@ export const insertCaseUpdateSchema = createInsertSchema(caseUpdates).omit({
   createdAt: true,
 });
 
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStaffAssignmentSchema = createInsertSchema(staffAssignments).omit({
+  id: true,
+  assignedAt: true,
+});
+
+export const insertTribunalProceedingSchema = createInsertSchema(tribunalProceedings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1),
@@ -305,4 +416,10 @@ export type PasswordResetRequest = typeof passwordResetRequests.$inferSelect;
 export type InsertPasswordResetRequest = z.infer<typeof insertPasswordResetRequestSchema>;
 export type CaseUpdate = typeof caseUpdates.$inferSelect;
 export type InsertCaseUpdate = z.infer<typeof insertCaseUpdateSchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+export type StaffAssignment = typeof staffAssignments.$inferSelect;
+export type InsertStaffAssignment = z.infer<typeof insertStaffAssignmentSchema>;
+export type TribunalProceeding = typeof tribunalProceedings.$inferSelect;
+export type InsertTribunalProceeding = z.infer<typeof insertTribunalProceedingSchema>;
 export type LoginData = z.infer<typeof loginSchema>;

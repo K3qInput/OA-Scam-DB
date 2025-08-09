@@ -6,6 +6,9 @@ import {
   appeals,
   passwordResetRequests,
   caseUpdates,
+  contactMessages,
+  staffAssignments,
+  tribunalProceedings,
   type User,
   type InsertUser,
   type Case,
@@ -20,6 +23,12 @@ import {
   type InsertPasswordResetRequest,
   type CaseUpdate,
   type InsertCaseUpdate,
+  type ContactMessage,
+  type InsertContactMessage,
+  type StaffAssignment,
+  type InsertStaffAssignment,
+  type TribunalProceeding,
+  type InsertTribunalProceeding,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, like, desc, asc, count, sql } from "drizzle-orm";
@@ -72,6 +81,23 @@ export interface IStorage {
   // Case update operations
   createCaseUpdate(updateData: InsertCaseUpdate): Promise<CaseUpdate>;
   getCaseUpdates(caseId: string): Promise<(CaseUpdate & { updatedByUser: User })[]>;
+
+  // Contact message operations
+  createContactMessage(messageData: InsertContactMessage): Promise<ContactMessage>;
+  getContactMessages(filters?: { status?: string; priority?: string; assignedTo?: string }): Promise<(ContactMessage & { assignedToUser?: User })[]>;
+  updateContactMessage(id: string, updates: Partial<InsertContactMessage>): Promise<ContactMessage>;
+  getContactMessage(id: string): Promise<(ContactMessage & { assignedToUser?: User }) | undefined>;
+
+  // Staff assignment operations
+  createStaffAssignment(assignmentData: InsertStaffAssignment): Promise<StaffAssignment>;
+  getStaffAssignments(filters?: { staffId?: string; caseId?: string; contactId?: string }): Promise<(StaffAssignment & { staff: User; assignedByUser: User })[]>;
+  updateStaffAssignment(id: string, updates: Partial<InsertStaffAssignment>): Promise<StaffAssignment>;
+  getStaffMembers(role?: string): Promise<User[]>;
+
+  // Tribunal proceeding operations
+  createTribunalProceeding(proceedingData: InsertTribunalProceeding): Promise<TribunalProceeding>;
+  getTribunalProceedings(caseId?: string): Promise<(TribunalProceeding & { case: Case; chairpersonUser: User })[]>;
+  updateTribunalProceeding(id: string, updates: Partial<InsertTribunalProceeding>): Promise<TribunalProceeding>;
 
   // Statistics
   getStatistics(): Promise<{
@@ -462,6 +488,179 @@ export class DatabaseStorage implements IStorage {
       verifiedCases: verifiedCases.count,
       altAccounts: altAccountsCount.count,
     };
+  }
+
+  // Contact message operations
+  async createContactMessage(messageData: InsertContactMessage): Promise<ContactMessage> {
+    const [newMessage] = await db.insert(contactMessages).values(messageData).returning();
+    return newMessage;
+  }
+
+  async getContactMessages(filters?: { status?: string; priority?: string; assignedTo?: string }): Promise<(ContactMessage & { assignedToUser?: User })[]> {
+    let query = db.select().from(contactMessages);
+    
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(contactMessages.status, filters.status));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(contactMessages.priority, filters.priority as any));
+    }
+    if (filters?.assignedTo) {
+      conditions.push(eq(contactMessages.assignedTo, filters.assignedTo));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const results = await query.orderBy(desc(contactMessages.createdAt));
+
+    const enrichedResults = await Promise.all(
+      results.map(async (message) => {
+        let assignedToUser = undefined;
+        if (message.assignedTo) {
+          assignedToUser = await this.getUser(message.assignedTo);
+        }
+        return {
+          ...message,
+          assignedToUser,
+        };
+      })
+    );
+
+    return enrichedResults;
+  }
+
+  async updateContactMessage(id: string, updates: Partial<InsertContactMessage>): Promise<ContactMessage> {
+    const [updatedMessage] = await db
+      .update(contactMessages)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(contactMessages.id, id))
+      .returning();
+    return updatedMessage;
+  }
+
+  async getContactMessage(id: string): Promise<(ContactMessage & { assignedToUser?: User }) | undefined> {
+    const [message] = await db.select().from(contactMessages).where(eq(contactMessages.id, id));
+    if (!message) return undefined;
+
+    let assignedToUser = undefined;
+    if (message.assignedTo) {
+      assignedToUser = await this.getUser(message.assignedTo);
+    }
+
+    return { ...message, assignedToUser };
+  }
+
+  // Staff assignment operations
+  async createStaffAssignment(assignmentData: InsertStaffAssignment): Promise<StaffAssignment> {
+    const [newAssignment] = await db.insert(staffAssignments).values(assignmentData).returning();
+    return newAssignment;
+  }
+
+  async getStaffAssignments(filters?: { staffId?: string; caseId?: string; contactId?: string }): Promise<(StaffAssignment & { staff: User; assignedByUser: User })[]> {
+    let query = db.select().from(staffAssignments).where(eq(staffAssignments.isActive, true));
+    
+    const conditions = [eq(staffAssignments.isActive, true)];
+    if (filters?.staffId) {
+      conditions.push(eq(staffAssignments.staffId, filters.staffId));
+    }
+    if (filters?.caseId) {
+      conditions.push(eq(staffAssignments.caseId, filters.caseId));
+    }
+    if (filters?.contactId) {
+      conditions.push(eq(staffAssignments.contactId, filters.contactId));
+    }
+
+    if (conditions.length > 1) {
+      query = query.where(and(...conditions));
+    }
+
+    const results = await query.orderBy(desc(staffAssignments.assignedAt));
+
+    const enrichedResults = await Promise.all(
+      results.map(async (assignment) => {
+        const staff = await this.getUser(assignment.staffId);
+        const assignedByUser = await this.getUser(assignment.assignedBy);
+        return {
+          ...assignment,
+          staff: staff!,
+          assignedByUser: assignedByUser!,
+        };
+      })
+    );
+
+    return enrichedResults;
+  }
+
+  async updateStaffAssignment(id: string, updates: Partial<InsertStaffAssignment>): Promise<StaffAssignment> {
+    const [updatedAssignment] = await db
+      .update(staffAssignments)
+      .set(updates)
+      .where(eq(staffAssignments.id, id))
+      .returning();
+    return updatedAssignment;
+  }
+
+  async getStaffMembers(role?: string): Promise<User[]> {
+    let query = db.select().from(users).where(eq(users.isActive, true));
+    
+    if (role) {
+      query = query.where(and(eq(users.isActive, true), eq(users.role, role as any)));
+    } else {
+      // Get all staff members (not regular users)
+      query = query.where(and(
+        eq(users.isActive, true), 
+        or(
+          eq(users.role, "admin"),
+          eq(users.role, "tribunal_head"),
+          eq(users.role, "senior_staff"),
+          eq(users.role, "staff")
+        )
+      ));
+    }
+
+    return await query.orderBy(asc(users.firstName), asc(users.lastName));
+  }
+
+  // Tribunal proceeding operations
+  async createTribunalProceeding(proceedingData: InsertTribunalProceeding): Promise<TribunalProceeding> {
+    const [newProceeding] = await db.insert(tribunalProceedings).values(proceedingData).returning();
+    return newProceeding;
+  }
+
+  async getTribunalProceedings(caseId?: string): Promise<(TribunalProceeding & { case: Case; chairpersonUser: User })[]> {
+    let query = db.select().from(tribunalProceedings);
+    
+    if (caseId) {
+      query = query.where(eq(tribunalProceedings.caseId, caseId));
+    }
+
+    const results = await query.orderBy(desc(tribunalProceedings.createdAt));
+
+    const enrichedResults = await Promise.all(
+      results.map(async (proceeding) => {
+        const caseData = await db.select().from(cases).where(eq(cases.id, proceeding.caseId));
+        const chairpersonUser = await this.getUser(proceeding.chairperson);
+        return {
+          ...proceeding,
+          case: caseData[0],
+          chairpersonUser: chairpersonUser!,
+        };
+      })
+    );
+
+    return enrichedResults;
+  }
+
+  async updateTribunalProceeding(id: string, updates: Partial<InsertTribunalProceeding>): Promise<TribunalProceeding> {
+    const [updatedProceeding] = await db
+      .update(tribunalProceedings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tribunalProceedings.id, id))
+      .returning();
+    return updatedProceeding;
   }
 }
 

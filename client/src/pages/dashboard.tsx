@@ -59,14 +59,32 @@ export default function Dashboard() {
     },
   });
 
-  // Fetch statistics
+  // Fetch enhanced statistics
   const { data: statistics } = useQuery({
-    queryKey: ["/api/statistics"],
+    queryKey: ["/api/dashboard/stats"],
     initialData: {
       totalCases: 0,
       pendingCases: 0,
       verifiedCases: 0,
-      altAccounts: 0
+      altAccounts: 0,
+      contactMessages: {
+        total: 0,
+        new: 0,
+        inProgress: 0,
+        resolved: 0,
+      },
+      staffAssignments: {
+        total: 0,
+        active: 0,
+        completed: 0,
+      },
+      staffMembers: {
+        total: 0,
+        admin: 0,
+        tribunalHead: 0,
+        seniorStaff: 0,
+        staff: 0,
+      }
     }
   });
 

@@ -9,7 +9,11 @@ import {
   Settings, 
   BarChart3,
   Search,
-  AlertTriangle
+  AlertTriangle,
+  Mail,
+  MessageSquare,
+  UserCheck,
+  Gavel
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -17,96 +21,106 @@ interface SidebarProps {
   className?: string;
 }
 
-const navigation = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: Home,
-    access: ["admin", "staff", "user"]
-  },
-  {
-    name: "All Cases",
-    href: "/cases",
-    icon: FileText,
-    access: ["admin", "staff"]
-  },
-  {
-    name: "New Case",
-    href: "/new-case",
-    icon: Plus,
-    access: ["admin", "staff", "user"]
-  },
-  {
-    name: "Users",
-    href: "/users",
-    icon: Users,
-    access: ["admin", "staff"]
-  },
-  {
-    name: "Reports",
-    href: "/reports",
-    icon: BarChart3,
-    access: ["admin", "staff"]
-  },
-  {
-    name: "Search",
-    href: "/search",
-    icon: Search,
-    access: ["admin", "staff"]
-  },
-  {
-    name: "Appeals",
-    href: "/appeals",
-    icon: AlertTriangle,
-    access: ["admin", "staff"]
-  },
-  {
-    name: "Admin Panel",
-    href: "/admin",
-    icon: Shield,
-    access: ["admin"]
-  },
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-    access: ["admin", "staff", "user"]
-  }
-];
-
 export default function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
 
-  const filteredNavigation = navigation.filter(item => 
-    item.access.includes(user?.role || "user")
+  const isActive = (href: string) => location === href;
+  
+  const linkClass = (href: string) => cn(
+    "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+    isActive(href) 
+      ? "bg-oa-red text-white" 
+      : "text-slate-300 hover:bg-oa-gray/20 hover:text-white"
   );
 
   return (
     <nav className={cn("bg-oa-dark border-r border-oa-gray/20 w-64 min-h-screen", className)}>
       <div className="p-4">
         <div className="space-y-1">
-          {filteredNavigation.map((item) => {
-            const isActive = location === item.href || 
-              (item.href !== "/dashboard" && location.startsWith(item.href));
+          {/* Core Navigation */}
+          <Link href="/dashboard" className={linkClass("/dashboard")}>
+            <Home className="mr-3 h-5 w-5" />
+            Dashboard
+          </Link>
+          
+          <Link href="/new-case" className={linkClass("/new-case")}>
+            <Plus className="mr-3 h-5 w-5" />
+            New Case
+          </Link>
+
+          {/* Contact & Support Section */}
+          <div className="pt-4">
+            <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Contact & Support
+            </h3>
+            <Link href="/contact" className={linkClass("/contact")}>
+              <Mail className="mr-3 h-5 w-5" />
+              Contact Us
+            </Link>
             
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                  isActive 
-                    ? "bg-oa-blue text-white" 
-                    : "text-slate-300 hover:bg-oa-gray/20 hover:text-white"
-                )}
-                data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
-              >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
+            {user && ["admin", "tribunal_head", "senior_staff", "staff"].includes(user.role) && (
+              <Link href="/contact-management" className={linkClass("/contact-management")}>
+                <MessageSquare className="mr-3 h-5 w-5" />
+                Manage Contacts
               </Link>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Staff Management Section */}
+          {user && ["admin", "tribunal_head", "senior_staff"].includes(user.role) && (
+            <div className="pt-4">
+              <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Staff Management
+              </h3>
+              <Link href="/staff-management" className={linkClass("/staff-management")}>
+                <Users className="mr-3 h-5 w-5" />
+                Staff Members
+              </Link>
+              
+              <Link href="/staff-assignments" className={linkClass("/staff-assignments")}>
+                <UserCheck className="mr-3 h-5 w-5" />
+                Assignments
+              </Link>
+            </div>
+          )}
+
+          {/* Tribunal Operations Section */}
+          {user && ["admin", "tribunal_head"].includes(user.role) && (
+            <div className="pt-4">
+              <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Tribunal Operations
+              </h3>
+              <Link href="/tribunal-proceedings" className={linkClass("/tribunal-proceedings")}>
+                <Gavel className="mr-3 h-5 w-5" />
+                Proceedings
+              </Link>
+            </div>
+          )}
+
+          {/* Security Section */}
+          <div className="pt-4">
+            <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Security
+            </h3>
+            <Link href="/threat-intel" className={linkClass("/threat-intel")}>
+              <Shield className="mr-3 h-5 w-5" />
+              Threat Intelligence
+            </Link>
+          </div>
+
+          {/* Admin Only */}
+          {user && user.role === "admin" && (
+            <div className="pt-4">
+              <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Administration
+              </h3>
+              <Link href="/admin" className={linkClass("/admin")}>
+                <Settings className="mr-3 h-5 w-5" />
+                Admin Panel
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
