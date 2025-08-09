@@ -1,80 +1,123 @@
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
 import { 
-  Database, 
+  Home, 
+  FileText, 
   Plus, 
   Users, 
-  Link, 
-  Scale, 
-  BarChart3, 
-  Settings 
+  Shield, 
+  Settings, 
+  BarChart3,
+  Search,
+  AlertTriangle
 } from "lucide-react";
-import { Link as RouterLink, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+
+interface SidebarProps {
+  className?: string;
+}
 
 const navigation = [
-  { name: "Case Database", href: "/", icon: Database },
-  { name: "New Report", href: "/new-case", icon: Plus },
-  { name: "User Profiles", href: "/users", icon: Users },
-  { name: "Alt Accounts", href: "/alt-accounts", icon: Link },
-  { name: "Appeals", href: "/appeals", icon: Scale },
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: Home,
+    access: ["admin", "staff", "user"]
+  },
+  {
+    name: "All Cases",
+    href: "/cases",
+    icon: FileText,
+    access: ["admin", "staff"]
+  },
+  {
+    name: "New Case",
+    href: "/new-case",
+    icon: Plus,
+    access: ["admin", "staff", "user"]
+  },
+  {
+    name: "Users",
+    href: "/users",
+    icon: Users,
+    access: ["admin", "staff"]
+  },
+  {
+    name: "Reports",
+    href: "/reports",
+    icon: BarChart3,
+    access: ["admin", "staff"]
+  },
+  {
+    name: "Search",
+    href: "/search",
+    icon: Search,
+    access: ["admin", "staff"]
+  },
+  {
+    name: "Appeals",
+    href: "/appeals",
+    icon: AlertTriangle,
+    access: ["admin", "staff"]
+  },
+  {
+    name: "Admin Panel",
+    href: "/admin",
+    icon: Shield,
+    access: ["admin"]
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
+    access: ["admin", "staff", "user"]
+  }
 ];
 
-const adminNavigation = [
-  { name: "Statistics", href: "/statistics", icon: BarChart3 },
-  { name: "Admin Panel", href: "/admin", icon: Settings },
-];
-
-export default function Sidebar() {
+export default function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
+
+  const filteredNavigation = navigation.filter(item => 
+    item.access.includes(user?.role || "user")
+  );
 
   return (
-    <aside className="w-64 bg-oa-dark border-r border-oa-surface">
-      <div className="p-6">
-        <nav className="space-y-2">
-          {navigation.map((item) => {
-            const isActive = location === item.href || (item.href === "/" && location === "/dashboard");
-            const Icon = item.icon;
+    <nav className={cn("bg-oa-dark border-r border-oa-gray/20 w-64 min-h-screen", className)}>
+      <div className="p-4">
+        <div className="space-y-1">
+          {filteredNavigation.map((item) => {
+            const isActive = location === item.href || 
+              (item.href !== "/dashboard" && location.startsWith(item.href));
             
             return (
-              <RouterLink key={item.name} href={item.href}>
-                <a className={`oa-sidebar-link ${isActive ? "active" : ""}`}>
-                  <Icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </a>
-              </RouterLink>
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  isActive 
+                    ? "bg-oa-blue text-white" 
+                    : "text-slate-300 hover:bg-oa-gray/20 hover:text-white"
+                )}
+                data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
+              >
+                <item.icon className="mr-3 h-5 w-5" />
+                {item.name}
+              </Link>
             );
           })}
-          
-          <div className="border-t border-oa-surface my-4"></div>
-          
-          {adminNavigation.map((item) => {
-            const isActive = location === item.href;
-            const Icon = item.icon;
-            
-            return (
-              <RouterLink key={item.name} href={item.href}>
-                <a className={`oa-sidebar-link ${isActive ? "active" : ""}`}>
-                  <Icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </a>
-              </RouterLink>
-            );
-          })}
-        </nav>
-
-        <div className="mt-8 p-4 bg-oa-surface rounded-lg">
-          <h3 className="text-sm font-semibold mb-3 text-red-500">Staff Controls</h3>
-          <div className="space-y-2 text-sm">
-            <button className="w-full text-left text-gray-400 hover:text-white">
-              Bulk Actions
-            </button>
-            <button className="w-full text-left text-gray-400 hover:text-white">
-              Export Data
-            </button>
-            <button className="w-full text-left text-gray-400 hover:text-white">
-              System Logs
-            </button>
-          </div>
         </div>
       </div>
-    </aside>
+
+      {/* Footer */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-oa-gray/20">
+        <div className="text-center text-xs text-slate-500">
+          <p>Made by Kiro.java</p>
+          <p>"I was too lazy 💀"</p>
+          <p>Copyright 2025</p>
+        </div>
+      </div>
+    </nav>
   );
 }

@@ -1,82 +1,124 @@
 import { useState } from "react";
-import { Search, Settings, Shield } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import type { User } from "@shared/schema";
-import PasswordResetModal from "@/components/password-reset-modal";
+import { Input } from "@/components/ui/input";
 
 interface HeaderProps {
-  onSearch?: (query: string) => void;
+  onMenuToggle?: () => void;
 }
 
-export default function Header({ onSearch }: HeaderProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
+export default function Header({ onMenuToggle }: HeaderProps) {
   const { user, logout } = useAuth();
-  const currentUser = user as User | undefined;
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch?.(searchQuery);
-  };
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <>
-      <nav className="bg-oa-dark border-b border-oa-surface px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Shield className="text-red-500 text-2xl" />
-              <h1 className="text-xl font-bold">OwnersAlliance</h1>
-              <span className="text-gray-400 text-sm">Database Portal</span>
-            </div>
-          </div>
+    <header className="bg-oa-dark border-b border-oa-gray/20 px-4 py-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onMenuToggle}
+            className="md:hidden text-white hover:bg-oa-gray/20"
+            data-testid="button-menu-toggle"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           
-          <div className="flex items-center space-x-4">
-            <form onSubmit={handleSearch} className="relative">
-              <Input
-                type="text"
-                placeholder="Search cases, users..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="oa-input w-80 pr-10"
-              />
-              <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-            </form>
-            
-            <div className="flex items-center space-x-2 bg-oa-surface px-4 py-2 rounded-lg">
-              <Shield className="h-4 w-4 text-red-500" />
-              <span className="text-sm capitalize">{currentUser?.role || 'User'}</span>
-              <span className="text-gray-400">|</span>
-              <span className="text-sm text-gray-300">{currentUser?.email || 'Loading...'}</span>
-            </div>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPasswordReset(true)}
-              className="text-gray-400 hover:text-white"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={logout}
-              className="text-gray-400 hover:text-white"
-            >
-              Logout
-            </Button>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-white">OwnersAlliance</h1>
+            <span className="text-oa-blue text-sm">Portal</span>
           </div>
         </div>
-      </nav>
 
-      <PasswordResetModal
-        isOpen={showPasswordReset}
-        onClose={() => setShowPasswordReset(false)}
-      />
-    </>
+        {/* Search Bar */}
+        <div className="flex-1 max-w-md mx-4 hidden md:block">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <Input
+              type="search"
+              placeholder="Search cases, users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-oa-gray/20 border-oa-gray/30 text-white placeholder:text-slate-400"
+              data-testid="input-search"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Notifications */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-oa-gray/20 relative"
+            data-testid="button-notifications"
+          >
+            <Bell className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              3
+            </span>
+          </Button>
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative h-8 w-8 rounded-full"
+                data-testid="button-user-menu"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage 
+                    src={user?.profileImageUrl} 
+                    alt={user?.username || "User"} 
+                  />
+                  <AvatarFallback className="bg-oa-blue text-white">
+                    {user?.username?.substring(0, 2).toUpperCase() || "OA"}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 bg-oa-dark border-oa-gray/30" align="end">
+              <DropdownMenuLabel className="text-white">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{user?.username}</p>
+                  <p className="text-xs text-slate-400">{user?.email}</p>
+                  <p className="text-xs text-oa-blue capitalize">{user?.role}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-oa-gray/30" />
+              <DropdownMenuItem className="text-white hover:bg-oa-gray/20">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-white hover:bg-oa-gray/20">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-oa-gray/30" />
+              <DropdownMenuItem 
+                onClick={logout}
+                className="text-red-400 hover:bg-red-500/20"
+                data-testid="button-logout"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </header>
   );
 }

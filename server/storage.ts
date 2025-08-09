@@ -185,7 +185,7 @@ export class DatabaseStorage implements IStorage {
     limit?: number;
     offset?: number;
   }): Promise<(Case & { reportedUser: User; reporterUser: User; staffUser?: User })[]> {
-    let query = db.select().from(cases);
+    let query = db.select().from(cases).orderBy(cases.createdAt);
 
     const conditions = [];
     if (filters?.status) {

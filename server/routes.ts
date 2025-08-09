@@ -238,11 +238,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cases", authenticateToken, async (req: any, res) => {
     try {
-      const caseData = insertCaseSchema.parse(req.body);
-      const newCase = await storage.createCase({
-        ...caseData,
+      const caseData = insertCaseSchema.parse({
+        ...req.body,
         reporterUserId: req.user.id,
       });
+      const newCase = await storage.createCase(caseData);
 
       // Create case update for creation
       await storage.createCaseUpdate({
