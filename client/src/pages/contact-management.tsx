@@ -30,7 +30,7 @@ export default function ContactManagement() {
 
   const updateMessageMutation = useMutation({
     mutationFn: ({ id, ...data }: { id: string } & any) => 
-      apiRequest(`/api/contact/${id}`, "PATCH", data),
+      apiRequest("PATCH", `/api/contact/${id}`, data),
     onSuccess: () => {
       toast({
         title: "Success",

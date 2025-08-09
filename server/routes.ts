@@ -12,6 +12,7 @@ import {
   insertStaffAssignmentSchema,
   insertTribunalProceedingSchema
 } from "@shared/schema";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import path from "path";
@@ -620,6 +621,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching staff members:", error);
       res.status(500).json({ message: "Failed to fetch staff members" });
+    }
+  });
+
+  app.post("/api/staff/create", authenticateToken, requireAdmin, async (req: any, res) => {
+    try {
+      const userData = req.body;
+      // Hash password before creating user
+      const hashedPassword = await bcrypt.hash(userData.passwordHash, 10);
+      const newStaff = await storage.createUser({
+        ...userData,
+        passwordHash: hashedPassword,
+      });
+      const { passwordHash, ...staffWithoutPassword } = newStaff;
+      res.status(201).json(staffWithoutPassword);
+    } catch (error) {
+      console.error("Error creating staff member:", error);
+      res.status(400).json({ message: "Failed to create staff member" });
+    }
+  });
+
+  // Staff Assignment Routes
+  app.get("/api/staff-assignments", authenticateToken, requireStaff, async (req, res) => {
+    try {
+      const { staffId, caseId, contactId } = req.query;
+      const filters = {
+        staffId: staffId as string,
+        caseId: caseId as string,
+        contactId: contactId as string,
+      };
+      const assignments = await storage.getStaffAssignments(filters);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching staff assignments:", error);
+      res.status(500).json({ message: "Failed to fetch staff assignments" });
+    }
+  });
+
+  app.post("/api/staff-assignments", authenticateToken, requireStaff, async (req: any, res) => {
+    try {
+      const assignmentData = insertStaffAssignmentSchema.parse({
+        ...req.body,
+        assignedBy: req.user.id,
+      });
+      const newAssignment = await storage.createStaffAssignment(assignmentData);
+      res.status(201).json(newAssignment);
+    } catch (error) {
+      console.error("Error creating staff assignment:", error);
+      res.status(400).json({ message: "Failed to create staff assignment" });
+    }
+  });
+
+  app.patch("/api/staff-assignments/:id", authenticateToken, requireStaff, async (req: any, res) => {
+    try {
+      const updates = req.body;
+      const updatedAssignment = await storage.updateStaffAssignment(req.params.id, updates);
+      res.json(updatedAssignment);
+    } catch (error) {
+      console.error("Error updating staff assignment:", error);
+      res.status(400).json({ message: "Failed to update staff assignment" });
+    }
+  });
+
+  // Tribunal Proceedings Routes
+  app.get("/api/tribunal-proceedings", authenticateToken, requireStaff, async (req, res) => {
+    try {
+      const { caseId } = req.query;
+      const proceedings = await storage.getTribunalProceedings(caseId as string);
+      res.json(proceedings);
+    } catch (error) {
+      console.error("Error fetching tribunal proceedings:", error);
+      res.status(500).json({ message: "Failed to fetch tribunal proceedings" });
+    }
+  });
+
+  app.post("/api/tribunal-proceedings", authenticateToken, requireTribunalHead, async (req: any, res) => {
+    try {
+      const proceedingData = insertTribunalProceedingSchema.parse({
+        ...req.body,
+        chairperson: req.user.id,
+      });
+      const newProceeding = await storage.createTribunalProceeding(proceedingData);
+      res.status(201).json(newProceeding);
+    } catch (error) {
+      console.error("Error creating tribunal proceeding:", error);
+      res.status(400).json({ message: "Failed to create tribunal proceeding" });
+    }
+  });
+
+  app.patch("/api/tribunal-proceedings/:id", authenticateToken, requireTribunalHead, async (req: any, res) => {
+    try {
+      const updates = req.body;
+      const updatedProceeding = await storage.updateTribunalProceeding(req.params.id, updates);
+      res.json(updatedProceeding);
+    } catch (error) {
+      console.error("Error updating tribunal proceeding:", error);
+      res.status(400).json({ message: "Failed to update tribunal proceeding" });
+    }
+  });
+
+  // Enhanced Dashboard Statistics
+  app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
+    try {
+      const stats = await storage.getDashboardStatistics();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching dashboard statistics:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard statistics" });
     }
   });
 

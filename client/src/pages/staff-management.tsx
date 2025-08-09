@@ -59,11 +59,11 @@ export default function StaffManagement() {
   });
 
   const { data: assignments = [] } = useQuery({
-    queryKey: ["/api/assignments"],
+    queryKey: ["/api/staff-assignments"],
   });
 
   const createStaffMutation = useMutation({
-    mutationFn: (data: CreateStaffData) => apiRequest("/api/staff/create", "POST", data),
+    mutationFn: (data: CreateStaffData) => apiRequest("POST", "/api/staff/create", data),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -101,7 +101,7 @@ export default function StaffManagement() {
     }
   };
 
-  const filteredStaff = staffMembers.filter((member: any) => {
+  const filteredStaff = (staffMembers as any[]).filter((member: any) => {
     const matchesSearch = 
       member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -115,7 +115,7 @@ export default function StaffManagement() {
   });
 
   const getStaffAssignmentCount = (staffId: string) => {
-    return assignments.filter((assignment: any) => 
+    return (assignments as any[]).filter((assignment: any) => 
       assignment.staffId === staffId && assignment.isActive
     ).length;
   };

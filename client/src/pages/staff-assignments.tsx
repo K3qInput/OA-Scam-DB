@@ -46,7 +46,7 @@ export default function StaffAssignments() {
   });
 
   const { data: assignments = [] } = useQuery({
-    queryKey: ["/api/assignments"],
+    queryKey: ["/api/staff-assignments"],
   });
 
   const { data: staffMembers = [] } = useQuery({
@@ -62,7 +62,7 @@ export default function StaffAssignments() {
   });
 
   const createAssignmentMutation = useMutation({
-    mutationFn: (data: CreateAssignmentData) => apiRequest("/api/assignments", "POST", data),
+    mutationFn: (data: CreateAssignmentData) => apiRequest("POST", "/api/staff-assignments", data),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -70,7 +70,7 @@ export default function StaffAssignments() {
       });
       setIsCreateDialogOpen(false);
       form.reset();
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-assignments"] });
     },
     onError: () => {
       toast({
@@ -83,13 +83,13 @@ export default function StaffAssignments() {
 
   const updateAssignmentMutation = useMutation({
     mutationFn: ({ id, ...data }: { id: string } & Partial<CreateAssignmentData>) => 
-      apiRequest(`/api/assignments/${id}`, "PATCH", data),
+      apiRequest("PATCH", `/api/staff-assignments/${id}`, data),
     onSuccess: () => {
       toast({
         title: "Success",
         description: "Assignment updated successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-assignments"] });
     },
     onError: () => {
       toast({

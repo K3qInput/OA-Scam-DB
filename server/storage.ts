@@ -106,6 +106,31 @@ export interface IStorage {
     verifiedCases: number;
     altAccounts: number;
   }>;
+  
+  getDashboardStatistics(): Promise<{
+    totalCases: number;
+    pendingCases: number;
+    verifiedCases: number;
+    altAccounts: number;
+    contactMessages: {
+      total: number;
+      new: number;
+      inProgress: number;
+      resolved: number;
+    };
+    staffAssignments: {
+      total: number;
+      active: number;
+      completed: number;
+    };
+    staffMembers: {
+      total: number;
+      admin: number;
+      tribunalHead: number;
+      seniorStaff: number;
+      staff: number;
+    };
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -434,7 +459,7 @@ export class DatabaseStorage implements IStorage {
   async updatePasswordResetRequest(id: string, updates: Partial<InsertPasswordResetRequest>): Promise<PasswordResetRequest> {
     const [updatedRequest] = await db
       .update(passwordResetRequests)
-      .set({ ...updates, approvedAt: new Date() })
+      .set(updates)
       .where(eq(passwordResetRequests.id, id))
       .returning();
     return updatedRequest;
@@ -450,7 +475,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(caseUpdates)
       .where(eq(caseUpdates.caseId, caseId))
-      .orderBy(asc(caseUpdates.createdAt));
+      .orderBy(desc(caseUpdates.createdAt));
 
     const enrichedResults = await Promise.all(
       results.map(async (update) => {
@@ -465,29 +490,103 @@ export class DatabaseStorage implements IStorage {
     return enrichedResults;
   }
 
-  async getStatistics(): Promise<{
-    totalCases: number;
-    pendingCases: number;
-    verifiedCases: number;
-    altAccounts: number;
-  }> {
-    const [totalCases] = await db.select({ count: count() }).from(cases);
-    const [pendingCases] = await db
-      .select({ count: count() })
-      .from(cases)
-      .where(eq(cases.status, "pending"));
-    const [verifiedCases] = await db
-      .select({ count: count() })
-      .from(cases)
-      .where(eq(cases.status, "verified"));
-    const [altAccountsCount] = await db.select({ count: count() }).from(altAccounts);
+  // Contact message operations
+  async createContactMessage(messageData: InsertContactMessage): Promise<ContactMessage> {
+    const [newMessage] = await db.insert(contactMessages).values(messageData).returning();
+    return newMessage;
+  }
 
-    return {
-      totalCases: totalCases.count,
-      pendingCases: pendingCases.count,
-      verifiedCases: verifiedCases.count,
-      altAccounts: altAccountsCount.count,
-    };
+  async getContactMessages(filters?: { 
+    status?: string; 
+    priority?: string; 
+    assignedTo?: string 
+  }): Promise<(ContactMessage & { assignedToUser?: User })[]> {
+    let query = db.select().from(contactMessages);
+
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(contactMessages.status, filters.status as any));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(contactMessages.priority, filters.priority as any));
+    }
+    if (filters?.assignedTo) {
+      conditions.push(eq(contactMessages.assignedTo, filters.assignedTo));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const results = await query.orderBy(desc(contactMessages.createdAt));
+
+    const enrichedResults = await Promise.all(
+      results.map(async (message) => {
+        let assignedToUser = undefined;
+        if (message.assignedTo) {
+          assignedToUser = await this.getUser(message.assignedTo);
+        }
+        return { ...message, assignedToUser };
+      })
+    );
+
+    return enrichedResults;
+  }
+
+  async updateContactMessage(id: string, updates: Partial<InsertContactMessage>): Promise<ContactMessage> {
+    const [updatedMessage] = await db
+      .update(contactMessages)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(contactMessages.id, id))
+      .returning();
+    return updatedMessage;
+  }
+
+  async getContactMessage(id: string): Promise<(ContactMessage & { assignedToUser?: User }) | undefined> {
+    const [message] = await db.select().from(contactMessages).where(eq(contactMessages.id, id));
+    
+    if (!message) return undefined;
+
+    let assignedToUser = undefined;
+    if (message.assignedTo) {
+      assignedToUser = await this.getUser(message.assignedTo);
+    }
+
+    return { ...message, assignedToUser };
+  }
+
+  async updatePasswordResetRequest(id: string, updates: Partial<InsertPasswordResetRequest>): Promise<PasswordResetRequest> {
+    const [updatedRequest] = await db
+      .update(passwordResetRequests)
+      .set(updates)
+      .where(eq(passwordResetRequests.id, id))
+      .returning();
+    return updatedRequest;
+  }
+
+  async createCaseUpdate(updateData: InsertCaseUpdate): Promise<CaseUpdate> {
+    const [newUpdate] = await db.insert(caseUpdates).values(updateData).returning();
+    return newUpdate;
+  }
+
+  async getCaseUpdates(caseId: string): Promise<(CaseUpdate & { updatedByUser: User })[]> {
+    const results = await db
+      .select()
+      .from(caseUpdates)
+      .where(eq(caseUpdates.caseId, caseId))
+      .orderBy(desc(caseUpdates.createdAt));
+
+    const enrichedResults = await Promise.all(
+      results.map(async (update) => {
+        const updatedByUser = await this.getUser(update.updatedBy);
+        return {
+          ...update,
+          updatedByUser: updatedByUser!,
+        };
+      })
+    );
+
+    return enrichedResults;
   }
 
   // Contact message operations
@@ -661,6 +760,103 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tribunalProceedings.id, id))
       .returning();
     return updatedProceeding;
+  }
+
+  // Statistics operations
+  async getStatistics(): Promise<{
+    totalCases: number;
+    pendingCases: number;
+    verifiedCases: number;
+    altAccounts: number;
+  }> {
+    const [totalCasesResult] = await db.select({ count: count() }).from(cases);
+    const [pendingCasesResult] = await db.select({ count: count() }).from(cases).where(eq(cases.status, "pending"));
+    const [verifiedCasesResult] = await db.select({ count: count() }).from(cases).where(eq(cases.status, "verified"));
+    const [altAccountsResult] = await db.select({ count: count() }).from(altAccounts);
+
+    return {
+      totalCases: totalCasesResult.count,
+      pendingCases: pendingCasesResult.count,
+      verifiedCases: verifiedCasesResult.count,
+      altAccounts: altAccountsResult.count,
+    };
+  }
+
+  async getDashboardStatistics(): Promise<{
+    totalCases: number;
+    pendingCases: number;
+    verifiedCases: number;
+    altAccounts: number;
+    contactMessages: {
+      total: number;
+      new: number;
+      inProgress: number;
+      resolved: number;
+    };
+    staffAssignments: {
+      total: number;
+      active: number;
+      completed: number;
+    };
+    staffMembers: {
+      total: number;
+      admin: number;
+      tribunalHead: number;
+      seniorStaff: number;
+      staff: number;
+    };
+  }> {
+    const baseStats = await this.getStatistics();
+    
+    // Contact messages statistics
+    const [totalContactResult] = await db.select({ count: count() }).from(contactMessages);
+    const [newContactResult] = await db.select({ count: count() }).from(contactMessages).where(eq(contactMessages.status, "new"));
+    const [inProgressContactResult] = await db.select({ count: count() }).from(contactMessages).where(eq(contactMessages.status, "in_progress"));
+    const [resolvedContactResult] = await db.select({ count: count() }).from(contactMessages).where(eq(contactMessages.status, "resolved"));
+
+    // Staff assignments statistics
+    const [totalAssignmentsResult] = await db.select({ count: count() }).from(staffAssignments);
+    const [activeAssignmentsResult] = await db.select({ count: count() }).from(staffAssignments).where(eq(staffAssignments.isActive, true));
+    const [completedAssignmentsResult] = await db.select({ count: count() }).from(staffAssignments).where(sql`completed_at IS NOT NULL`);
+
+    // Staff members statistics
+    const [totalStaffResult] = await db.select({ count: count() }).from(users).where(
+      and(
+        eq(users.isActive, true),
+        or(
+          eq(users.role, "admin"),
+          eq(users.role, "tribunal_head"),
+          eq(users.role, "senior_staff"),
+          eq(users.role, "staff")
+        )
+      )
+    );
+    const [adminResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "admin")));
+    const [tribunalHeadResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "tribunal_head")));
+    const [seniorStaffResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "senior_staff")));
+    const [staffResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "staff")));
+
+    return {
+      ...baseStats,
+      contactMessages: {
+        total: totalContactResult.count,
+        new: newContactResult.count,
+        inProgress: inProgressContactResult.count,
+        resolved: resolvedContactResult.count,
+      },
+      staffAssignments: {
+        total: totalAssignmentsResult.count,
+        active: activeAssignmentsResult.count,
+        completed: completedAssignmentsResult.count,
+      },
+      staffMembers: {
+        total: totalStaffResult.count,
+        admin: adminResult.count,
+        tribunalHead: tribunalHeadResult.count,
+        seniorStaff: seniorStaffResult.count,
+        staff: staffResult.count,
+      },
+    };
   }
 }
 

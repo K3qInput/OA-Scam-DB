@@ -48,7 +48,7 @@ export default function TribunalProceedings() {
   });
 
   const { data: proceedings = [] } = useQuery({
-    queryKey: ["/api/tribunal/proceedings"],
+    queryKey: ["/api/tribunal-proceedings"],
   });
 
   const { data: cases = [] } = useQuery({
@@ -60,7 +60,7 @@ export default function TribunalProceedings() {
   });
 
   const createProceedingMutation = useMutation({
-    mutationFn: (data: CreateProceedingData) => apiRequest("/api/tribunal/proceedings", "POST", data),
+    mutationFn: (data: CreateProceedingData) => apiRequest("POST", "/api/tribunal-proceedings", data),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -68,7 +68,7 @@ export default function TribunalProceedings() {
       });
       setIsCreateDialogOpen(false);
       form.reset();
-      queryClient.invalidateQueries({ queryKey: ["/api/tribunal/proceedings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tribunal-proceedings"] });
     },
     onError: () => {
       toast({
@@ -81,13 +81,13 @@ export default function TribunalProceedings() {
 
   const updateProceedingMutation = useMutation({
     mutationFn: ({ id, ...data }: { id: string } & Partial<CreateProceedingData>) => 
-      apiRequest(`/api/tribunal/proceedings/${id}`, "PATCH", data),
+      apiRequest("PATCH", `/api/tribunal-proceedings/${id}`, data),
     onSuccess: () => {
       toast({
         title: "Success",
         description: "Proceeding updated successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/tribunal/proceedings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tribunal-proceedings"] });
     },
     onError: () => {
       toast({
