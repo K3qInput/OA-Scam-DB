@@ -10,8 +10,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Session configuration for Passport
+const jwtSecret = process.env.JWT_SECRET || "ownersalliance_secure_session_key_2025_default";
 app.use(session({
-  secret: process.env.JWT_SECRET || "fallback_secret_key_change_in_production",
+  secret: jwtSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {

@@ -3,13 +3,16 @@ import { Strategy as DiscordStrategy } from "passport-discord";
 import { storage } from "./storage";
 import { nanoid } from "nanoid";
 
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+// Use provided Discord credentials if environment variables are missing
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || "1403800460476944424";
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "7KEyIeFI7N6jJN48WG_ieSREyvftCdU0";
 const BASE_URL = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : "http://localhost:5000";
 
 if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
   console.error("Discord OAuth credentials are missing!");
   console.error("Please set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET environment variables");
+} else {
+  console.log("Discord OAuth configured with client ID:", DISCORD_CLIENT_ID);
 }
 
 // Serialize user for session

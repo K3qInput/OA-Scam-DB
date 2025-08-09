@@ -5,22 +5,24 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-// Construct DATABASE_URL from individual Replit PostgreSQL environment variables if not provided
+// Check for database URL and construct if needed
 let databaseUrl = process.env.DATABASE_URL;
 
-if (!databaseUrl) {
-  const { PGHOST, PGUSER, PGPASSWORD, PGDATABASE, PGPORT } = process.env;
+// If DATABASE_URL is not set or empty, construct from provided values
+if (!databaseUrl || databaseUrl.trim() === '') {
+  console.log("DATABASE_URL not found in environment, constructing from provided credentials...");
   
-  if (!PGHOST || !PGUSER || !PGPASSWORD || !PGDATABASE || !PGPORT) {
-    console.error("DATABASE_URL is not set and required PostgreSQL environment variables are missing!");
-    console.error("Available env vars:", Object.keys(process.env).filter(k => k.includes('PG') || k.includes('DB')));
-    throw new Error(
-      "DATABASE_URL must be set or PostgreSQL environment variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE, PGPORT) must be provided.",
-    );
-  }
+  // Use the credentials provided by the user
+  const PGHOST = "ep-rough-credit-afoxp554.c-2.us-west-2.aws.neon.tech";
+  const PGUSER = "neondb_owner";
+  const PGPASSWORD = "npg_pcaF4XtDmx3s";
+  const PGDATABASE = "neondb";
+  const PGPORT = "5432";
   
-  databaseUrl = `postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
-  console.log("Constructed DATABASE_URL from environment variables");
+  databaseUrl = `postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require`;
+  console.log("Constructed DATABASE_URL from hardcoded credentials");
+} else {
+  console.log("Using DATABASE_URL from environment");
 }
 
 console.log("Database connection established with URL:", databaseUrl.substring(0, 30) + "...");
