@@ -159,29 +159,29 @@ export default function Dashboard() {
   const pagination = casesData?.pagination || { page: 1, pages: 1, total: 0 };
 
   return (
-    <div className="flex h-screen bg-oa-black">
+    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       <Sidebar />
       
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto">
-        <Header onSearch={handleSearch} />
+        <Header />
         
         {/* Page Header */}
-        <div className="px-8 py-6 border-b border-oa-surface bg-gradient-to-r from-oa-black to-oa-dark animate-fade-in">
+        <div className="px-8 py-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-900/90 to-black/90 backdrop-blur-sm animate-fade-in">
           <div className="flex items-center justify-between">
             <div className="animate-slide-in-left">
-              <h2 className="text-3xl font-bold text-white oa-glow-text">Scam Database</h2>
-              <p className="text-gray-300 mt-1">Comprehensive fraud tracking and management portal</p>
+              <h2 className="text-3xl font-bold text-white drop-shadow-lg">Tribunal Management Dashboard</h2>
+              <p className="text-gray-200 mt-1">Comprehensive fraud tracking and tribunal operations portal</p>
             </div>
             
             <div className="flex items-center space-x-4 animate-slide-in-right">
               <div className="flex items-center space-x-2">
-                <Filter className="text-gray-400 h-4 w-4" />
+                <Filter className="text-gray-300 h-4 w-4" />
                 <Select onValueChange={handleStatusFilter}>
-                  <SelectTrigger className="oa-input w-40">
+                  <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white w-40">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-oa-dark border-oa-surface">
+                  <SelectContent className="bg-gray-800 border-gray-600">
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending">Pending Review</SelectItem>
                     <SelectItem value="verified">Verified</SelectItem>
@@ -192,10 +192,10 @@ export default function Dashboard() {
               </div>
               
               <Select onValueChange={handleTypeFilter}>
-                <SelectTrigger className="oa-input w-40">
+                <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white w-40">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
-                <SelectContent className="bg-oa-dark border-oa-surface">
+                <SelectContent className="bg-gray-800 border-gray-600">
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="financial_scam">Financial Scam</SelectItem>
                   <SelectItem value="identity_theft">Identity Theft</SelectItem>
@@ -217,38 +217,42 @@ export default function Dashboard() {
         <div className="flex">
           {/* Left Content Area */}
           <div className="flex-1 p-8">
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Enhanced Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-slide-in-up">
               <StatsCard
                 title="Total Cases"
                 value={statistics?.totalCases || 0}
-                icon={<TrendingUp className="h-6 w-6 text-red-400" />}
-                trend={5}
-                className="animate-slide-in-up"
+                icon={<TrendingUp className="h-6 w-6" />}
+                trend="+12%"
+                trendDirection="up"
+                animationDelay={0}
               />
               
               <StatsCard
                 title="Pending Review"
                 value={statistics?.pendingCases || 0}
-                icon={<AlertTriangle className="h-6 w-6 text-yellow-400" />}
-                trend={-2}
-                className="animate-slide-in-up"
+                icon={<AlertTriangle className="h-6 w-6" />}
+                trend="-5%"
+                trendDirection="down"
+                animationDelay={100}
               />
               
               <StatsCard
-                title="Verified Scams"
+                title="Verified Cases"
                 value={statistics?.verifiedCases || 0}
-                icon={<CheckCircle className="h-6 w-6 text-red-400" />}
-                trend={8}
-                className="animate-slide-in-up"
+                icon={<CheckCircle className="h-6 w-6" />}
+                trend="+8%"
+                trendDirection="up"
+                animationDelay={200}
               />
               
               <StatsCard
-                title="Alt Accounts"
-                value={statistics?.altAccounts || 0}
-                icon={<Users className="h-6 w-6 text-blue-400" />}
-                trend={3}
-                className="animate-slide-in-up"
+                title="Staff Members"
+                value={statistics?.staffMembers?.total || 0}
+                icon={<Users className="h-6 w-6" />}
+                trend="+2"
+                trendDirection="up"
+                animationDelay={300}
               />
             </div>
 
@@ -263,7 +267,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <EnhancedCard className="animate-fade-in">
+              <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl animate-fade-in">
                 <DataTable
                   cases={cases}
                   onViewCase={(caseId) => setSelectedCaseId(caseId)}
@@ -317,7 +321,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
-              </EnhancedCard>
+              </div>
             )}
           </div>
 

@@ -46,34 +46,88 @@ EnhancedCard.displayName = "EnhancedCard";
 
 export default EnhancedCard;
 
-// Specialized card components
-export function StatsCard({ title, value, icon, trend, className = "", ...props }: {
+// Import necessary components
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import AnimatedCounter from "./animated-counter";
+
+// Enhanced StatsCard component
+interface StatsCardProps {
   title: string;
-  value: string | number;
+  value: number | string;
+  subtitle?: string;
   icon?: React.ReactNode;
-  trend?: number;
+  trend?: string;
+  trendDirection?: 'up' | 'down' | 'neutral';
+  animationDelay?: number;
   className?: string;
-  [key: string]: any;
-}) {
+}
+
+export function StatsCard({ 
+  title, 
+  value, 
+  subtitle, 
+  icon, 
+  trend, 
+  trendDirection = 'neutral', 
+  animationDelay = 0,
+  className = ""
+}: StatsCardProps) {
+  const getTrendColor = () => {
+    switch (trendDirection) {
+      case 'up': return 'text-green-400';
+      case 'down': return 'text-red-400';
+      default: return 'text-gray-400';
+    }
+  };
+
+  const getTrendIcon = () => {
+    switch (trendDirection) {
+      case 'up': return <TrendingUp className="h-4 w-4" />;
+      case 'down': return <TrendingDown className="h-4 w-4" />;
+      default: return <Minus className="h-4 w-4" />;
+    }
+  };
+
   return (
-    <EnhancedCard variant="stats" className={cn("animate-slide-in-up", className)} {...props}>
+    <div 
+      className={`bg-gray-900/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 hover:border-red-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/10 ${className}`}
+      style={{ animationDelay: `${animationDelay}ms` }}
+    >
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-400 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-white">{value}</p>
-          {trend && (
-            <p className={`text-xs mt-1 ${trend > 0 ? 'text-green-400' : trend < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-              {trend > 0 ? '↗' : trend < 0 ? '↘' : '→'} {Math.abs(trend)}%
-            </p>
-          )}
+        <div className="flex-1">
+          <div className="flex items-center space-x-3">
+            {icon && (
+              <div className="p-2 bg-red-500/20 rounded-lg text-red-400">
+                {icon}
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium text-gray-300 mb-1">{title}</p>
+              <div className="flex items-center space-x-2">
+                {typeof value === 'number' ? (
+                  <AnimatedCounter 
+                    value={value}
+                    className="text-2xl font-bold text-white"
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-white">{value}</span>
+                )}
+              </div>
+              {subtitle && (
+                <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
+              )}
+            </div>
+          </div>
         </div>
-        {icon && (
-          <div className="p-3 bg-red-500/20 rounded-lg">
-            {icon}
+        
+        {trend && (
+          <div className={`flex items-center space-x-1 ${getTrendColor()}`}>
+            {getTrendIcon()}
+            <span className="text-sm font-medium">{trend}</span>
           </div>
         )}
       </div>
-    </EnhancedCard>
+    </div>
   );
 }
 

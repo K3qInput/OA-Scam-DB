@@ -15,9 +15,10 @@ import { Input } from "@/components/ui/input";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
+  onSearch?: (query: string) => void;
 }
 
-export default function Header({ onMenuToggle }: HeaderProps) {
+export default function Header({ onMenuToggle, onSearch }: HeaderProps) {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -49,8 +50,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               type="search"
               placeholder="Search cases, users..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-oa-gray/20 border-oa-gray/30 text-white placeholder:text-slate-400"
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                onSearch?.(e.target.value);
+              }}
+              className="pl-10 bg-gray-800/80 border-gray-600 text-white placeholder:text-gray-400"
               data-testid="input-search"
             />
           </div>
