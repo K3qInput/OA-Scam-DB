@@ -39,6 +39,20 @@ interface UploadedFile {
 }
 
 export default function NewCase() {
+  return (
+    <div className="flex h-screen bg-oa-black">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Header />
+        <div className="px-8 py-6">
+          <EnhancedNewCase />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function LegacyNewCase() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();

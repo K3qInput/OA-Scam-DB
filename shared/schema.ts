@@ -87,6 +87,10 @@ export const cases = pgTable("cases", {
   currency: varchar("currency").default("USD"),
   tags: text("tags").array(),
   metadata: jsonb("metadata"),
+  aiAnalysis: jsonb("ai_analysis"), // AI analysis results
+  aiRiskScore: integer("ai_risk_score"), // 1-10 risk assessment
+  aiUrgencyLevel: varchar("ai_urgency_level"), // low, medium, high, critical
+  moderationAdvice: text("moderation_advice"), // AI-generated advice for mods
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   resolvedAt: timestamp("resolved_at"),

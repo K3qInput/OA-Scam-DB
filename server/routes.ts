@@ -20,6 +20,7 @@ import fs from "fs";
 import { sendPasswordResetApprovalRequest, sendPasswordResetToken } from "./email";
 import crypto from "crypto";
 import passport from "passport";
+import { analyzeCaseReport, generateModerationAdvice } from "./ai-analysis";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key_change_in_production";
 
@@ -262,6 +263,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         reporterUserId: req.user.id,
       });
+
+      // Perform AI analysis on the case
+      let aiAnalysis, moderationAdvice;
+      try {
+        console.log("🧠 Performing AI analysis for case:", caseData.title);
+        aiAnalysis = await analyzeCaseReport({
+          title: caseData.title,
+          description: caseData.description,
+          type: caseData.type,
+          amountInvolved: caseData.amountInvolved?.toString(),
+          reportedUserId: caseData.reportedUserId,
+          evidenceFiles: [] // Will be populated if evidence is uploaded
+        });
+
+        moderationAdvice = await generateModerationAdvice(caseData, aiAnalysis);
+        
+        // Add AI analysis to case data
+        Object.assign(caseData, {
+          aiAnalysis,
+          aiRiskScore: aiAnalysis.riskScore,
+          aiUrgencyLevel: aiAnalysis.urgencyLevel,
+          moderationAdvice
+        });
+
+        console.log("✅ AI analysis completed:", {
+          riskScore: aiAnalysis.riskScore,
+          urgencyLevel: aiAnalysis.urgencyLevel,
+          confidence: aiAnalysis.confidence
+        });
+      } catch (aiError) {
+        console.error("❌ AI analysis failed:", aiError);
+        // Continue without AI analysis - case creation should not fail
+      }
+
       const newCase = await storage.createCase(caseData);
 
       // Create case update for creation
@@ -269,10 +304,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         caseId: newCase.id,
         updatedBy: req.user.id,
         updateType: "creation",
-        comment: "Case created",
+        comment: aiAnalysis ? 
+          `Case created with AI analysis (Risk: ${aiAnalysis.riskScore}/10, Urgency: ${aiAnalysis.urgencyLevel})` :
+          "Case created",
       });
 
-      res.status(201).json(newCase);
+      res.status(201).json({
+        ...newCase,
+        aiAnalysis,
+        moderationAdvice
+      });
     } catch (error) {
       console.error("Error creating case:", error);
       res.status(400).json({ message: "Invalid case data" });
