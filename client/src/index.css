@@ -5,62 +5,80 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0, 0%, 4%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(0, 0%, 10%);
-  --muted-foreground: hsl(0, 5%, 64%);
-  --popover: hsl(0, 0%, 10%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(0, 0%, 10%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(0, 0%, 16%);
-  --input: hsl(0, 0%, 16%);
-  --primary: hsl(0, 84%, 60%);
-  --primary-foreground: hsl(0, 0%, 98%);
-  --secondary: hsl(0, 0%, 16%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(0, 0%, 16%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 84%, 60%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(0, 84%, 60%);
-  --radius: 0.5rem;
+  --background: hsl(222, 84%, 4%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 8%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 47%, 11%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 47%, 11%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --primary: hsl(0, 85%, 58%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 85%, 58%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(0, 85%, 58%);
+  --radius: 0.75rem;
 
-  /* OA Custom Colors */
-  --oa-black: hsl(0, 0%, 4%);
-  --oa-dark: hsl(0, 0%, 10%);
-  --oa-surface: hsl(0, 0%, 16%);
-  --oa-red: hsl(0, 84%, 60%);
-  --oa-red-dark: hsl(0, 78%, 55%);
-  --oa-red-light: hsl(0, 84%, 70%);
-  --oa-gray: hsl(218, 11%, 42%);
-  --oa-light-gray: hsl(218, 11%, 65%);
-  --oa-accent: hsl(15, 85%, 55%);
-  --oa-success: hsl(120, 84%, 45%);
-  --oa-warning: hsl(45, 84%, 55%);
-  --oa-info: hsl(200, 84%, 55%);
+  /* Enhanced OA Color Palette */
+  --oa-black: hsl(222, 84%, 4%);
+  --oa-dark: hsl(217, 32%, 8%);
+  --oa-surface: hsl(217, 32%, 17%);
+  --oa-light: hsl(220, 13%, 69%);
+  --oa-border: hsl(217, 32%, 20%);
+  
+  /* Brand Colors */
+  --oa-red: hsl(0, 85%, 58%);
+  --oa-red-dark: hsl(0, 78%, 50%);
+  --oa-red-light: hsl(0, 85%, 68%);
+  --oa-red-muted: hsl(0, 85%, 15%);
+  
+  /* Accent Colors */
+  --oa-orange: hsl(25, 85%, 58%);
+  --oa-amber: hsl(45, 85%, 58%);
+  --oa-emerald: hsl(142, 85%, 48%);
+  --oa-blue: hsl(217, 85%, 58%);
+  --oa-indigo: hsl(243, 85%, 62%);
+  --oa-purple: hsl(262, 85%, 62%);
+  
+  /* Functional Colors */
+  --oa-success: hsl(142, 85%, 48%);
+  --oa-warning: hsl(45, 85%, 58%);
+  --oa-error: hsl(0, 85%, 58%);
+  --oa-info: hsl(217, 85%, 58%);
+  
+  /* Semantic Colors */
+  --oa-gray: hsl(220, 13%, 45%);
+  --oa-gray-light: hsl(220, 13%, 69%);
+  --oa-gray-dark: hsl(220, 13%, 25%);
 }
 
 .dark {
-  --background: hsl(0, 0%, 4%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(0, 0%, 10%);
-  --muted-foreground: hsl(0, 5%, 64%);
-  --popover: hsl(0, 0%, 10%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(0, 0%, 10%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(0, 0%, 16%);
-  --input: hsl(0, 0%, 16%);
-  --primary: hsl(0, 84%, 60%);
-  --primary-foreground: hsl(0, 0%, 98%);
-  --secondary: hsl(0, 0%, 16%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(0, 0%, 16%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 84%, 60%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(0, 84%, 60%);
+  --background: hsl(222, 84%, 4%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 8%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 47%, 11%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 47%, 11%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --primary: hsl(0, 85%, 58%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 85%, 58%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(0, 85%, 58%);
 }
 
 @layer base {
@@ -70,9 +88,10 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    background-color: var(--oa-black);
+    background: linear-gradient(135deg, var(--oa-black) 0%, hsl(220, 84%, 3%) 50%, var(--oa-dark) 100%);
     color: var(--foreground);
     font-family: 'Inter', sans-serif;
+    min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {

@@ -19,14 +19,36 @@ import { Plus, Gavel, Calendar, Users, FileText, Clock, CheckCircle, XCircle, Al
 const createProceedingSchema = z.object({
   caseId: z.string().min(1, "Case is required"),
   proceedingType: z.enum(["hearing", "review", "appeal", "final_decision"]),
-  scheduledDate: z.string().min(1, "Scheduled date is required"),
+  scheduledDate: z.string().min(1, "Scheduled date is required").transform(str => new Date(str)),
   panelMembers: z.array(z.string()).default([]),
   decisionReason: z.string().default(""),
   nextSteps: z.string().default(""),
   isPublic: z.boolean().default(false),
+  outcome: z.enum(["approved", "rejected", "pending", "deferred"]).optional(),
 });
 
 type CreateProceedingData = z.infer<typeof createProceedingSchema>;
+
+interface TribunalProceeding {
+  id: string;
+  caseId: string;
+  proceedingType: string;
+  scheduledDate: string;
+  outcome?: string;
+  panelMembers: string[];
+  decisionReason: string;
+  nextSteps: string;
+  isPublic: boolean;
+  createdAt: string;
+}
+
+interface Case {
+  id: string;
+  caseNumber: string;
+  reportedUserId: string;
+  title: string;
+  status: string;
+}
 
 export default function TribunalProceedings() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -47,16 +69,19 @@ export default function TribunalProceedings() {
     },
   });
 
-  const { data: proceedings = [] } = useQuery({
+  const { data: proceedings = [] } = useQuery<TribunalProceeding[]>({
     queryKey: ["/api/tribunal-proceedings"],
   });
 
-  const { data: cases = [] } = useQuery({
+  const { data: casesData } = useQuery({
     queryKey: ["/api/cases"],
   });
 
+  const cases = (casesData as any)?.cases || [];
+
   const { data: staffMembers = [] } = useQuery({
     queryKey: ["/api/staff"],
+    initialData: [],
   });
 
   const createProceedingMutation = useMutation({
@@ -80,8 +105,8 @@ export default function TribunalProceedings() {
   });
 
   const updateProceedingMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & Partial<CreateProceedingData>) => 
-      apiRequest("PATCH", `/api/tribunal-proceedings/${id}`, data),
+    mutationFn: ({ id, outcome, ...data }: { id: string; outcome?: string } & Partial<CreateProceedingData>) => 
+      apiRequest("PATCH", `/api/tribunal-proceedings/${id}`, { outcome, ...data }),
     onSuccess: () => {
       toast({
         title: "Success",

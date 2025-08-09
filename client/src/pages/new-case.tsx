@@ -114,10 +114,9 @@ export default function NewCase() {
   const onSubmit = async (data: NewCaseFormData) => {
     setIsSubmitting(true);
     
-    // Convert amount to decimal if provided
+    // Keep amount as string for API consistency
     const processedData = {
       ...data,
-      amountInvolved: data.amountInvolved ? parseFloat(data.amountInvolved) : undefined,
     };
 
     try {
@@ -127,13 +126,22 @@ export default function NewCase() {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    files.forEach(file => {
+  const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select files smaller than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setUploadedFiles(prev => [...prev, { file, description: "" }]);
     });
-    // Reset input
-    event.target.value = "";
   };
 
   const removeFile = (index: number) => {
@@ -141,9 +149,9 @@ export default function NewCase() {
   };
 
   const updateFileDescription = (index: number, description: string) => {
-    setUploadedFiles(prev => prev.map((item, i) => 
-      i === index ? { ...item, description } : item
-    ));
+    setUploadedFiles(prev => 
+      prev.map((item, i) => i === index ? { ...item, description } : item)
+    );
   };
 
   return (
@@ -353,7 +361,7 @@ export default function NewCase() {
                             type="file"
                             multiple
                             accept="image/*,.pdf,.txt,.csv"
-                            onChange={handleFileUpload}
+                            onChange={addFile}
                             className="hidden"
                             id="file-upload"
                           />

@@ -22,10 +22,12 @@ export default function ContactManagement() {
 
   const { data: contactMessages = [] } = useQuery({
     queryKey: ["/api/contact"],
+    initialData: [],
   });
 
   const { data: staffMembers = [] } = useQuery({
     queryKey: ["/api/staff"],
+    initialData: [],
   });
 
   const updateMessageMutation = useMutation({

@@ -13,6 +13,14 @@ export default function CaseDetails() {
   const { data: caseData, isLoading } = useQuery({
     queryKey: ["/api/cases", id],
     enabled: !!id,
+    queryFn: async () => {
+      const response = await fetch(`/api/cases/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+      });
+      return response.json();
+    },
   });
 
   return (

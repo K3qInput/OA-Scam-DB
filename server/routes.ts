@@ -697,10 +697,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tribunal-proceedings", authenticateToken, requireTribunalHead, async (req: any, res) => {
     try {
-      const proceedingData = insertTribunalProceedingSchema.parse({
-        ...req.body,
+      const data = req.body;
+      // Convert string date to Date object for proper validation
+      const processedData = {
+        ...data,
         chairperson: req.user.id,
-      });
+        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : undefined,
+      };
+      const proceedingData = insertTribunalProceedingSchema.parse(processedData);
       const newProceeding = await storage.createTribunalProceeding(proceedingData);
       res.status(201).json(newProceeding);
     } catch (error) {

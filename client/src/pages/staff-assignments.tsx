@@ -47,18 +47,23 @@ export default function StaffAssignments() {
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["/api/staff-assignments"],
+    initialData: [],
   });
 
   const { data: staffMembers = [] } = useQuery({
     queryKey: ["/api/staff"],
+    initialData: [],
   });
 
-  const { data: cases = [] } = useQuery({
+  const { data: casesData } = useQuery({
     queryKey: ["/api/cases"],
   });
 
+  const cases = (casesData as any)?.cases || [];
+
   const { data: contactMessages = [] } = useQuery({
     queryKey: ["/api/contact"],
+    initialData: [],
   });
 
   const createAssignmentMutation = useMutation({
@@ -119,9 +124,8 @@ export default function StaffAssignments() {
 
   const completeAssignment = (assignmentId: string) => {
     updateAssignmentMutation.mutate({ 
-      id: assignmentId, 
-      completedAt: new Date().toISOString(),
-      isActive: false 
+      id: assignmentId,
+      notes: "Assignment completed"
     });
   };
 
