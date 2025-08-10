@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 export interface AIAnalysisResult {
   riskScore: number; // 1-10 scale
@@ -23,6 +23,19 @@ export async function analyzeCaseReport(caseData: {
   evidenceFiles?: Array<{ name: string; description?: string }>;
 }): Promise<AIAnalysisResult> {
   try {
+    // If OpenAI is not configured, return fallback analysis
+    if (!openai) {
+      return {
+        riskScore: 5,
+        fraudIndicators: ['Manual review required - AI analysis not available'],
+        recommendedActions: ['Conduct thorough investigation', 'Verify reporter identity', 'Review evidence'],
+        urgencyLevel: 'medium',
+        similarPatterns: [],
+        evidenceAssessment: 'AI analysis not configured - manual review recommended',
+        summary: 'OpenAI API not configured, manual review required',
+        confidence: 0.1
+      };
+    }
     const prompt = `
 You are an expert fraud analyst for OwnersAlliance. Analyze this scam report and provide a comprehensive assessment.
 
@@ -100,6 +113,10 @@ Focus on:
 
 export async function generateModerationAdvice(caseData: any, analysis: AIAnalysisResult): Promise<string> {
   try {
+    // If OpenAI is not configured, return fallback advice
+    if (!openai) {
+      return 'AI guidance unavailable - OpenAI not configured. Please conduct standard investigation procedures and manual review.';
+    }
     const prompt = `
 Based on this fraud analysis, provide specific moderation advice:
 
