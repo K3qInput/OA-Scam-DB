@@ -883,12 +883,14 @@ export function registerRoutes(app: Express): Server {
       )).flat().filter(Boolean)];
 
       const filteredUsers = Array.from(
-        new Map(allUsers.map(user => [user.id, user])).values()
+        new Map(allUsers.map(user => [user?.id, user])).values()
       ).filter((user: any) => 
-        user.username.toLowerCase().includes(searchTerm) ||
-        user.firstName.toLowerCase().includes(searchTerm) ||
-        user.lastName.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm)
+        user && (
+          user.username?.toLowerCase().includes(searchTerm) ||
+          user.firstName?.toLowerCase().includes(searchTerm) ||
+          user.lastName?.toLowerCase().includes(searchTerm) ||
+          user.email?.toLowerCase().includes(searchTerm)
+        )
       );
 
       res.json(filteredUsers.slice(0, 20)); // Limit to 20 results
