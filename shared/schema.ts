@@ -211,8 +211,182 @@ export const tribunalProceedings = pgTable("tribunal_proceedings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Vouch/Devouch System
+export const vouchStatusEnum = pgEnum("vouch_status", ["vouched", "devouched"]);
+
+export const vouches = pgTable("vouches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  targetUserId: varchar("target_user_id").notNull(), // User being vouched/devouched
+  voucherUserId: varchar("voucher_user_id").notNull(), // User making the vouch/devouch
+  status: vouchStatusEnum("status").notNull(),
+  reason: text("reason").notNull(),
+  evidence: text("evidence"), // Optional supporting evidence
+  weight: integer("weight").default(1).notNull(), // Vouch weight based on voucher's reputation
+  isAnonymous: boolean("is_anonymous").default(false).notNull(),
+  expiresAt: timestamp("expires_at"), // Vouches can expire
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Public Dispute Resolutions with Anonymous Voting
+export const disputeResolutions = pgTable("dispute_resolutions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  proposedResolution: text("proposed_resolution").notNull(),
+  proposedBy: varchar("proposed_by").notNull(), // Staff member
+  isPublic: boolean("is_public").default(true).notNull(),
+  votingStartDate: timestamp("voting_start_date").defaultNow().notNull(),
+  votingEndDate: timestamp("voting_end_date").notNull(),
+  minimumVotes: integer("minimum_votes").default(10).notNull(),
+  status: varchar("status").default("active").notNull(), // "active", "completed", "cancelled"
+  finalDecision: varchar("final_decision"), // "approved", "rejected", "modified"
+  implementation: text("implementation"), // How the decision will be implemented
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const voteChoiceEnum = pgEnum("vote_choice", ["approve", "reject", "abstain"]);
+
+export const disputeVotes = pgTable("dispute_votes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  disputeId: varchar("dispute_id").notNull(),
+  voterHash: varchar("voter_hash").notNull().unique(), // Anonymized voter identifier
+  choice: voteChoiceEnum("choice").notNull(),
+  reason: text("reason"), // Optional explanation
+  weight: integer("weight").default(1).notNull(), // Vote weight based on user reputation
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Anti-Alt Detection System
+export const altDetectionReports = pgTable("alt_detection_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  suspectedAltUserId: varchar("suspected_alt_user_id").notNull(),
+  mainAccountUserId: varchar("main_account_user_id"),
+  reportedBy: varchar("reported_by"),
+  detectionMethod: varchar("detection_method").notNull(), // "ip_match", "device_fingerprint", "behavior_pattern", "manual_report"
+  confidenceScore: integer("confidence_score").notNull(), // 1-100 confidence level
+  evidence: jsonb("evidence").notNull(), // Detailed evidence data
+  status: varchar("status").default("pending").notNull(), // "pending", "confirmed", "false_positive", "investigating"
+  reviewedBy: varchar("reviewed_by"),
+  reviewNotes: text("review_notes"),
+  actionTaken: varchar("action_taken"), // "warning", "suspension", "ban", "none"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+// Device/IP tracking for alt detection
+export const userSessions = pgTable("user_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  ipAddress: varchar("ip_address").notNull(),
+  userAgent: text("user_agent").notNull(),
+  deviceFingerprint: varchar("device_fingerprint"), // Browser fingerprint
+  sessionToken: varchar("session_token").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastActivity: timestamp("last_activity").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Staff Management and Permissions
+export const staffPermissions = pgTable("staff_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  permission: varchar("permission").notNull(), // "manage_cases", "review_appeals", "ban_users", etc.
+  grantedBy: varchar("granted_by").notNull(),
+  grantedAt: timestamp("granted_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+export const staffPerformance = pgTable("staff_performance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  staffId: varchar("staff_id").notNull(),
+  period: varchar("period").notNull(), // "2025-01", "Q1-2025", etc.
+  casesHandled: integer("cases_handled").default(0).notNull(),
+  casesResolved: integer("cases_resolved").default(0).notNull(),
+  averageResolutionTime: integer("average_resolution_time"), // in hours
+  qualityScore: integer("quality_score"), // 1-100 based on reviews
+  commendations: integer("commendations").default(0).notNull(),
+  warnings: integer("warnings").default(0).notNull(),
+  notes: text("notes"),
+  evaluatedBy: varchar("evaluated_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Utility Area - Staff Guides and Resources
+export const utilityCategories = pgTable("utility_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  icon: varchar("icon"),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const utilityDocuments = pgTable("utility_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").notNull(),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  description: text("description"),
+  tags: text("tags").array(),
+  authorId: varchar("author_id").notNull(),
+  lastEditedBy: varchar("last_edited_by"),
+  version: integer("version").default(1).notNull(),
+  isPublic: boolean("is_public").default(false).notNull(), // Staff only by default
+  accessLevel: varchar("access_level").default("staff").notNull(), // "all", "staff", "senior_staff", "admin"
+  downloadCount: integer("download_count").default(0).notNull(),
+  rating: decimal("rating", { precision: 3, scale: 2 }), // Average rating
+  ratingCount: integer("rating_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const documentRatings = pgTable("document_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  rating: integer("rating").notNull(), // 1-5 stars
+  review: text("review"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// User Reputation System
+export const userReputation = pgTable("user_reputation", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  reputationScore: integer("reputation_score").default(100).notNull(), // Starting score: 100
+  vouchesReceived: integer("vouches_received").default(0).notNull(),
+  devouchesReceived: integer("devouches_received").default(0).notNull(),
+  casesReported: integer("cases_reported").default(0).notNull(),
+  validReports: integer("valid_reports").default(0).notNull(),
+  falseReports: integer("false_reports").default(0).notNull(),
+  communityScore: integer("community_score").default(0).notNull(),
+  trustLevel: varchar("trust_level").default("bronze").notNull(), // "bronze", "silver", "gold", "platinum"
+  lastCalculated: timestamp("last_calculated").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Audit Logs for all actions
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  action: varchar("action").notNull(), // "create_case", "vouch_user", "vote_dispute", etc.
+  entityType: varchar("entity_type").notNull(), // "case", "user", "dispute", etc.
+  entityId: varchar("entity_id"),
+  oldValues: jsonb("old_values"),
+  newValues: jsonb("new_values"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  additionalData: jsonb("additional_data"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   reportedCases: many(cases, { relationName: "reportedUser" }),
   reporterCases: many(cases, { relationName: "reporterUser" }),
   staffCases: many(cases, { relationName: "staffUser" }),
@@ -220,6 +394,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   altAccountsAsPrimary: many(altAccounts, { relationName: "primaryUser" }),
   altAccountsAsAlt: many(altAccounts, { relationName: "altUser" }),
   passwordResetRequests: many(passwordResetRequests),
+  vouchesGiven: many(vouches, { relationName: "voucher" }),
+  vouchesReceived: many(vouches, { relationName: "target" }),
+  reputation: one(userReputation),
+  permissions: many(staffPermissions),
+  performance: many(staffPerformance),
+  sessions: many(userSessions),
+  auditLogs: many(auditLogs),
+  utilityDocuments: many(utilityDocuments),
 }));
 
 export const casesRelations = relations(cases, ({ one, many }) => ({
@@ -341,6 +523,132 @@ export const tribunalProceedingsRelations = relations(tribunalProceedings, ({ on
   }),
 }));
 
+// New Relations for all the new tables
+export const vouchesRelations = relations(vouches, ({ one }) => ({
+  targetUser: one(users, {
+    fields: [vouches.targetUserId],
+    references: [users.id],
+    relationName: "target",
+  }),
+  voucherUser: one(users, {
+    fields: [vouches.voucherUserId],
+    references: [users.id],
+    relationName: "voucher",
+  }),
+}));
+
+export const disputeResolutionsRelations = relations(disputeResolutions, ({ one, many }) => ({
+  case: one(cases, {
+    fields: [disputeResolutions.caseId],
+    references: [cases.id],
+  }),
+  proposedByUser: one(users, {
+    fields: [disputeResolutions.proposedBy],
+    references: [users.id],
+  }),
+  votes: many(disputeVotes),
+}));
+
+export const disputeVotesRelations = relations(disputeVotes, ({ one }) => ({
+  dispute: one(disputeResolutions, {
+    fields: [disputeVotes.disputeId],
+    references: [disputeResolutions.id],
+  }),
+}));
+
+export const altDetectionReportsRelations = relations(altDetectionReports, ({ one }) => ({
+  suspectedAltUser: one(users, {
+    fields: [altDetectionReports.suspectedAltUserId],
+    references: [users.id],
+  }),
+  mainAccountUser: one(users, {
+    fields: [altDetectionReports.mainAccountUserId],
+    references: [users.id],
+  }),
+  reportedByUser: one(users, {
+    fields: [altDetectionReports.reportedBy],
+    references: [users.id],
+  }),
+  reviewedByUser: one(users, {
+    fields: [altDetectionReports.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const staffPermissionsRelations = relations(staffPermissions, ({ one }) => ({
+  user: one(users, {
+    fields: [staffPermissions.userId],
+    references: [users.id],
+  }),
+  grantedByUser: one(users, {
+    fields: [staffPermissions.grantedBy],
+    references: [users.id],
+  }),
+}));
+
+export const staffPerformanceRelations = relations(staffPerformance, ({ one }) => ({
+  staff: one(users, {
+    fields: [staffPerformance.staffId],
+    references: [users.id],
+  }),
+  evaluatedByUser: one(users, {
+    fields: [staffPerformance.evaluatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const utilityCategoriesRelations = relations(utilityCategories, ({ many }) => ({
+  documents: many(utilityDocuments),
+}));
+
+export const utilityDocumentsRelations = relations(utilityDocuments, ({ one, many }) => ({
+  category: one(utilityCategories, {
+    fields: [utilityDocuments.categoryId],
+    references: [utilityCategories.id],
+  }),
+  author: one(users, {
+    fields: [utilityDocuments.authorId],
+    references: [users.id],
+  }),
+  lastEditedByUser: one(users, {
+    fields: [utilityDocuments.lastEditedBy],
+    references: [users.id],
+  }),
+  ratings: many(documentRatings),
+}));
+
+export const documentRatingsRelations = relations(documentRatings, ({ one }) => ({
+  document: one(utilityDocuments, {
+    fields: [documentRatings.documentId],
+    references: [utilityDocuments.id],
+  }),
+  user: one(users, {
+    fields: [documentRatings.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userReputationRelations = relations(userReputation, ({ one }) => ({
+  user: one(users, {
+    fields: [userReputation.userId],
+    references: [users.id],
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -399,6 +707,71 @@ export const insertTribunalProceedingSchema = createInsertSchema(tribunalProceed
   updatedAt: true,
 });
 
+// New insert schemas for all new tables
+export const insertVouchSchema = createInsertSchema(vouches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDisputeResolutionSchema = createInsertSchema(disputeResolutions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDisputeVoteSchema = createInsertSchema(disputeVotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAltDetectionReportSchema = createInsertSchema(altDetectionReports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStaffPermissionSchema = createInsertSchema(staffPermissions).omit({
+  id: true,
+  grantedAt: true,
+});
+
+export const insertStaffPerformanceSchema = createInsertSchema(staffPerformance).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUtilityCategorySchema = createInsertSchema(utilityCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUtilityDocumentSchema = createInsertSchema(utilityDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDocumentRatingSchema = createInsertSchema(documentRatings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserReputationSchema = createInsertSchema(userReputation).omit({
+  id: true,
+  lastCalculated: true,
+  updatedAt: true,
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1),
@@ -426,4 +799,30 @@ export type StaffAssignment = typeof staffAssignments.$inferSelect;
 export type InsertStaffAssignment = z.infer<typeof insertStaffAssignmentSchema>;
 export type TribunalProceeding = typeof tribunalProceedings.$inferSelect;
 export type InsertTribunalProceeding = z.infer<typeof insertTribunalProceedingSchema>;
+
+// New types for all new tables
+export type Vouch = typeof vouches.$inferSelect;
+export type InsertVouch = z.infer<typeof insertVouchSchema>;
+export type DisputeResolution = typeof disputeResolutions.$inferSelect;
+export type InsertDisputeResolution = z.infer<typeof insertDisputeResolutionSchema>;
+export type DisputeVote = typeof disputeVotes.$inferSelect;
+export type InsertDisputeVote = z.infer<typeof insertDisputeVoteSchema>;
+export type AltDetectionReport = typeof altDetectionReports.$inferSelect;
+export type InsertAltDetectionReport = z.infer<typeof insertAltDetectionReportSchema>;
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+export type StaffPermission = typeof staffPermissions.$inferSelect;
+export type InsertStaffPermission = z.infer<typeof insertStaffPermissionSchema>;
+export type StaffPerformance = typeof staffPerformance.$inferSelect;
+export type InsertStaffPerformance = z.infer<typeof insertStaffPerformanceSchema>;
+export type UtilityCategory = typeof utilityCategories.$inferSelect;
+export type InsertUtilityCategory = z.infer<typeof insertUtilityCategorySchema>;
+export type UtilityDocument = typeof utilityDocuments.$inferSelect;
+export type InsertUtilityDocument = z.infer<typeof insertUtilityDocumentSchema>;
+export type DocumentRating = typeof documentRatings.$inferSelect;
+export type InsertDocumentRating = z.infer<typeof insertDocumentRatingSchema>;
+export type UserReputation = typeof userReputation.$inferSelect;
+export type InsertUserReputation = z.infer<typeof insertUserReputationSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type LoginData = z.infer<typeof loginSchema>;

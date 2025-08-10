@@ -15,6 +15,10 @@ import StaffManagement from "@/pages/staff-management";
 import TribunalProceedings from "@/pages/tribunal-proceedings";
 import ContactManagement from "@/pages/contact-management";
 import StaffAssignments from "@/pages/staff-assignments";
+import Vouches from "@/pages/vouches";
+import Disputes from "@/pages/disputes";
+import AltDetection from "@/pages/alt-detection";
+import Utilities from "@/pages/utilities";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -53,6 +57,18 @@ function Router() {
       </Route>
       <Route path="/staff-assignments">
         {hasToken ? <StaffAssignments /> : <DiscordLogin />}
+      </Route>
+      <Route path="/vouches">
+        {hasToken ? <Vouches /> : <DiscordLogin />}
+      </Route>
+      <Route path="/disputes">
+        {hasToken ? <Disputes /> : <DiscordLogin />}
+      </Route>
+      <Route path="/alt-detection">
+        {hasToken ? <AltDetection /> : <DiscordLogin />}
+      </Route>
+      <Route path="/utilities">
+        {hasToken ? <Utilities /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>

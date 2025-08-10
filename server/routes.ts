@@ -10,7 +10,19 @@ import {
   insertCaseUpdateSchema,
   insertContactMessageSchema,
   insertStaffAssignmentSchema,
-  insertTribunalProceedingSchema
+  insertTribunalProceedingSchema,
+  insertVouchSchema,
+  insertDisputeResolutionSchema,
+  insertDisputeVoteSchema,
+  insertAltDetectionReportSchema,
+  insertUserSessionSchema,
+  insertStaffPermissionSchema,
+  insertStaffPerformanceSchema,
+  insertUtilityCategorySchema,
+  insertUtilityDocumentSchema,
+  insertDocumentRatingSchema,
+  insertUserReputationSchema,
+  insertAuditLogSchema
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -73,178 +85,238 @@ const authenticateToken = async (req: any, res: any, next: any) => {
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid token" });
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 
-// Staff-only middleware (includes all staff levels)
-const requireStaff = (req: any, res: any, next: any) => {
-  if (!req.user || !["staff", "senior_staff", "tribunal_head", "admin"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Staff access required" });
-  }
-  next();
-};
-
-// Senior staff middleware
-const requireSeniorStaff = (req: any, res: any, next: any) => {
-  if (!req.user || !["senior_staff", "tribunal_head", "admin"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Senior staff access required" });
-  }
-  next();
-};
-
-// Tribunal head middleware
-const requireTribunalHead = (req: any, res: any, next: any) => {
-  if (!req.user || !["tribunal_head", "admin"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Tribunal head access required" });
-  }
-  next();
-};
-
-// Admin-only middleware
-const requireAdmin = (req: any, res: any, next: any) => {
-  if (!req.user || req.user.role !== "admin") {
-    return res.status(403).json({ message: "Admin access required" });
-  }
-  next();
-};
-
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize admin user if not exists
-  const initializeAdmin = async () => {
-    try {
-      const adminUser = await storage.getUserByUsername("admin");
-      if (!adminUser) {
-        await storage.createUser({
-          username: "admin",
-          email: "admin@oa.com",
-          passwordHash: "admin123", // Default password, should be changed
-          role: "admin",
-          firstName: "Admin",
-          lastName: "User",
-        });
-        console.log("Admin user created with email: admin@oa.com, password: admin123");
-      }
-    } catch (error) {
-      console.error("Failed to initialize admin user:", error);
+// Role-based auth middleware
+const requireRole = (roles: string[]) => {
+  return (req: any, res: any, next: any) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions" });
     }
+    next();
   };
+};
 
-  await initializeAdmin();
+// Discord OAuth configuration
+const configureDiscordAuth = (app: Express) => {
+  if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
+    console.log("Discord OAuth not configured - missing client ID or secret");
+    return;
+  }
 
-  // Discord OAuth routes
-  app.get("/api/auth/discord", passport.authenticate("discord"));
-  app.get("/auth/discord", passport.authenticate("discord"));
-
-  app.get("/api/auth/discord/callback", 
-    passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
-    async (req: any, res) => {
-      try {
-        // Generate JWT token for the authenticated user
-        const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, { expiresIn: "24h" });
-        
-        // Redirect to frontend with token
-        res.redirect(`/login?token=${token}&discord_success=true`);
-      } catch (error) {
-        console.error("Discord callback error:", error);
-        res.redirect("/login?error=auth_failed");
-      }
-    }
-  );
-
-  app.get("/auth/discord/callback", 
-    passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
-    async (req: any, res) => {
-      try {
-        // Generate JWT token for the authenticated user
-        const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, { expiresIn: "24h" });
-        
-        // Redirect to frontend with token
-        res.redirect(`/login?token=${token}&discord_success=true`);
-      } catch (error) {
-        console.error("Discord callback error:", error);
-        res.redirect("/login?error=auth_failed");
-      }
-    }
-  );
-
-  // Authentication routes
-  app.post("/api/login", async (req, res) => {
+  const DiscordStrategy = require("passport-discord").Strategy;
+  
+  passport.use(new DiscordStrategy({
+    clientID: process.env.DISCORD_CLIENT_ID,
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    callbackURL: "/api/auth/discord/callback",
+    scope: ["identify", "email"],
+  }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
     try {
-      console.log("=== LOGIN REQUEST ===");
-      console.log("Body:", req.body);
+      // Check if user exists with this Discord ID
+      let user = await storage.getUserByDiscordId(profile.id);
       
+      if (user) {
+        // Update Discord info if needed
+        user = await storage.updateUser(user.id, {
+          discordUsername: profile.username,
+          discordDiscriminator: profile.discriminator,
+          discordAvatar: profile.avatar,
+        });
+      } else {
+        // Create new user
+        user = await storage.createUser({
+          username: profile.username,
+          email: profile.email,
+          passwordHash: null, // No password for OAuth users
+          role: "user",
+          firstName: profile.username,
+          lastName: "",
+          profileImageUrl: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null,
+          isActive: true,
+          department: null,
+          specialization: null,
+          staffId: null,
+          phoneNumber: null,
+          officeLocation: null,
+          emergencyContact: null,
+          certifications: [],
+          discordId: profile.id,
+          discordUsername: profile.username,
+          discordDiscriminator: profile.discriminator,
+          discordAvatar: profile.avatar,
+        });
+      }
+
+      return done(null, user);
+    } catch (error) {
+      return done(error, null);
+    }
+  }));
+
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: string, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
+  });
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+};
+
+// Generate anonymized voter hash for dispute voting
+const generateVoterHash = (userId: string, disputeId: string): string => {
+  return crypto.createHash('sha256').update(`${userId}-${disputeId}-salt`).digest('hex');
+};
+
+// Audit logging helper
+const createAuditLog = async (userId: string, action: string, entityType: string, entityId?: string, oldValues?: any, newValues?: any, req?: any) => {
+  await storage.createAuditLog({
+    userId,
+    action,
+    entityType,
+    entityId,
+    oldValues,
+    newValues,
+    ipAddress: req?.ip || req?.connection?.remoteAddress,
+    userAgent: req?.get('User-Agent'),
+    additionalData: null,
+  });
+};
+
+export function registerRoutes(app: Express): Server {
+  // Configure Discord OAuth
+  configureDiscordAuth(app);
+
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "healthy", timestamp: new Date().toISOString() });
+  });
+
+  // ============ AUTHENTICATION ROUTES ============
+  
+  // Login route
+  app.post("/api/auth/login", async (req, res) => {
+    try {
       const { username, password } = loginSchema.parse(req.body);
-      console.log("Parsed credentials:", { username, passwordLength: password.length });
       
       const user = await storage.authenticateUser(username, password);
-      console.log("Authentication result:", !!user);
-      
       if (!user) {
-        console.log("Authentication failed - returning 401");
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "24h" });
-      console.log("Token generated, sending response");
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
       
+      // Create user session
+      await storage.createUserSession({
+        userId: user.id,
+        ipAddress: req.ip || req.connection?.remoteAddress || "unknown",
+        userAgent: req.get('User-Agent') || "unknown",
+        deviceFingerprint: null,
+        sessionToken: token,
+        isActive: true,
+        lastActivity: new Date(),
+      });
+
+      await createAuditLog(user.id, "login", "user", user.id, null, null, req);
+
       res.json({ 
         token, 
-        user: { 
-          id: user.id, 
-          email: user.email, 
-          username: user.username, 
-          role: user.role 
-        } 
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl
+        }
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "Database error", error: error.message });
+      res.status(400).json({ message: "Invalid request data" });
     }
   });
 
-  app.get("/api/me", authenticateToken, (req: any, res) => {
-    const { passwordHash, ...userWithoutPassword } = req.user;
-    res.json(userWithoutPassword);
+  // Discord OAuth routes
+  app.get("/api/auth/discord", passport.authenticate("discord"));
+  
+  app.get("/api/auth/discord/callback", 
+    passport.authenticate("discord", { failureRedirect: "/login" }),
+    async (req: any, res) => {
+      const user = req.user;
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+      
+      // Create user session
+      await storage.createUserSession({
+        userId: user.id,
+        ipAddress: req.ip || req.connection?.remoteAddress || "unknown",
+        userAgent: req.get('User-Agent') || "unknown",
+        deviceFingerprint: null,
+        sessionToken: token,
+        isActive: true,
+        lastActivity: new Date(),
+      });
+
+      await createAuditLog(user.id, "discord_login", "user", user.id, null, null, req);
+      
+      // Redirect to frontend with token
+      res.redirect(`/dashboard?token=${token}`);
+    }
+  );
+
+  // Get current user
+  app.get("/api/auth/user", authenticateToken, async (req: any, res) => {
+    const user = req.user;
+    const reputation = await storage.getUserReputation(user.id);
+    
+    res.json({
+      ...user,
+      reputation
+    });
   });
 
-  // Case routes
-  app.get("/api/cases", async (req, res) => {
+  // Logout
+  app.post("/api/auth/logout", authenticateToken, async (req: any, res) => {
+    await createAuditLog(req.user.id, "logout", "user", req.user.id, null, null, req);
+    res.json({ message: "Logged out successfully" });
+  });
+
+  // ============ CASE MANAGEMENT ROUTES ============
+  
+  // Get cases with filtering
+  app.get("/api/cases", authenticateToken, async (req: any, res) => {
     try {
-      const { status, type, search, page = "1", limit = "10" } = req.query;
-      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+      const { status, type, search, limit = 50, offset = 0 } = req.query;
       
-      const filters = {
-        status: status as string,
-        type: type as string,
-        search: search as string,
-        limit: parseInt(limit as string),
-        offset,
-      };
-
-      const cases = await storage.getCases(filters);
-      const total = await storage.getCaseCount({
-        status: filters.status,
-        type: filters.type,
-        search: filters.search,
+      const cases = await storage.getCases({
+        status,
+        type,
+        search,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
       });
-
-      res.json({
-        cases,
-        pagination: {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
-          total,
-          pages: Math.ceil(total / parseInt(limit as string)),
-        },
-      });
+      
+      const total = await storage.getCaseCount({ status, type, search });
+      
+      res.json({ cases, total });
     } catch (error) {
-      console.error("Error fetching cases:", error);
+      console.error("Get cases error:", error);
       res.status(500).json({ message: "Failed to fetch cases" });
     }
   });
 
-  app.get("/api/cases/:id", async (req, res) => {
+  // Get specific case
+  app.get("/api/cases/:id", authenticateToken, async (req, res) => {
     try {
       const caseData = await storage.getCase(req.params.id);
       if (!caseData) {
@@ -252,661 +324,587 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(caseData);
     } catch (error) {
-      console.error("Error fetching case:", error);
+      console.error("Get case error:", error);
       res.status(500).json({ message: "Failed to fetch case" });
     }
   });
 
-  app.post("/api/cases", authenticateToken, async (req: any, res) => {
+  // Create new case
+  app.post("/api/cases", authenticateToken, upload.array("evidence"), async (req: any, res) => {
     try {
-      const caseData = insertCaseSchema.parse({
-        ...req.body,
-        reporterUserId: req.user.id,
-      });
+      const validatedData = insertCaseSchema.parse(req.body);
+      
+      // AI analysis if available
+      let aiAnalysis = null;
+      let aiRiskScore = null;
+      let aiUrgencyLevel = null;
+      let moderationAdvice = null;
 
-      // Perform AI analysis on the case
-      let aiAnalysis, moderationAdvice;
       try {
-        console.log("🧠 Performing AI analysis for case:", caseData.title);
-        aiAnalysis = await analyzeCaseReport({
-          title: caseData.title,
-          description: caseData.description,
-          type: caseData.type,
-          amountInvolved: caseData.amountInvolved?.toString(),
-          reportedUserId: caseData.reportedUserId,
-          evidenceFiles: [] // Will be populated if evidence is uploaded
-        });
-
-        moderationAdvice = await generateModerationAdvice(caseData, aiAnalysis);
-        
-        // Add AI analysis to case data
-        Object.assign(caseData, {
-          aiAnalysis,
-          aiRiskScore: aiAnalysis.riskScore,
-          aiUrgencyLevel: aiAnalysis.urgencyLevel,
-          moderationAdvice
-        });
-
-        console.log("✅ AI analysis completed:", {
-          riskScore: aiAnalysis.riskScore,
-          urgencyLevel: aiAnalysis.urgencyLevel,
-          confidence: aiAnalysis.confidence
-        });
+        if (req.body.description && req.body.description.length > 50) {
+          aiAnalysis = await analyzeCaseReport(req.body.description);
+          aiRiskScore = aiAnalysis?.riskScore || null;
+          aiUrgencyLevel = aiAnalysis?.urgencyLevel || null;
+          moderationAdvice = await generateModerationAdvice(req.body.description, req.body.type);
+        }
       } catch (aiError) {
-        console.error("❌ AI analysis failed:", aiError);
-        // Continue without AI analysis - case creation should not fail
+        console.log("AI analysis not available:", aiError);
       }
 
-      const newCase = await storage.createCase(caseData);
-
-      // Create case update for creation
-      await storage.createCaseUpdate({
-        caseId: newCase.id,
-        updatedBy: req.user.id,
-        updateType: "creation",
-        comment: aiAnalysis ? 
-          `Case created with AI analysis (Risk: ${aiAnalysis.riskScore}/10, Urgency: ${aiAnalysis.urgencyLevel})` :
-          "Case created",
-      });
-
-      res.status(201).json({
-        ...newCase,
+      const newCase = await storage.createCase({
+        ...validatedData,
+        reporterUserId: req.user.id,
         aiAnalysis,
-        moderationAdvice
+        aiRiskScore,
+        aiUrgencyLevel,
+        moderationAdvice,
       });
+
+      // Handle file uploads if any
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          await storage.createEvidence({
+            caseId: newCase.id,
+            fileName: file.filename,
+            originalName: file.originalname,
+            fileType: file.mimetype,
+            fileSize: file.size,
+            filePath: file.path,
+            uploadedBy: req.user.id,
+            description: req.body.evidenceDescription || "Case evidence",
+          });
+        }
+      }
+
+      await createAuditLog(req.user.id, "create_case", "case", newCase.id, null, newCase, req);
+
+      res.status(201).json(newCase);
     } catch (error) {
-      console.error("Error creating case:", error);
-      res.status(400).json({ message: "Invalid case data" });
+      console.error("Create case error:", error);
+      res.status(400).json({ message: "Failed to create case" });
     }
   });
 
-  app.patch("/api/cases/:id", authenticateToken, requireStaff, async (req: any, res) => {
+  // Update case
+  app.put("/api/cases/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
-      const updates = req.body;
       const oldCase = await storage.getCase(req.params.id);
-      
       if (!oldCase) {
         return res.status(404).json({ message: "Case not found" });
       }
 
-      const updatedCase = await storage.updateCase(req.params.id, {
-        ...updates,
-        staffUserId: req.user.id,
-      });
-
-      // Create case update for status change
-      if (updates.status && updates.status !== oldCase.status) {
-        await storage.createCaseUpdate({
-          caseId: updatedCase.id,
-          updatedBy: req.user.id,
-          updateType: "status_change",
-          oldValue: oldCase.status,
-          newValue: updates.status,
-          comment: `Status changed from ${oldCase.status} to ${updates.status}`,
-        });
-      }
+      const updatedCase = await storage.updateCase(req.params.id, req.body);
+      
+      await createAuditLog(req.user.id, "update_case", "case", req.params.id, oldCase, updatedCase, req);
 
       res.json(updatedCase);
     } catch (error) {
-      console.error("Error updating case:", error);
+      console.error("Update case error:", error);
       res.status(400).json({ message: "Failed to update case" });
     }
   });
 
-  // Evidence routes
-  app.post("/api/cases/:caseId/evidence", authenticateToken, upload.single("file"), async (req: any, res) => {
+  // ============ VOUCH/DEVOUCH SYSTEM ROUTES ============
+  
+  // Get vouches for a user
+  app.get("/api/vouches/:userId", authenticateToken, async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+      const vouches = await storage.getVouches(req.params.userId);
+      res.json(vouches);
+    } catch (error) {
+      console.error("Get vouches error:", error);
+      res.status(500).json({ message: "Failed to fetch vouches" });
+    }
+  });
+
+  // Create vouch/devouch (one per user limit)
+  app.post("/api/vouches", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = insertVouchSchema.parse(req.body);
+      
+      // Check if user is trying to vouch themselves
+      if (validatedData.targetUserId === req.user.id) {
+        return res.status(400).json({ message: "You cannot vouch for yourself" });
       }
 
-      const evidence = await storage.createEvidence({
-        caseId: req.params.caseId,
-        fileName: req.file.filename,
-        originalName: req.file.originalname,
-        fileType: req.file.mimetype,
-        fileSize: req.file.size,
-        filePath: req.file.path,
-        uploadedBy: req.user.id,
-        description: req.body.description || "",
+      // Get voucher's reputation for weight calculation
+      const voucherReputation = await storage.getUserReputation(req.user.id);
+      const weight = voucherReputation?.trustLevel === "platinum" ? 3 : 
+                    voucherReputation?.trustLevel === "gold" ? 2 : 1;
+
+      const vouch = await storage.createVouch({
+        ...validatedData,
+        voucherUserId: req.user.id,
+        weight,
       });
 
-      res.status(201).json(evidence);
+      await createAuditLog(req.user.id, "create_vouch", "vouch", vouch.id, null, vouch, req);
+
+      res.status(201).json(vouch);
     } catch (error) {
-      console.error("Error uploading evidence:", error);
-      res.status(500).json({ message: "Failed to upload evidence" });
+      console.error("Create vouch error:", error);
+      if (error instanceof Error && error.message.includes("already vouched")) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Failed to create vouch" });
+      }
     }
   });
 
-  app.get("/api/evidence/:id/download", authenticateToken, async (req, res) => {
+  // ============ DISPUTE RESOLUTION & VOTING ROUTES ============
+  
+  // Get active disputes for voting
+  app.get("/api/disputes/active", authenticateToken, async (req, res) => {
     try {
-      // Get evidence details from database first
-      const evidenceList = await storage.getEvidenceByCase(""); // This needs to be fixed to get by evidence ID
-      const evidence = evidenceList.find(e => e.id === req.params.id);
+      const disputes = await storage.getActiveDisputes();
+      res.json(disputes);
+    } catch (error) {
+      console.error("Get active disputes error:", error);
+      res.status(500).json({ message: "Failed to fetch active disputes" });
+    }
+  });
+
+  // Create dispute resolution
+  app.post("/api/disputes", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
+    try {
+      const validatedData = insertDisputeResolutionSchema.parse(req.body);
       
-      if (!evidence) {
-        return res.status(404).json({ message: "Evidence not found" });
-      }
+      const dispute = await storage.createDisputeResolution({
+        ...validatedData,
+        proposedBy: req.user.id,
+      });
 
-      const filePath = evidence.filePath;
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "File not found on disk" });
-      }
+      await createAuditLog(req.user.id, "create_dispute", "dispute", dispute.id, null, dispute, req);
 
-      res.download(filePath, evidence.originalName);
+      res.status(201).json(dispute);
     } catch (error) {
-      console.error("Error downloading evidence:", error);
-      res.status(500).json({ message: "Failed to download evidence" });
+      console.error("Create dispute error:", error);
+      res.status(400).json({ message: "Failed to create dispute resolution" });
     }
   });
 
-  // Alt account routes
-  app.get("/api/alt-accounts/:userId", authenticateToken, requireStaff, async (req, res) => {
+  // Vote on dispute (anonymous)
+  app.post("/api/disputes/:id/vote", authenticateToken, async (req: any, res) => {
     try {
-      const altAccounts = await storage.getAltAccounts(req.params.userId);
-      res.json(altAccounts);
+      const validatedData = insertDisputeVoteSchema.parse(req.body);
+      
+      // Generate anonymous voter hash
+      const voterHash = generateVoterHash(req.user.id, req.params.id);
+      
+      // Get voter's reputation for weight calculation
+      const voterReputation = await storage.getUserReputation(req.user.id);
+      const weight = voterReputation?.trustLevel === "platinum" ? 3 : 
+                    voterReputation?.trustLevel === "gold" ? 2 : 1;
+
+      const vote = await storage.createDisputeVote({
+        ...validatedData,
+        disputeId: req.params.id,
+        voterHash,
+        weight,
+      });
+
+      // Log vote anonymously (no user ID in logs for privacy)
+      await storage.createAuditLog({
+        userId: "anonymous", // Don't log actual user ID for vote privacy
+        action: "vote_dispute",
+        entityType: "dispute",
+        entityId: req.params.id,
+        oldValues: null,
+        newValues: { choice: validatedData.choice, weight },
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        additionalData: null,
+      });
+
+      res.status(201).json({ message: "Vote recorded successfully" });
     } catch (error) {
-      console.error("Error fetching alt accounts:", error);
-      res.status(500).json({ message: "Failed to fetch alt accounts" });
+      console.error("Vote dispute error:", error);
+      if (error instanceof Error && error.message.includes("already voted")) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Failed to record vote" });
+      }
     }
   });
 
-  // Appeal routes
-  app.get("/api/appeals", authenticateToken, requireStaff, async (req, res) => {
+  // ============ ALT DETECTION SYSTEM ROUTES ============
+  
+  // Get alt detection reports
+  app.get("/api/alt-detection", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
-      const appeals = await storage.getAppeals();
+      const { status } = req.query;
+      const reports = await storage.getAltDetectionReports(status);
+      res.json(reports);
+    } catch (error) {
+      console.error("Get alt detection reports error:", error);
+      res.status(500).json({ message: "Failed to fetch alt detection reports" });
+    }
+  });
+
+  // Create alt detection report
+  app.post("/api/alt-detection", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = insertAltDetectionReportSchema.parse(req.body);
+      
+      const report = await storage.createAltDetectionReport({
+        ...validatedData,
+        reportedBy: validatedData.reportedBy || req.user.id,
+      });
+
+      await createAuditLog(req.user.id, "create_alt_report", "alt_report", report.id, null, report, req);
+
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Create alt detection report error:", error);
+      res.status(400).json({ message: "Failed to create alt detection report" });
+    }
+  });
+
+  // Update alt detection report
+  app.put("/api/alt-detection/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
+    try {
+      const updatedReport = await storage.updateAltDetectionReport(req.params.id, req.body);
+      
+      await createAuditLog(req.user.id, "update_alt_report", "alt_report", req.params.id, null, updatedReport, req);
+
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Update alt detection report error:", error);
+      res.status(400).json({ message: "Failed to update alt detection report" });
+    }
+  });
+
+  // ============ STAFF MANAGEMENT ROUTES ============
+  
+  // Get staff members
+  app.get("/api/staff", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req, res) => {
+    try {
+      const staff = await storage.getStaffMembers();
+      res.json(staff);
+    } catch (error) {
+      console.error("Get staff error:", error);
+      res.status(500).json({ message: "Failed to fetch staff members" });
+    }
+  });
+
+  // Get staff permissions
+  app.get("/api/staff/:id/permissions", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req, res) => {
+    try {
+      const permissions = await storage.getStaffPermissions(req.params.id);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Get staff permissions error:", error);
+      res.status(500).json({ message: "Failed to fetch staff permissions" });
+    }
+  });
+
+  // Grant staff permission
+  app.post("/api/staff/permissions", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
+    try {
+      const validatedData = insertStaffPermissionSchema.parse(req.body);
+      
+      const permission = await storage.createStaffPermission({
+        ...validatedData,
+        grantedBy: req.user.id,
+      });
+
+      await createAuditLog(req.user.id, "grant_permission", "permission", permission.id, null, permission, req);
+
+      res.status(201).json(permission);
+    } catch (error) {
+      console.error("Grant permission error:", error);
+      res.status(400).json({ message: "Failed to grant permission" });
+    }
+  });
+
+  // Get staff performance
+  app.get("/api/staff/:id/performance", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const { period } = req.query;
+      const performance = await storage.getStaffPerformance(req.params.id, period);
+      res.json(performance);
+    } catch (error) {
+      console.error("Get staff performance error:", error);
+      res.status(500).json({ message: "Failed to fetch staff performance" });
+    }
+  });
+
+  // Create staff performance review
+  app.post("/api/staff/performance", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
+    try {
+      const validatedData = insertStaffPerformanceSchema.parse(req.body);
+      
+      const performance = await storage.createStaffPerformance({
+        ...validatedData,
+        evaluatedBy: req.user.id,
+      });
+
+      await createAuditLog(req.user.id, "create_performance_review", "performance", performance.id, null, performance, req);
+
+      res.status(201).json(performance);
+    } catch (error) {
+      console.error("Create performance review error:", error);
+      res.status(400).json({ message: "Failed to create performance review" });
+    }
+  });
+
+  // ============ UTILITY SYSTEM ROUTES ============
+  
+  // Get utility categories
+  app.get("/api/utility/categories", authenticateToken, async (req, res) => {
+    try {
+      const categories = await storage.getUtilityCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Get utility categories error:", error);
+      res.status(500).json({ message: "Failed to fetch utility categories" });
+    }
+  });
+
+  // Create utility category
+  app.post("/api/utility/categories", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const validatedData = insertUtilityCategorySchema.parse(req.body);
+      
+      const category = await storage.createUtilityCategory(validatedData);
+
+      await createAuditLog(req.user.id, "create_utility_category", "utility_category", category.id, null, category, req);
+
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Create utility category error:", error);
+      res.status(400).json({ message: "Failed to create utility category" });
+    }
+  });
+
+  // Get utility documents
+  app.get("/api/utility/documents", authenticateToken, async (req: any, res) => {
+    try {
+      const { categoryId } = req.query;
+      const documents = await storage.getUtilityDocuments(categoryId);
+      
+      // Filter by access level
+      const filteredDocuments = documents.filter(doc => {
+        if (doc.accessLevel === "all") return true;
+        if (doc.accessLevel === "staff" && ["admin", "tribunal_head", "senior_staff", "staff"].includes(req.user.role)) return true;
+        if (doc.accessLevel === "senior_staff" && ["admin", "tribunal_head", "senior_staff"].includes(req.user.role)) return true;
+        if (doc.accessLevel === "admin" && req.user.role === "admin") return true;
+        return false;
+      });
+      
+      res.json(filteredDocuments);
+    } catch (error) {
+      console.error("Get utility documents error:", error);
+      res.status(500).json({ message: "Failed to fetch utility documents" });
+    }
+  });
+
+  // Create utility document
+  app.post("/api/utility/documents", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
+    try {
+      const validatedData = insertUtilityDocumentSchema.parse(req.body);
+      
+      const document = await storage.createUtilityDocument({
+        ...validatedData,
+        authorId: req.user.id,
+      });
+
+      await createAuditLog(req.user.id, "create_utility_document", "utility_document", document.id, null, document, req);
+
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Create utility document error:", error);
+      res.status(400).json({ message: "Failed to create utility document" });
+    }
+  });
+
+  // Update utility document
+  app.put("/api/utility/documents/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
+    try {
+      const updatedDocument = await storage.updateUtilityDocument(req.params.id, {
+        ...req.body,
+        lastEditedBy: req.user.id,
+      });
+
+      await createAuditLog(req.user.id, "update_utility_document", "utility_document", req.params.id, null, updatedDocument, req);
+
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error("Update utility document error:", error);
+      res.status(400).json({ message: "Failed to update utility document" });
+    }
+  });
+
+  // Rate utility document
+  app.post("/api/utility/documents/:id/rate", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = insertDocumentRatingSchema.parse(req.body);
+      
+      const rating = await storage.createDocumentRating({
+        ...validatedData,
+        documentId: req.params.id,
+        userId: req.user.id,
+      });
+
+      res.status(201).json(rating);
+    } catch (error) {
+      console.error("Rate document error:", error);
+      res.status(400).json({ message: "Failed to rate document" });
+    }
+  });
+
+  // ============ USER REPUTATION ROUTES ============
+  
+  // Get user reputation
+  app.get("/api/reputation/:userId", authenticateToken, async (req, res) => {
+    try {
+      const reputation = await storage.getUserReputation(req.params.userId);
+      if (!reputation) {
+        return res.status(404).json({ message: "Reputation not found" });
+      }
+      res.json(reputation);
+    } catch (error) {
+      console.error("Get reputation error:", error);
+      res.status(500).json({ message: "Failed to fetch reputation" });
+    }
+  });
+
+  // ============ STATISTICS & DASHBOARD ROUTES ============
+  
+  // Get dashboard statistics
+  app.get("/api/statistics", authenticateToken, async (req, res) => {
+    try {
+      const stats = await storage.getDashboardStatistics();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get statistics error:", error);
+      res.status(500).json({ message: "Failed to fetch statistics" });
+    }
+  });
+
+  // ============ AUDIT LOG ROUTES ============
+  
+  // Get audit logs
+  app.get("/api/audit-logs", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
+    try {
+      const { userId, entityType, limit = 100, offset = 0 } = req.query;
+      const logs = await storage.getAuditLogs(userId, entityType);
+      
+      const paginatedLogs = logs.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+      
+      res.json({
+        logs: paginatedLogs,
+        total: logs.length
+      });
+    } catch (error) {
+      console.error("Get audit logs error:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  // ============ EXISTING ROUTES (LEGACY COMPATIBILITY) ============
+  
+  // Contact messages, appeals, tribunal proceedings, etc. (keeping existing functionality)
+  app.get("/api/contact", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
+    try {
+      const { status, priority, search, limit = 50, offset = 0 } = req.query;
+      
+      const messages = await storage.getContactMessages({
+        status,
+        priority,
+        search,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+      
+      res.json(messages);
+    } catch (error) {
+      console.error("Get contact messages error:", error);
+      res.status(500).json({ message: "Failed to fetch contact messages" });
+    }
+  });
+
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const validatedData = insertContactMessageSchema.parse(req.body);
+      const message = await storage.createContactMessage(validatedData);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Create contact message error:", error);
+      res.status(400).json({ message: "Failed to create contact message" });
+    }
+  });
+
+  app.get("/api/appeals", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
+    try {
+      const { caseId } = req.query;
+      const appeals = await storage.getAppeals(caseId);
       res.json(appeals);
     } catch (error) {
-      console.error("Error fetching appeals:", error);
+      console.error("Get appeals error:", error);
       res.status(500).json({ message: "Failed to fetch appeals" });
     }
   });
 
   app.post("/api/appeals", authenticateToken, async (req: any, res) => {
     try {
-      const appealData = insertAppealSchema.parse(req.body);
-      const newAppeal = await storage.createAppeal({
-        ...appealData,
+      const validatedData = insertAppealSchema.parse(req.body);
+      
+      const appeal = await storage.createAppeal({
+        ...validatedData,
         appealedBy: req.user.id,
       });
-      res.status(201).json(newAppeal);
+
+      await createAuditLog(req.user.id, "create_appeal", "appeal", appeal.id, null, appeal, req);
+
+      res.status(201).json(appeal);
     } catch (error) {
-      console.error("Error creating appeal:", error);
-      res.status(400).json({ message: "Invalid appeal data" });
+      console.error("Create appeal error:", error);
+      res.status(400).json({ message: "Failed to create appeal" });
     }
   });
 
-  app.patch("/api/appeals/:id", authenticateToken, requireStaff, async (req: any, res) => {
+  // User search route for frontend components
+  app.get("/api/users/search", authenticateToken, async (req: any, res) => {
     try {
-      const updates = req.body;
-      const updatedAppeal = await storage.updateAppeal(req.params.id, {
-        ...updates,
-        reviewedBy: req.user.id,
-      });
-      res.json(updatedAppeal);
-    } catch (error) {
-      console.error("Error updating appeal:", error);
-      res.status(400).json({ message: "Failed to update appeal" });
-    }
-  });
-
-  // Password reset routes
-  app.post("/api/auth/request-password-reset", authenticateToken, async (req: any, res) => {
-    try {
-      const { reason } = insertPasswordResetRequestSchema.parse(req.body);
-      
-      // Only allow admin user to request password reset
-      if (req.user.email !== "admin@oa.com") {
-        return res.status(403).json({ message: "Only admin can request password reset" });
+      const { q } = req.query;
+      if (!q || q.length < 2) {
+        return res.json([]);
       }
 
-      const request = await storage.createPasswordResetRequest({
-        userId: req.user.id,
-        reason,
-        status: "pending",
-      });
+      const searchTerm = q.toLowerCase();
+      const users = await storage.getStaffMembers();
+      const allUsers = [...users, ...(await Promise.all(
+        (await storage.getCases()).map(async (c) => {
+          const reportedUser = await storage.getUser(c.reportedUserId);
+          const reporterUser = await storage.getUser(c.reporterUserId);
+          return [reportedUser, reporterUser];
+        })
+      )).flat().filter(Boolean)];
 
-      // Send email to approval address
-      try {
-        await sendPasswordResetApprovalRequest(request.id, req.user.email, reason);
-        res.json({ message: "Password reset request sent for approval" });
-      } catch (emailError) {
-        console.error("Failed to send approval email:", emailError);
-        res.status(500).json({ message: "Failed to send approval email" });
-      }
+      const filteredUsers = Array.from(
+        new Map(allUsers.map(user => [user.id, user])).values()
+      ).filter((user: any) => 
+        user.username.toLowerCase().includes(searchTerm) ||
+        user.firstName.toLowerCase().includes(searchTerm) ||
+        user.lastName.toLowerCase().includes(searchTerm) ||
+        user.email.toLowerCase().includes(searchTerm)
+      );
+
+      res.json(filteredUsers.slice(0, 20)); // Limit to 20 results
     } catch (error) {
-      console.error("Error requesting password reset:", error);
-      res.status(400).json({ message: "Invalid request data" });
+      console.error("User search error:", error);
+      res.status(500).json({ message: "Failed to search users" });
     }
   });
 
-  // Admin approval routes (accessible via email links)
-  app.get("/api/admin/approve-password-reset/:requestId", async (req, res) => {
-    try {
-      const requestId = req.params.requestId;
-      const token = crypto.randomBytes(32).toString("hex");
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-      const allRequests = await storage.getPasswordResetRequests();
-      const currentRequest = allRequests.find(r => r.id === requestId);
-      if (currentRequest) {
-        // Create a new request with the token since updatePasswordResetRequest doesn't support token
-        await storage.createPasswordResetRequest({
-          userId: currentRequest.userId,
-          reason: currentRequest.reason,
-          status: "approved",
-        });
-      }
-
-      // Get the request to send reset email
-      const requests = await storage.getPasswordResetRequests();
-      const request = requests.find(r => r.id === requestId);
-      
-      if (request) {
-        await sendPasswordResetToken(request.user.email, token);
-      }
-
-      res.send(`
-        <html>
-          <body style="font-family: Arial, sans-serif; background: #0a0a0a; color: white; padding: 20px;">
-            <div style="max-width: 500px; margin: 0 auto; text-align: center;">
-              <h1 style="color: #ef4444;">✅ Password Reset Approved</h1>
-              <p>The password reset request has been approved. A reset link has been sent to the user's email.</p>
-              <p style="color: #9ca3af;">You can close this window.</p>
-            </div>
-          </body>
-        </html>
-      `);
-    } catch (error) {
-      console.error("Error approving password reset:", error);
-      res.status(500).send("Error approving password reset");
-    }
-  });
-
-  app.get("/api/admin/reject-password-reset/:requestId", async (req, res) => {
-    try {
-      await storage.updatePasswordResetRequest(req.params.requestId, {
-        status: "rejected",
-      });
-
-      res.send(`
-        <html>
-          <body style="font-family: Arial, sans-serif; background: #0a0a0a; color: white; padding: 20px;">
-            <div style="max-width: 500px; margin: 0 auto; text-align: center;">
-              <h1 style="color: #ef4444;">❌ Password Reset Rejected</h1>
-              <p>The password reset request has been rejected.</p>
-              <p style="color: #9ca3af;">You can close this window.</p>
-            </div>
-          </body>
-        </html>
-      `);
-    } catch (error) {
-      console.error("Error rejecting password reset:", error);
-      res.status(500).send("Error rejecting password reset");
-    }
-  });
-
-  // Reset password with token
-  app.post("/api/auth/reset-password", async (req, res) => {
-    try {
-      const { token, newPassword } = req.body;
-      
-      if (!token || !newPassword) {
-        return res.status(400).json({ message: "Token and new password required" });
-      }
-
-      const requests = await storage.getPasswordResetRequests();
-      const request = requests.find(r => r.token === token && r.status === "approved");
-
-      if (!request || !request.expiresAt || request.expiresAt < new Date()) {
-        return res.status(400).json({ message: "Invalid or expired token" });
-      }
-
-      // Update user password
-      await storage.updateUser(request.userId, {
-        passwordHash: newPassword,
-      });
-
-      // Mark request as used
-      await storage.updatePasswordResetRequest(request.id, {
-        status: "completed",
-      });
-
-      res.json({ message: "Password reset successfully" });
-    } catch (error) {
-      console.error("Error resetting password:", error);
-      res.status(500).json({ message: "Failed to reset password" });
-    }
-  });
-
-  // Statistics route
-  app.get("/api/statistics", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const stats = await storage.getStatistics();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching statistics:", error);
-      res.status(500).json({ message: "Failed to fetch statistics" });
-    }
-  });
-
-  // Case updates route
-  app.get("/api/cases/:caseId/updates", authenticateToken, async (req, res) => {
-    try {
-      const updates = await storage.getCaseUpdates(req.params.caseId);
-      res.json(updates);
-    } catch (error) {
-      console.error("Error fetching case updates:", error);
-      res.status(500).json({ message: "Failed to fetch case updates" });
-    }
-  });
-
-  // Contact Messages Routes
-  app.post("/api/contact", async (req, res) => {
-    try {
-      const contactData = insertContactMessageSchema.parse(req.body);
-      const newMessage = await storage.createContactMessage(contactData);
-      res.status(201).json(newMessage);
-    } catch (error) {
-      console.error("Error creating contact message:", error);
-      res.status(400).json({ message: "Invalid contact data" });
-    }
-  });
-
-  app.get("/api/contact", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const { status, priority, assignedTo } = req.query;
-      const filters = {
-        status: status as string,
-        priority: priority as string,
-        assignedTo: assignedTo as string,
-      };
-      const messages = await storage.getContactMessages(filters);
-      res.json(messages);
-    } catch (error) {
-      console.error("Error fetching contact messages:", error);
-      res.status(500).json({ message: "Failed to fetch contact messages" });
-    }
-  });
-
-  app.get("/api/contact/:id", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const message = await storage.getContactMessage(req.params.id);
-      if (!message) {
-        return res.status(404).json({ message: "Contact message not found" });
-      }
-      res.json(message);
-    } catch (error) {
-      console.error("Error fetching contact message:", error);
-      res.status(500).json({ message: "Failed to fetch contact message" });
-    }
-  });
-
-  app.patch("/api/contact/:id", authenticateToken, requireStaff, async (req: any, res) => {
-    try {
-      const updates = req.body;
-      const updatedMessage = await storage.updateContactMessage(req.params.id, updates);
-      res.json(updatedMessage);
-    } catch (error) {
-      console.error("Error updating contact message:", error);
-      res.status(400).json({ message: "Failed to update contact message" });
-    }
-  });
-
-  // Staff Management Routes
-  app.get("/api/staff", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const { role } = req.query;
-      const staff = await storage.getStaffMembers(role as string);
-      res.json(staff);
-    } catch (error) {
-      console.error("Error fetching staff members:", error);
-      res.status(500).json({ message: "Failed to fetch staff members" });
-    }
-  });
-
-  app.post("/api/staff/create", authenticateToken, requireAdmin, async (req: any, res) => {
-    try {
-      const userData = req.body;
-      // Hash password before creating user
-      const hashedPassword = await bcrypt.hash(userData.passwordHash, 10);
-      const newStaff = await storage.createUser({
-        ...userData,
-        passwordHash: hashedPassword,
-      });
-      const { passwordHash, ...staffWithoutPassword } = newStaff;
-      res.status(201).json(staffWithoutPassword);
-    } catch (error) {
-      console.error("Error creating staff member:", error);
-      res.status(400).json({ message: "Failed to create staff member" });
-    }
-  });
-
-  // Staff Assignment Routes
-  app.get("/api/staff-assignments", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const { staffId, caseId, contactId } = req.query;
-      const filters = {
-        staffId: staffId as string,
-        caseId: caseId as string,
-        contactId: contactId as string,
-      };
-      const assignments = await storage.getStaffAssignments(filters);
-      res.json(assignments);
-    } catch (error) {
-      console.error("Error fetching staff assignments:", error);
-      res.status(500).json({ message: "Failed to fetch staff assignments" });
-    }
-  });
-
-  app.post("/api/staff-assignments", authenticateToken, requireStaff, async (req: any, res) => {
-    try {
-      const assignmentData = insertStaffAssignmentSchema.parse({
-        ...req.body,
-        assignedBy: req.user.id,
-      });
-      const newAssignment = await storage.createStaffAssignment(assignmentData);
-      res.status(201).json(newAssignment);
-    } catch (error) {
-      console.error("Error creating staff assignment:", error);
-      res.status(400).json({ message: "Failed to create staff assignment" });
-    }
-  });
-
-  app.patch("/api/staff-assignments/:id", authenticateToken, requireStaff, async (req: any, res) => {
-    try {
-      const updates = req.body;
-      const updatedAssignment = await storage.updateStaffAssignment(req.params.id, updates);
-      res.json(updatedAssignment);
-    } catch (error) {
-      console.error("Error updating staff assignment:", error);
-      res.status(400).json({ message: "Failed to update staff assignment" });
-    }
-  });
-
-  // Tribunal Proceedings Routes
-  app.get("/api/tribunal-proceedings", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const { caseId } = req.query;
-      const proceedings = await storage.getTribunalProceedings(caseId as string);
-      res.json(proceedings);
-    } catch (error) {
-      console.error("Error fetching tribunal proceedings:", error);
-      res.status(500).json({ message: "Failed to fetch tribunal proceedings" });
-    }
-  });
-
-  app.post("/api/tribunal-proceedings", authenticateToken, requireTribunalHead, async (req: any, res) => {
-    try {
-      const data = req.body;
-      // Convert string date to Date object for proper validation
-      const processedData = {
-        ...data,
-        chairperson: req.user.id,
-        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : undefined,
-      };
-      const proceedingData = insertTribunalProceedingSchema.parse(processedData);
-      const newProceeding = await storage.createTribunalProceeding(proceedingData);
-      res.status(201).json(newProceeding);
-    } catch (error) {
-      console.error("Error creating tribunal proceeding:", error);
-      res.status(400).json({ message: "Failed to create tribunal proceeding" });
-    }
-  });
-
-  app.patch("/api/tribunal-proceedings/:id", authenticateToken, requireTribunalHead, async (req: any, res) => {
-    try {
-      const updates = req.body;
-      const updatedProceeding = await storage.updateTribunalProceeding(req.params.id, updates);
-      res.json(updatedProceeding);
-    } catch (error) {
-      console.error("Error updating tribunal proceeding:", error);
-      res.status(400).json({ message: "Failed to update tribunal proceeding" });
-    }
-  });
-
-  // Enhanced Dashboard Statistics
-  app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
-    try {
-      const stats = await storage.getDashboardStatistics();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching dashboard statistics:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard statistics" });
-    }
-  });
-
-  app.post("/api/staff/create", authenticateToken, requireSeniorStaff, async (req: any, res) => {
-    try {
-      const userData = req.body;
-      // Generate staff ID if not provided
-      if (!userData.staffId) {
-        const staffCount = await storage.getStaffMembers();
-        userData.staffId = `STAFF-${(staffCount.length + 1).toString().padStart(4, '0')}`;
-      }
-      const newStaff = await storage.createUser(userData);
-      res.status(201).json(newStaff);
-    } catch (error) {
-      console.error("Error creating staff member:", error);
-      res.status(400).json({ message: "Failed to create staff member" });
-    }
-  });
-
-  // Staff Assignment Routes
-  app.get("/api/assignments", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const { staffId, caseId, contactId } = req.query;
-      const filters = {
-        staffId: staffId as string,
-        caseId: caseId as string,
-        contactId: contactId as string,
-      };
-      const assignments = await storage.getStaffAssignments(filters);
-      res.json(assignments);
-    } catch (error) {
-      console.error("Error fetching staff assignments:", error);
-      res.status(500).json({ message: "Failed to fetch staff assignments" });
-    }
-  });
-
-  app.post("/api/assignments", authenticateToken, requireSeniorStaff, async (req: any, res) => {
-    try {
-      const assignmentData = insertStaffAssignmentSchema.parse({
-        ...req.body,
-        assignedBy: req.user.id,
-      });
-      const newAssignment = await storage.createStaffAssignment(assignmentData);
-      res.status(201).json(newAssignment);
-    } catch (error) {
-      console.error("Error creating staff assignment:", error);
-      res.status(400).json({ message: "Invalid assignment data" });
-    }
-  });
-
-  app.patch("/api/assignments/:id", authenticateToken, requireSeniorStaff, async (req: any, res) => {
-    try {
-      const updates = req.body;
-      const updatedAssignment = await storage.updateStaffAssignment(req.params.id, updates);
-      res.json(updatedAssignment);
-    } catch (error) {
-      console.error("Error updating staff assignment:", error);
-      res.status(400).json({ message: "Failed to update assignment" });
-    }
-  });
-
-  // Tribunal Proceedings Routes
-  app.get("/api/tribunal/proceedings", authenticateToken, requireStaff, async (req, res) => {
-    try {
-      const { caseId } = req.query;
-      const proceedings = await storage.getTribunalProceedings(caseId as string);
-      res.json(proceedings);
-    } catch (error) {
-      console.error("Error fetching tribunal proceedings:", error);
-      res.status(500).json({ message: "Failed to fetch proceedings" });
-    }
-  });
-
-  app.post("/api/tribunal/proceedings", authenticateToken, requireTribunalHead, async (req: any, res) => {
-    try {
-      const proceedingData = insertTribunalProceedingSchema.parse({
-        ...req.body,
-        chairperson: req.user.id,
-      });
-      const newProceeding = await storage.createTribunalProceeding(proceedingData);
-      res.status(201).json(newProceeding);
-    } catch (error) {
-      console.error("Error creating tribunal proceeding:", error);
-      res.status(400).json({ message: "Invalid proceeding data" });
-    }
-  });
-
-  app.patch("/api/tribunal/proceedings/:id", authenticateToken, requireTribunalHead, async (req: any, res) => {
-    try {
-      const updates = req.body;
-      const updatedProceeding = await storage.updateTribunalProceeding(req.params.id, updates);
-      res.json(updatedProceeding);
-    } catch (error) {
-      console.error("Error updating tribunal proceeding:", error);
-      res.status(400).json({ message: "Failed to update proceeding" });
-    }
-  });
-
-  // Dashboard Statistics for different roles
-  app.get("/api/dashboard/stats", authenticateToken, async (req: any, res) => {
-    try {
-      const baseStats = await storage.getStatistics();
-      
-      // Add role-specific statistics
-      const contactMessages = await storage.getContactMessages();
-      const staffAssignments = await storage.getStaffAssignments({ staffId: req.user.id });
-      const allStaff = await storage.getStaffMembers();
-      
-      const enhancedStats = {
-        ...baseStats,
-        contactMessages: {
-          total: contactMessages.length,
-          new: contactMessages.filter(m => m.status === 'new').length,
-          inProgress: contactMessages.filter(m => m.status === 'in_progress').length,
-          resolved: contactMessages.filter(m => m.status === 'resolved').length,
-        },
-        staffAssignments: {
-          total: staffAssignments.length,
-          active: staffAssignments.filter(a => a.isActive).length,
-          completed: staffAssignments.filter(a => a.completedAt).length,
-        },
-        staffMembers: {
-          total: allStaff.length,
-          admin: allStaff.filter(s => s.role === 'admin').length,
-          tribunalHead: allStaff.filter(s => s.role === 'tribunal_head').length,
-          seniorStaff: allStaff.filter(s => s.role === 'senior_staff').length,
-          staff: allStaff.filter(s => s.role === 'staff').length,
-        }
-      };
-      
-      res.json(enhancedStats);
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-      res.status(500).json({ message: "Failed to fetch statistics" });
+  // Serve uploaded files
+  app.get("/api/files/:filename", authenticateToken, (req, res) => {
+    const filePath = path.join(uploadsDir, req.params.filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: "File not found" });
     }
   });
 

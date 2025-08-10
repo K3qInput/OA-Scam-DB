@@ -9,6 +9,18 @@ import {
   contactMessages,
   staffAssignments,
   tribunalProceedings,
+  vouches,
+  disputeResolutions,
+  disputeVotes,
+  altDetectionReports,
+  userSessions,
+  staffPermissions,
+  staffPerformance,
+  utilityCategories,
+  utilityDocuments,
+  documentRatings,
+  userReputation,
+  auditLogs,
   type User,
   type InsertUser,
   type Case,
@@ -29,10 +41,33 @@ import {
   type InsertStaffAssignment,
   type TribunalProceeding,
   type InsertTribunalProceeding,
+  type Vouch,
+  type InsertVouch,
+  type DisputeResolution,
+  type InsertDisputeResolution,
+  type DisputeVote,
+  type InsertDisputeVote,
+  type AltDetectionReport,
+  type InsertAltDetectionReport,
+  type UserSession,
+  type InsertUserSession,
+  type StaffPermission,
+  type InsertStaffPermission,
+  type StaffPerformance,
+  type InsertStaffPerformance,
+  type UtilityCategory,
+  type InsertUtilityCategory,
+  type UtilityDocument,
+  type InsertUtilityDocument,
+  type DocumentRating,
+  type InsertDocumentRating,
+  type UserReputation,
+  type InsertUserReputation,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, or, like, desc, asc, count, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { randomBytes } from "crypto";
 
 export interface IStorage {
   // User operations
@@ -74,158 +109,358 @@ export interface IStorage {
   updateAppeal(id: string, updates: Partial<InsertAppeal>): Promise<Appeal>;
 
   // Password reset operations
-  createPasswordResetRequest(requestData: InsertPasswordResetRequest): Promise<PasswordResetRequest>;
-  getPasswordResetRequests(): Promise<(PasswordResetRequest & { user: User })[]>;
+  createPasswordResetRequest(request: InsertPasswordResetRequest): Promise<PasswordResetRequest>;
+  getPasswordResetRequest(id: string): Promise<PasswordResetRequest | undefined>;
   updatePasswordResetRequest(id: string, updates: Partial<InsertPasswordResetRequest>): Promise<PasswordResetRequest>;
 
   // Case update operations
-  createCaseUpdate(updateData: InsertCaseUpdate): Promise<CaseUpdate>;
-  getCaseUpdates(caseId: string): Promise<(CaseUpdate & { updatedByUser: User })[]>;
+  createCaseUpdate(update: InsertCaseUpdate): Promise<CaseUpdate>;
+  getCaseUpdates(caseId: string): Promise<CaseUpdate[]>;
 
   // Contact message operations
-  createContactMessage(messageData: InsertContactMessage): Promise<ContactMessage>;
-  getContactMessages(filters?: { status?: string; priority?: string; assignedTo?: string }): Promise<(ContactMessage & { assignedToUser?: User })[]>;
+  getContactMessages(filters?: {
+    status?: string;
+    priority?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ContactMessage[]>;
+  createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
   updateContactMessage(id: string, updates: Partial<InsertContactMessage>): Promise<ContactMessage>;
-  getContactMessage(id: string): Promise<(ContactMessage & { assignedToUser?: User }) | undefined>;
 
   // Staff assignment operations
-  createStaffAssignment(assignmentData: InsertStaffAssignment): Promise<StaffAssignment>;
-  getStaffAssignments(filters?: { staffId?: string; caseId?: string; contactId?: string }): Promise<(StaffAssignment & { staff: User; assignedByUser: User })[]>;
+  getStaffAssignments(staffId?: string, caseId?: string): Promise<StaffAssignment[]>;
+  createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment>;
   updateStaffAssignment(id: string, updates: Partial<InsertStaffAssignment>): Promise<StaffAssignment>;
-  getStaffMembers(role?: string): Promise<User[]>;
 
-  // Tribunal proceeding operations
-  createTribunalProceeding(proceedingData: InsertTribunalProceeding): Promise<TribunalProceeding>;
-  getTribunalProceedings(caseId?: string): Promise<(TribunalProceeding & { case: Case; chairpersonUser: User })[]>;
+  // Tribunal proceedings operations
+  getTribunalProceedings(caseId?: string): Promise<TribunalProceeding[]>;
+  createTribunalProceeding(proceeding: InsertTribunalProceeding): Promise<TribunalProceeding>;
   updateTribunalProceeding(id: string, updates: Partial<InsertTribunalProceeding>): Promise<TribunalProceeding>;
 
-  // Statistics
-  getStatistics(): Promise<{
-    totalCases: number;
-    pendingCases: number;
-    verifiedCases: number;
-    altAccounts: number;
-  }>;
-  
-  getDashboardStatistics(): Promise<{
-    totalCases: number;
-    pendingCases: number;
-    verifiedCases: number;
-    altAccounts: number;
-    contactMessages: {
-      total: number;
-      new: number;
-      inProgress: number;
-      resolved: number;
-    };
-    staffAssignments: {
-      total: number;
-      active: number;
-      completed: number;
-    };
-    staffMembers: {
-      total: number;
-      admin: number;
-      tribunalHead: number;
-      seniorStaff: number;
-      staff: number;
-    };
-  }>;
+  // Vouch/Devouch system
+  getVouches(targetUserId: string): Promise<(Vouch & { voucherUser: User })[]>;
+  createVouch(vouch: InsertVouch): Promise<Vouch>;
+  getVouchByUsers(targetUserId: string, voucherUserId: string): Promise<Vouch | undefined>;
+  updateVouch(id: string, updates: Partial<InsertVouch>): Promise<Vouch>;
+
+  // Dispute resolution system
+  getActiveDisputes(): Promise<(DisputeResolution & { votes: DisputeVote[] })[]>;
+  createDisputeResolution(dispute: InsertDisputeResolution): Promise<DisputeResolution>;
+  updateDisputeResolution(id: string, updates: Partial<InsertDisputeResolution>): Promise<DisputeResolution>;
+  createDisputeVote(vote: InsertDisputeVote): Promise<DisputeVote>;
+  getDisputeVotes(disputeId: string): Promise<DisputeVote[]>;
+
+  // Alt detection system
+  getAltDetectionReports(status?: string): Promise<AltDetectionReport[]>;
+  createAltDetectionReport(report: InsertAltDetectionReport): Promise<AltDetectionReport>;
+  updateAltDetectionReport(id: string, updates: Partial<InsertAltDetectionReport>): Promise<AltDetectionReport>;
+
+  // User session tracking
+  createUserSession(session: InsertUserSession): Promise<UserSession>;
+  getUserSessions(userId: string): Promise<UserSession[]>;
+  updateUserSession(id: string, updates: Partial<InsertUserSession>): Promise<UserSession>;
+
+  // Staff management
+  getStaffPermissions(userId: string): Promise<StaffPermission[]>;
+  createStaffPermission(permission: InsertStaffPermission): Promise<StaffPermission>;
+  getStaffPerformance(staffId: string, period?: string): Promise<StaffPerformance[]>;
+  createStaffPerformance(performance: InsertStaffPerformance): Promise<StaffPerformance>;
+
+  // Utility system
+  getUtilityCategories(): Promise<UtilityCategory[]>;
+  createUtilityCategory(category: InsertUtilityCategory): Promise<UtilityCategory>;
+  getUtilityDocuments(categoryId?: string): Promise<(UtilityDocument & { category: UtilityCategory; author: User })[]>;
+  createUtilityDocument(document: InsertUtilityDocument): Promise<UtilityDocument>;
+  updateUtilityDocument(id: string, updates: Partial<InsertUtilityDocument>): Promise<UtilityDocument>;
+  createDocumentRating(rating: InsertDocumentRating): Promise<DocumentRating>;
+
+  // User reputation system
+  getUserReputation(userId: string): Promise<UserReputation | undefined>;
+  createUserReputation(reputation: InsertUserReputation): Promise<UserReputation>;
+  updateUserReputation(userId: string, updates: Partial<InsertUserReputation>): Promise<UserReputation>;
+
+  // Audit logging
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(userId?: string, entityType?: string): Promise<AuditLog[]>;
+
+  // Additional missing methods for routes compatibility
+  getPasswordResetRequests(status?: string): Promise<PasswordResetRequest[]>;
+  getContactMessage(id: string): Promise<ContactMessage | undefined>;
+  getStaffMembers(): Promise<User[]>;
+  getStatistics(): Promise<any>;
+  getDashboardStatistics(): Promise<any>;
 }
 
-export class DatabaseStorage implements IStorage {
+export class MemStorage implements IStorage {
+  private users: User[] = [];
+  private cases: Case[] = [];
+  private evidence: Evidence[] = [];
+  private altAccounts: AltAccount[] = [];
+  private appeals: Appeal[] = [];
+  private passwordResetRequests: PasswordResetRequest[] = [];
+  private caseUpdates: CaseUpdate[] = [];
+  private contactMessages: ContactMessage[] = [];
+  private staffAssignments: StaffAssignment[] = [];
+  private tribunalProceedings: TribunalProceeding[] = [];
+  private vouches: Vouch[] = [];
+  private disputeResolutions: DisputeResolution[] = [];
+  private disputeVotes: DisputeVote[] = [];
+  private altDetectionReports: AltDetectionReport[] = [];
+  private userSessions: UserSession[] = [];
+  private staffPermissions: StaffPermission[] = [];
+  private staffPerformance: StaffPerformance[] = [];
+  private utilityCategories: UtilityCategory[] = [];
+  private utilityDocuments: UtilityDocument[] = [];
+  private documentRatings: DocumentRating[] = [];
+  private userReputation: UserReputation[] = [];
+  private auditLogs: AuditLog[] = [];
+
+  constructor() {
+    this.initializeSampleData();
+  }
+
+  private async initializeSampleData() {
+    // Create admin user
+    const adminUser: User = {
+      id: "admin-1",
+      username: "admin",
+      email: "admin@tribunal.com",
+      passwordHash: await bcrypt.hash("admin123", 10),
+      role: "admin",
+      firstName: "Admin",
+      lastName: "User",
+      profileImageUrl: null,
+      isActive: true,
+      department: "administration",
+      specialization: "system_management",
+      staffId: "STAFF-001",
+      phoneNumber: "+1-555-0001",
+      officeLocation: "Main Office",
+      emergencyContact: "+1-555-0002",
+      certifications: ["Admin Certification"],
+      discordId: null,
+      discordUsername: null,
+      discordDiscriminator: null,
+      discordAvatar: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Create sample tribunal head
+    const tribunalHead: User = {
+      id: "tribunal-1",
+      username: "tribunal_head",
+      email: "head@tribunal.com",
+      passwordHash: await bcrypt.hash("tribunal123", 10),
+      role: "tribunal_head",
+      firstName: "Tribunal",
+      lastName: "Head",
+      profileImageUrl: null,
+      isActive: true,
+      department: "tribunal",
+      specialization: "case_review",
+      staffId: "STAFF-002",
+      phoneNumber: "+1-555-0003",
+      officeLocation: "Tribunal Chamber",
+      emergencyContact: "+1-555-0004",
+      certifications: ["Tribunal Leadership", "Case Management"],
+      discordId: null,
+      discordUsername: null,
+      discordDiscriminator: null,
+      discordAvatar: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Create sample staff user
+    const staffUser: User = {
+      id: "staff-1",
+      username: "staff_member",
+      email: "staff@tribunal.com",
+      passwordHash: await bcrypt.hash("staff123", 10),
+      role: "staff",
+      firstName: "Staff",
+      lastName: "Member",
+      profileImageUrl: null,
+      isActive: true,
+      department: "investigation",
+      specialization: "financial_crimes",
+      staffId: "STAFF-003",
+      phoneNumber: "+1-555-0005",
+      officeLocation: "Investigation Unit",
+      emergencyContact: "+1-555-0006",
+      certifications: ["Financial Crime Investigation"],
+      discordId: null,
+      discordUsername: null,
+      discordDiscriminator: null,
+      discordAvatar: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Create sample regular user
+    const regularUser: User = {
+      id: "user-1",
+      username: "john_doe",
+      email: "john@example.com",
+      passwordHash: await bcrypt.hash("user123", 10),
+      role: "user",
+      firstName: "John",
+      lastName: "Doe",
+      profileImageUrl: null,
+      isActive: true,
+      department: null,
+      specialization: null,
+      staffId: null,
+      phoneNumber: null,
+      officeLocation: null,
+      emergencyContact: null,
+      certifications: [],
+      discordId: "123456789",
+      discordUsername: "johndoe",
+      discordDiscriminator: "0001",
+      discordAvatar: "avatar_hash",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.users = [adminUser, tribunalHead, staffUser, regularUser];
+
+    // Initialize utility categories
+    const categories: UtilityCategory[] = [
+      {
+        id: "cat-1",
+        name: "Staff Guides",
+        description: "Comprehensive guides for staff members",
+        icon: "book",
+        sortOrder: 1,
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "cat-2",
+        name: "Case Management",
+        description: "Resources for managing cases effectively",
+        icon: "folder",
+        sortOrder: 2,
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "cat-3",
+        name: "Legal Resources",
+        description: "Legal documentation and procedures",
+        icon: "scale",
+        sortOrder: 3,
+        isActive: true,
+        createdAt: new Date(),
+      }
+    ];
+
+    this.utilityCategories = categories;
+
+    // Create reputation records for all users
+    this.userReputation = this.users.map(user => ({
+      id: `rep-${user.id}`,
+      userId: user.id,
+      reputationScore: user.role === "admin" ? 1000 : user.role === "tribunal_head" ? 800 : user.role === "staff" ? 500 : 100,
+      vouchesReceived: 0,
+      devouchesReceived: 0,
+      casesReported: 0,
+      validReports: 0,
+      falseReports: 0,
+      communityScore: 0,
+      trustLevel: user.role === "admin" ? "platinum" : user.role === "tribunal_head" ? "gold" : user.role === "staff" ? "silver" : "bronze",
+      lastCalculated: new Date(),
+      updatedAt: new Date(),
+    }));
+  }
+
+  // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return this.users.find(u => u.id === id);
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return this.users.find(u => u.email === email);
   }
 
   async getUserByDiscordId(discordId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.discordId, discordId));
-    return user || undefined;
+    return this.users.find(u => u.discordId === discordId);
   }
 
-  async createUser(userData: InsertUser): Promise<User> {
-    // Only hash password if it's provided (for Discord OAuth users, password might not be set)
-    let processedData = { ...userData };
-    if (userData.passwordHash) {
-      processedData.passwordHash = await bcrypt.hash(userData.passwordHash, 10);
-    }
+  async createUser(user: InsertUser): Promise<User> {
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      ...user,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.push(newUser);
     
-    const [user] = await db
-      .insert(users)
-      .values(processedData)
-      .returning();
-    return user;
+    // Create initial reputation
+    const reputation: UserReputation = {
+      id: `rep-${newUser.id}`,
+      userId: newUser.id,
+      reputationScore: 100,
+      vouchesReceived: 0,
+      devouchesReceived: 0,
+      casesReported: 0,
+      validReports: 0,
+      falseReports: 0,
+      communityScore: 0,
+      trustLevel: "bronze",
+      lastCalculated: new Date(),
+      updatedAt: new Date(),
+    };
+    this.userReputation.push(reputation);
+    
+    return newUser;
   }
 
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
-    if (updates.passwordHash) {
-      updates.passwordHash = await bcrypt.hash(updates.passwordHash, 10);
-    }
-    const [user] = await db
-      .update(users)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return user;
+    const userIndex = this.users.findIndex(u => u.id === id);
+    if (userIndex === -1) throw new Error("User not found");
+    
+    this.users[userIndex] = {
+      ...this.users[userIndex],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.users[userIndex];
   }
 
   async authenticateUser(username: string, password: string): Promise<User | null> {
-    console.log("Authenticating user:", username);
-    try {
-      const user = await this.getUserByUsername(username);
-      console.log("User found:", !!user, user?.isActive);
-      
-      if (!user || !user.isActive) {
-        console.log("User not found or inactive");
-        return null;
-      }
-
-      // If user doesn't have a password (Discord OAuth user), deny password login
-      if (!user.passwordHash) {
-        console.log("User has no password (Discord OAuth user)");
-        return null;
-      }
-
-      const isValid = await bcrypt.compare(password, user.passwordHash);
-      console.log("Password valid:", isValid);
-      return isValid ? user : null;
-    } catch (error) {
-      console.error("Authentication error:", error);
-      throw error;
-    }
+    const user = this.users.find(u => u.username === username);
+    if (!user || !user.passwordHash) return null;
+    
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    return isValid ? user : null;
   }
 
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return this.users.find(u => u.username === username);
+  }
+
+  // Case operations
   async getCase(id: string): Promise<(Case & { reportedUser: User; reporterUser: User; staffUser?: User; evidence: Evidence[] }) | undefined> {
-    const [result] = await db
-      .select()
-      .from(cases)
-      .leftJoin(users, eq(cases.reportedUserId, users.id))
-      .where(eq(cases.id, id));
+    const caseItem = this.cases.find(c => c.id === id);
+    if (!caseItem) return undefined;
 
-    if (!result) return undefined;
+    const reportedUser = await this.getUser(caseItem.reportedUserId);
+    const reporterUser = await this.getUser(caseItem.reporterUserId);
+    const staffUser = caseItem.staffUserId ? await this.getUser(caseItem.staffUserId) : undefined;
+    const evidence = await this.getEvidenceByCase(id);
 
-    const reportedUser = await this.getUser(result.cases.reportedUserId);
-    const reporterUser = await this.getUser(result.cases.reporterUserId);
-    const staffUser = result.cases.staffUserId ? await this.getUser(result.cases.staffUserId) : undefined;
-    const evidenceList = await this.getEvidenceByCase(id);
+    if (!reportedUser || !reporterUser) return undefined;
 
     return {
-      ...result.cases,
-      reportedUser: reportedUser!,
-      reporterUser: reporterUser!,
+      ...caseItem,
+      reportedUser,
+      reporterUser,
       staffUser,
-      evidence: evidenceList,
+      evidence,
     };
   }
 
@@ -236,43 +471,35 @@ export class DatabaseStorage implements IStorage {
     limit?: number;
     offset?: number;
   }): Promise<(Case & { reportedUser: User; reporterUser: User; staffUser?: User })[]> {
-    let query = db.select().from(cases).orderBy(cases.createdAt);
+    let filteredCases = this.cases;
 
-    const conditions = [];
     if (filters?.status) {
-      conditions.push(eq(cases.status, filters.status as any));
+      filteredCases = filteredCases.filter(c => c.status === filters.status);
     }
     if (filters?.type) {
-      conditions.push(eq(cases.type, filters.type as any));
+      filteredCases = filteredCases.filter(c => c.type === filters.type);
     }
     if (filters?.search) {
-      conditions.push(
-        or(
-          like(cases.title, `%${filters.search}%`),
-          like(cases.description, `%${filters.search}%`),
-          like(cases.caseNumber, `%${filters.search}%`)
-        )
+      const search = filters.search.toLowerCase();
+      filteredCases = filteredCases.filter(c => 
+        c.title.toLowerCase().includes(search) ||
+        c.description.toLowerCase().includes(search) ||
+        c.caseNumber.toLowerCase().includes(search)
       );
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
+    // Sort by creation date (newest first)
+    filteredCases.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    query = query.orderBy(desc(cases.createdAt));
-
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
     if (filters?.offset) {
-      query = query.offset(filters.offset);
+      filteredCases = filteredCases.slice(filters.offset);
+    }
+    if (filters?.limit) {
+      filteredCases = filteredCases.slice(0, filters.limit);
     }
 
-    const results = await query;
-
-    // Fetch related users for each case
     const enrichedCases = await Promise.all(
-      results.map(async (caseItem) => {
+      filteredCases.map(async (caseItem) => {
         const reportedUser = await this.getUser(caseItem.reportedUserId);
         const reporterUser = await this.getUser(caseItem.reporterUserId);
         const staffUser = caseItem.staffUserId ? await this.getUser(caseItem.staffUserId) : undefined;
@@ -290,574 +517,765 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCaseCount(filters?: { status?: string; type?: string; search?: string }): Promise<number> {
-    let query = db.select({ count: count() }).from(cases);
+    let filteredCases = this.cases;
 
-    const conditions = [];
     if (filters?.status) {
-      conditions.push(eq(cases.status, filters.status as any));
+      filteredCases = filteredCases.filter(c => c.status === filters.status);
     }
     if (filters?.type) {
-      conditions.push(eq(cases.type, filters.type as any));
+      filteredCases = filteredCases.filter(c => c.type === filters.type);
     }
     if (filters?.search) {
-      conditions.push(
-        or(
-          like(cases.title, `%${filters.search}%`),
-          like(cases.description, `%${filters.search}%`),
-          like(cases.caseNumber, `%${filters.search}%`)
-        )
+      const search = filters.search.toLowerCase();
+      filteredCases = filteredCases.filter(c => 
+        c.title.toLowerCase().includes(search) ||
+        c.description.toLowerCase().includes(search) ||
+        c.caseNumber.toLowerCase().includes(search)
       );
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    const [result] = await query;
-    return result.count;
+    return filteredCases.length;
   }
 
   async createCase(caseData: InsertCase): Promise<Case> {
     const caseNumber = await this.generateCaseNumber();
-    const [newCase] = await db
-      .insert(cases)
-      .values({ ...caseData, caseNumber })
-      .returning();
+    const newCase: Case = {
+      id: `case-${Date.now()}`,
+      caseNumber,
+      ...caseData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      resolvedAt: null,
+    };
+    this.cases.push(newCase);
     return newCase;
   }
 
   async updateCase(id: string, updates: Partial<InsertCase>): Promise<Case> {
-    const [updatedCase] = await db
-      .update(cases)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(cases.id, id))
-      .returning();
-    return updatedCase;
+    const caseIndex = this.cases.findIndex(c => c.id === id);
+    if (caseIndex === -1) throw new Error("Case not found");
+    
+    this.cases[caseIndex] = {
+      ...this.cases[caseIndex],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.cases[caseIndex];
   }
 
   async generateCaseNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const [result] = await db
-      .select({ count: count() })
-      .from(cases)
-      .where(sql`EXTRACT(YEAR FROM created_at) = ${year}`);
-    
-    const nextNumber = (result.count + 1).toString().padStart(4, '0');
-    return `SC-${year}-${nextNumber}`;
+    const existingCases = this.cases.filter(c => c.caseNumber.startsWith(`TR-${year}`));
+    const nextNumber = existingCases.length + 1;
+    return `TR-${year}-${nextNumber.toString().padStart(4, '0')}`;
   }
 
+  // Evidence operations
   async createEvidence(evidenceData: InsertEvidence): Promise<Evidence> {
-    const [newEvidence] = await db.insert(evidence).values(evidenceData).returning();
+    const newEvidence: Evidence = {
+      id: `evidence-${Date.now()}`,
+      ...evidenceData,
+      createdAt: new Date(),
+    };
+    this.evidence.push(newEvidence);
     return newEvidence;
   }
 
   async getEvidenceByCase(caseId: string): Promise<Evidence[]> {
-    return await db.select().from(evidence).where(eq(evidence.caseId, caseId));
+    return this.evidence.filter(e => e.caseId === caseId);
   }
 
   async deleteEvidence(id: string): Promise<void> {
-    await db.delete(evidence).where(eq(evidence.id, id));
+    const index = this.evidence.findIndex(e => e.id === id);
+    if (index !== -1) {
+      this.evidence.splice(index, 1);
+    }
   }
 
+  // Alt account operations
   async getAltAccounts(userId: string): Promise<(AltAccount & { primaryUser: User; altUser: User })[]> {
-    const results = await db
-      .select()
-      .from(altAccounts)
-      .where(or(eq(altAccounts.primaryUserId, userId), eq(altAccounts.altUserId, userId)));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (altAccount) => {
-        const primaryUser = await this.getUser(altAccount.primaryUserId);
-        const altUser = await this.getUser(altAccount.altUserId);
+    const alts = this.altAccounts.filter(a => a.primaryUserId === userId || a.altUserId === userId);
+    
+    const enrichedAlts = await Promise.all(
+      alts.map(async (alt) => {
+        const primaryUser = await this.getUser(alt.primaryUserId);
+        const altUser = await this.getUser(alt.altUserId);
+        
         return {
-          ...altAccount,
+          ...alt,
           primaryUser: primaryUser!,
           altUser: altUser!,
         };
       })
     );
 
-    return enrichedResults;
+    return enrichedAlts;
   }
 
   async createAltAccount(altAccountData: InsertAltAccount): Promise<AltAccount> {
-    const [newAltAccount] = await db.insert(altAccounts).values(altAccountData).returning();
+    const newAltAccount: AltAccount = {
+      id: `alt-${Date.now()}`,
+      ...altAccountData,
+      createdAt: new Date(),
+      verifiedAt: null,
+    };
+    this.altAccounts.push(newAltAccount);
     return newAltAccount;
   }
 
   async updateAltAccount(id: string, updates: Partial<InsertAltAccount>): Promise<AltAccount> {
-    const [updatedAltAccount] = await db
-      .update(altAccounts)
-      .set(updates)
-      .where(eq(altAccounts.id, id))
-      .returning();
-    return updatedAltAccount;
+    const index = this.altAccounts.findIndex(a => a.id === id);
+    if (index === -1) throw new Error("Alt account not found");
+    
+    this.altAccounts[index] = {
+      ...this.altAccounts[index],
+      ...updates,
+    };
+    return this.altAccounts[index];
   }
 
+  // Appeal operations
   async getAppeals(caseId?: string): Promise<(Appeal & { case: Case; appealedByUser: User })[]> {
-    let query = db.select().from(appeals);
-    
+    let appeals = this.appeals;
     if (caseId) {
-      query = query.where(eq(appeals.caseId, caseId));
+      appeals = appeals.filter(a => a.caseId === caseId);
     }
 
-    const results = await query.orderBy(desc(appeals.createdAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (appeal) => {
-        const caseData = await db.select().from(cases).where(eq(cases.id, appeal.caseId));
+    const enrichedAppeals = await Promise.all(
+      appeals.map(async (appeal) => {
+        const caseItem = this.cases.find(c => c.id === appeal.caseId);
         const appealedByUser = await this.getUser(appeal.appealedBy);
+        
         return {
           ...appeal,
-          case: caseData[0],
+          case: caseItem!,
           appealedByUser: appealedByUser!,
         };
       })
     );
 
-    return enrichedResults;
+    return enrichedAppeals;
   }
 
   async createAppeal(appealData: InsertAppeal): Promise<Appeal> {
-    const [newAppeal] = await db.insert(appeals).values(appealData).returning();
+    const newAppeal: Appeal = {
+      id: `appeal-${Date.now()}`,
+      ...appealData,
+      createdAt: new Date(),
+      reviewedAt: null,
+    };
+    this.appeals.push(newAppeal);
     return newAppeal;
   }
 
   async updateAppeal(id: string, updates: Partial<InsertAppeal>): Promise<Appeal> {
-    const [updatedAppeal] = await db
-      .update(appeals)
-      .set({ ...updates, reviewedAt: new Date() })
-      .where(eq(appeals.id, id))
-      .returning();
-    return updatedAppeal;
+    const index = this.appeals.findIndex(a => a.id === id);
+    if (index === -1) throw new Error("Appeal not found");
+    
+    this.appeals[index] = {
+      ...this.appeals[index],
+      ...updates,
+    };
+    return this.appeals[index];
   }
 
-  async createPasswordResetRequest(requestData: InsertPasswordResetRequest): Promise<PasswordResetRequest> {
-    const [newRequest] = await db.insert(passwordResetRequests).values(requestData).returning();
+  // Password reset operations
+  async createPasswordResetRequest(request: InsertPasswordResetRequest): Promise<PasswordResetRequest> {
+    const newRequest: PasswordResetRequest = {
+      id: `reset-${Date.now()}`,
+      ...request,
+      token: null,
+      expiresAt: null,
+      createdAt: new Date(),
+      approvedAt: null,
+    };
+    this.passwordResetRequests.push(newRequest);
     return newRequest;
   }
 
-  async getPasswordResetRequests(): Promise<(PasswordResetRequest & { user: User })[]> {
-    const results = await db
-      .select()
-      .from(passwordResetRequests)
-      .orderBy(desc(passwordResetRequests.createdAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (request) => {
-        const user = await this.getUser(request.userId);
-        return {
-          ...request,
-          user: user!,
-        };
-      })
-    );
-
-    return enrichedResults;
+  async getPasswordResetRequest(id: string): Promise<PasswordResetRequest | undefined> {
+    return this.passwordResetRequests.find(r => r.id === id);
   }
 
   async updatePasswordResetRequest(id: string, updates: Partial<InsertPasswordResetRequest>): Promise<PasswordResetRequest> {
-    const [updatedRequest] = await db
-      .update(passwordResetRequests)
-      .set(updates)
-      .where(eq(passwordResetRequests.id, id))
-      .returning();
-    return updatedRequest;
+    const index = this.passwordResetRequests.findIndex(r => r.id === id);
+    if (index === -1) throw new Error("Password reset request not found");
+    
+    this.passwordResetRequests[index] = {
+      ...this.passwordResetRequests[index],
+      ...updates,
+    };
+    return this.passwordResetRequests[index];
   }
 
-  async createCaseUpdate(updateData: InsertCaseUpdate): Promise<CaseUpdate> {
-    const [newUpdate] = await db.insert(caseUpdates).values(updateData).returning();
+  // Case update operations
+  async createCaseUpdate(update: InsertCaseUpdate): Promise<CaseUpdate> {
+    const newUpdate: CaseUpdate = {
+      id: `update-${Date.now()}`,
+      ...update,
+      createdAt: new Date(),
+    };
+    this.caseUpdates.push(newUpdate);
     return newUpdate;
   }
 
-  async getCaseUpdates(caseId: string): Promise<(CaseUpdate & { updatedByUser: User })[]> {
-    const results = await db
-      .select()
-      .from(caseUpdates)
-      .where(eq(caseUpdates.caseId, caseId))
-      .orderBy(desc(caseUpdates.createdAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (update) => {
-        const updatedByUser = await this.getUser(update.updatedBy);
-        return {
-          ...update,
-          updatedByUser: updatedByUser!,
-        };
-      })
-    );
-
-    return enrichedResults;
+  async getCaseUpdates(caseId: string): Promise<CaseUpdate[]> {
+    return this.caseUpdates.filter(u => u.caseId === caseId);
   }
 
   // Contact message operations
-  async createContactMessage(messageData: InsertContactMessage): Promise<ContactMessage> {
-    const [newMessage] = await db.insert(contactMessages).values(messageData).returning();
+  async getContactMessages(filters?: {
+    status?: string;
+    priority?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ContactMessage[]> {
+    let messages = this.contactMessages;
+
+    if (filters?.status) {
+      messages = messages.filter(m => m.status === filters.status);
+    }
+    if (filters?.priority) {
+      messages = messages.filter(m => m.priority === filters.priority);
+    }
+    if (filters?.search) {
+      const search = filters.search.toLowerCase();
+      messages = messages.filter(m => 
+        m.subject.toLowerCase().includes(search) ||
+        m.message.toLowerCase().includes(search) ||
+        m.name.toLowerCase().includes(search) ||
+        m.email.toLowerCase().includes(search)
+      );
+    }
+
+    // Sort by creation date (newest first)
+    messages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    if (filters?.offset) {
+      messages = messages.slice(filters.offset);
+    }
+    if (filters?.limit) {
+      messages = messages.slice(0, filters.limit);
+    }
+
+    return messages;
+  }
+
+  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
+    const newMessage: ContactMessage = {
+      id: `contact-${Date.now()}`,
+      ...message,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      resolvedAt: null,
+    };
+    this.contactMessages.push(newMessage);
     return newMessage;
   }
 
-  async getContactMessages(filters?: { 
-    status?: string; 
-    priority?: string; 
-    assignedTo?: string 
-  }): Promise<(ContactMessage & { assignedToUser?: User })[]> {
-    let query = db.select().from(contactMessages);
-
-    const conditions = [];
-    if (filters?.status) {
-      conditions.push(eq(contactMessages.status, filters.status as any));
-    }
-    if (filters?.priority) {
-      conditions.push(eq(contactMessages.priority, filters.priority as any));
-    }
-    if (filters?.assignedTo) {
-      conditions.push(eq(contactMessages.assignedTo, filters.assignedTo));
-    }
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    const results = await query.orderBy(desc(contactMessages.createdAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (message) => {
-        let assignedToUser = undefined;
-        if (message.assignedTo) {
-          assignedToUser = await this.getUser(message.assignedTo);
-        }
-        return { ...message, assignedToUser };
-      })
-    );
-
-    return enrichedResults;
-  }
-
   async updateContactMessage(id: string, updates: Partial<InsertContactMessage>): Promise<ContactMessage> {
-    const [updatedMessage] = await db
-      .update(contactMessages)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(contactMessages.id, id))
-      .returning();
-    return updatedMessage;
-  }
-
-  async getContactMessage(id: string): Promise<(ContactMessage & { assignedToUser?: User }) | undefined> {
-    const [message] = await db.select().from(contactMessages).where(eq(contactMessages.id, id));
+    const index = this.contactMessages.findIndex(m => m.id === id);
+    if (index === -1) throw new Error("Contact message not found");
     
-    if (!message) return undefined;
-
-    let assignedToUser = undefined;
-    if (message.assignedTo) {
-      assignedToUser = await this.getUser(message.assignedTo);
-    }
-
-    return { ...message, assignedToUser };
-  }
-
-  async updatePasswordResetRequest(id: string, updates: Partial<InsertPasswordResetRequest>): Promise<PasswordResetRequest> {
-    const [updatedRequest] = await db
-      .update(passwordResetRequests)
-      .set(updates)
-      .where(eq(passwordResetRequests.id, id))
-      .returning();
-    return updatedRequest;
-  }
-
-  async createCaseUpdate(updateData: InsertCaseUpdate): Promise<CaseUpdate> {
-    const [newUpdate] = await db.insert(caseUpdates).values(updateData).returning();
-    return newUpdate;
-  }
-
-  async getCaseUpdates(caseId: string): Promise<(CaseUpdate & { updatedByUser: User })[]> {
-    const results = await db
-      .select()
-      .from(caseUpdates)
-      .where(eq(caseUpdates.caseId, caseId))
-      .orderBy(desc(caseUpdates.createdAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (update) => {
-        const updatedByUser = await this.getUser(update.updatedBy);
-        return {
-          ...update,
-          updatedByUser: updatedByUser!,
-        };
-      })
-    );
-
-    return enrichedResults;
-  }
-
-  // Contact message operations
-  async createContactMessage(messageData: InsertContactMessage): Promise<ContactMessage> {
-    const [newMessage] = await db.insert(contactMessages).values(messageData).returning();
-    return newMessage;
-  }
-
-  async getContactMessages(filters?: { status?: string; priority?: string; assignedTo?: string }): Promise<(ContactMessage & { assignedToUser?: User })[]> {
-    let query = db.select().from(contactMessages);
-    
-    const conditions = [];
-    if (filters?.status) {
-      conditions.push(eq(contactMessages.status, filters.status));
-    }
-    if (filters?.priority) {
-      conditions.push(eq(contactMessages.priority, filters.priority as any));
-    }
-    if (filters?.assignedTo) {
-      conditions.push(eq(contactMessages.assignedTo, filters.assignedTo));
-    }
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    const results = await query.orderBy(desc(contactMessages.createdAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (message) => {
-        let assignedToUser = undefined;
-        if (message.assignedTo) {
-          assignedToUser = await this.getUser(message.assignedTo);
-        }
-        return {
-          ...message,
-          assignedToUser,
-        };
-      })
-    );
-
-    return enrichedResults;
-  }
-
-  async updateContactMessage(id: string, updates: Partial<InsertContactMessage>): Promise<ContactMessage> {
-    const [updatedMessage] = await db
-      .update(contactMessages)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(contactMessages.id, id))
-      .returning();
-    return updatedMessage;
-  }
-
-  async getContactMessage(id: string): Promise<(ContactMessage & { assignedToUser?: User }) | undefined> {
-    const [message] = await db.select().from(contactMessages).where(eq(contactMessages.id, id));
-    if (!message) return undefined;
-
-    let assignedToUser = undefined;
-    if (message.assignedTo) {
-      assignedToUser = await this.getUser(message.assignedTo);
-    }
-
-    return { ...message, assignedToUser };
+    this.contactMessages[index] = {
+      ...this.contactMessages[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.contactMessages[index];
   }
 
   // Staff assignment operations
-  async createStaffAssignment(assignmentData: InsertStaffAssignment): Promise<StaffAssignment> {
-    const [newAssignment] = await db.insert(staffAssignments).values(assignmentData).returning();
+  async getStaffAssignments(staffId?: string, caseId?: string): Promise<StaffAssignment[]> {
+    let assignments = this.staffAssignments;
+    
+    if (staffId) {
+      assignments = assignments.filter(a => a.staffId === staffId);
+    }
+    if (caseId) {
+      assignments = assignments.filter(a => a.caseId === caseId);
+    }
+
+    return assignments;
+  }
+
+  async createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment> {
+    const newAssignment: StaffAssignment = {
+      id: `assignment-${Date.now()}`,
+      ...assignment,
+      assignedAt: new Date(),
+      completedAt: null,
+    };
+    this.staffAssignments.push(newAssignment);
     return newAssignment;
   }
 
-  async getStaffAssignments(filters?: { staffId?: string; caseId?: string; contactId?: string }): Promise<(StaffAssignment & { staff: User; assignedByUser: User })[]> {
-    let query = db.select().from(staffAssignments).where(eq(staffAssignments.isActive, true));
-    
-    const conditions = [eq(staffAssignments.isActive, true)];
-    if (filters?.staffId) {
-      conditions.push(eq(staffAssignments.staffId, filters.staffId));
-    }
-    if (filters?.caseId) {
-      conditions.push(eq(staffAssignments.caseId, filters.caseId));
-    }
-    if (filters?.contactId) {
-      conditions.push(eq(staffAssignments.contactId, filters.contactId));
-    }
-
-    if (conditions.length > 1) {
-      query = query.where(and(...conditions));
-    }
-
-    const results = await query.orderBy(desc(staffAssignments.assignedAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (assignment) => {
-        const staff = await this.getUser(assignment.staffId);
-        const assignedByUser = await this.getUser(assignment.assignedBy);
-        return {
-          ...assignment,
-          staff: staff!,
-          assignedByUser: assignedByUser!,
-        };
-      })
-    );
-
-    return enrichedResults;
-  }
-
   async updateStaffAssignment(id: string, updates: Partial<InsertStaffAssignment>): Promise<StaffAssignment> {
-    const [updatedAssignment] = await db
-      .update(staffAssignments)
-      .set(updates)
-      .where(eq(staffAssignments.id, id))
-      .returning();
-    return updatedAssignment;
+    const index = this.staffAssignments.findIndex(a => a.id === id);
+    if (index === -1) throw new Error("Staff assignment not found");
+    
+    this.staffAssignments[index] = {
+      ...this.staffAssignments[index],
+      ...updates,
+    };
+    return this.staffAssignments[index];
   }
 
-  async getStaffMembers(role?: string): Promise<User[]> {
-    let query = db.select().from(users).where(eq(users.isActive, true));
+  // Tribunal proceedings operations
+  async getTribunalProceedings(caseId?: string): Promise<TribunalProceeding[]> {
+    let proceedings = this.tribunalProceedings;
     
-    if (role) {
-      query = query.where(and(eq(users.isActive, true), eq(users.role, role as any)));
-    } else {
-      // Get all staff members (not regular users)
-      query = query.where(and(
-        eq(users.isActive, true), 
-        or(
-          eq(users.role, "admin"),
-          eq(users.role, "tribunal_head"),
-          eq(users.role, "senior_staff"),
-          eq(users.role, "staff")
-        )
-      ));
+    if (caseId) {
+      proceedings = proceedings.filter(p => p.caseId === caseId);
     }
 
-    return await query.orderBy(asc(users.firstName), asc(users.lastName));
+    return proceedings;
   }
 
-  // Tribunal proceeding operations
-  async createTribunalProceeding(proceedingData: InsertTribunalProceeding): Promise<TribunalProceeding> {
-    const [newProceeding] = await db.insert(tribunalProceedings).values(proceedingData).returning();
+  async createTribunalProceeding(proceeding: InsertTribunalProceeding): Promise<TribunalProceeding> {
+    const newProceeding: TribunalProceeding = {
+      id: `proceeding-${Date.now()}`,
+      ...proceeding,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.tribunalProceedings.push(newProceeding);
     return newProceeding;
   }
 
-  async getTribunalProceedings(caseId?: string): Promise<(TribunalProceeding & { case: Case; chairpersonUser: User })[]> {
-    let query = db.select().from(tribunalProceedings);
+  async updateTribunalProceeding(id: string, updates: Partial<InsertTribunalProceeding>): Promise<TribunalProceeding> {
+    const index = this.tribunalProceedings.findIndex(p => p.id === id);
+    if (index === -1) throw new Error("Tribunal proceeding not found");
     
-    if (caseId) {
-      query = query.where(eq(tribunalProceedings.caseId, caseId));
-    }
+    this.tribunalProceedings[index] = {
+      ...this.tribunalProceedings[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.tribunalProceedings[index];
+  }
 
-    const results = await query.orderBy(desc(tribunalProceedings.createdAt));
-
-    const enrichedResults = await Promise.all(
-      results.map(async (proceeding) => {
-        const caseData = await db.select().from(cases).where(eq(cases.id, proceeding.caseId));
-        const chairpersonUser = await this.getUser(proceeding.chairperson);
+  // Vouch/Devouch system
+  async getVouches(targetUserId: string): Promise<(Vouch & { voucherUser: User })[]> {
+    const vouches = this.vouches.filter(v => v.targetUserId === targetUserId);
+    
+    const enrichedVouches = await Promise.all(
+      vouches.map(async (vouch) => {
+        const voucherUser = await this.getUser(vouch.voucherUserId);
         return {
-          ...proceeding,
-          case: caseData[0],
-          chairpersonUser: chairpersonUser!,
+          ...vouch,
+          voucherUser: voucherUser!,
         };
       })
     );
 
-    return enrichedResults;
+    return enrichedVouches;
   }
 
-  async updateTribunalProceeding(id: string, updates: Partial<InsertTribunalProceeding>): Promise<TribunalProceeding> {
-    const [updatedProceeding] = await db
-      .update(tribunalProceedings)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(tribunalProceedings.id, id))
-      .returning();
-    return updatedProceeding;
+  async createVouch(vouch: InsertVouch): Promise<Vouch> {
+    // Check if this user already vouched/devouched this target
+    const existingVouch = await this.getVouchByUsers(vouch.targetUserId, vouch.voucherUserId);
+    if (existingVouch) {
+      throw new Error("You have already vouched or devouched this user");
+    }
+
+    const newVouch: Vouch = {
+      id: `vouch-${Date.now()}`,
+      ...vouch,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.vouches.push(newVouch);
+
+    // Update target user's reputation
+    await this.updateUserReputationAfterVouch(vouch.targetUserId, vouch.status, vouch.weight || 1);
+
+    return newVouch;
   }
 
-  // Statistics operations
-  async getStatistics(): Promise<{
-    totalCases: number;
-    pendingCases: number;
-    verifiedCases: number;
-    altAccounts: number;
-  }> {
-    const [totalCasesResult] = await db.select({ count: count() }).from(cases);
-    const [pendingCasesResult] = await db.select({ count: count() }).from(cases).where(eq(cases.status, "pending"));
-    const [verifiedCasesResult] = await db.select({ count: count() }).from(cases).where(eq(cases.status, "verified"));
-    const [altAccountsResult] = await db.select({ count: count() }).from(altAccounts);
-
-    return {
-      totalCases: totalCasesResult.count,
-      pendingCases: pendingCasesResult.count,
-      verifiedCases: verifiedCasesResult.count,
-      altAccounts: altAccountsResult.count,
-    };
+  async getVouchByUsers(targetUserId: string, voucherUserId: string): Promise<Vouch | undefined> {
+    return this.vouches.find(v => v.targetUserId === targetUserId && v.voucherUserId === voucherUserId);
   }
 
-  async getDashboardStatistics(): Promise<{
-    totalCases: number;
-    pendingCases: number;
-    verifiedCases: number;
-    altAccounts: number;
-    contactMessages: {
-      total: number;
-      new: number;
-      inProgress: number;
-      resolved: number;
-    };
-    staffAssignments: {
-      total: number;
-      active: number;
-      completed: number;
-    };
-    staffMembers: {
-      total: number;
-      admin: number;
-      tribunalHead: number;
-      seniorStaff: number;
-      staff: number;
-    };
-  }> {
-    const baseStats = await this.getStatistics();
+  async updateVouch(id: string, updates: Partial<InsertVouch>): Promise<Vouch> {
+    const index = this.vouches.findIndex(v => v.id === id);
+    if (index === -1) throw new Error("Vouch not found");
     
-    // Contact messages statistics
-    const [totalContactResult] = await db.select({ count: count() }).from(contactMessages);
-    const [newContactResult] = await db.select({ count: count() }).from(contactMessages).where(eq(contactMessages.status, "new"));
-    const [inProgressContactResult] = await db.select({ count: count() }).from(contactMessages).where(eq(contactMessages.status, "in_progress"));
-    const [resolvedContactResult] = await db.select({ count: count() }).from(contactMessages).where(eq(contactMessages.status, "resolved"));
+    this.vouches[index] = {
+      ...this.vouches[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.vouches[index];
+  }
 
-    // Staff assignments statistics
-    const [totalAssignmentsResult] = await db.select({ count: count() }).from(staffAssignments);
-    const [activeAssignmentsResult] = await db.select({ count: count() }).from(staffAssignments).where(eq(staffAssignments.isActive, true));
-    const [completedAssignmentsResult] = await db.select({ count: count() }).from(staffAssignments).where(sql`completed_at IS NOT NULL`);
+  private async updateUserReputationAfterVouch(targetUserId: string, status: string, weight: number) {
+    const reputation = this.userReputation.find(r => r.userId === targetUserId);
+    if (!reputation) return;
 
-    // Staff members statistics
-    const [totalStaffResult] = await db.select({ count: count() }).from(users).where(
-      and(
-        eq(users.isActive, true),
-        or(
-          eq(users.role, "admin"),
-          eq(users.role, "tribunal_head"),
-          eq(users.role, "senior_staff"),
-          eq(users.role, "staff")
-        )
-      )
+    if (status === "vouched") {
+      reputation.vouchesReceived += 1;
+      reputation.reputationScore += (weight * 10);
+    } else if (status === "devouched") {
+      reputation.devouchesReceived += 1;
+      reputation.reputationScore -= (weight * 15);
+    }
+
+    // Update trust level based on reputation score
+    if (reputation.reputationScore >= 1000) reputation.trustLevel = "platinum";
+    else if (reputation.reputationScore >= 500) reputation.trustLevel = "gold";
+    else if (reputation.reputationScore >= 200) reputation.trustLevel = "silver";
+    else reputation.trustLevel = "bronze";
+
+    reputation.updatedAt = new Date();
+  }
+
+  // Dispute resolution system
+  async getActiveDisputes(): Promise<(DisputeResolution & { votes: DisputeVote[] })[]> {
+    const activeDisputes = this.disputeResolutions.filter(d => 
+      d.status === "active" && new Date(d.votingEndDate) > new Date()
     );
-    const [adminResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "admin")));
-    const [tribunalHeadResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "tribunal_head")));
-    const [seniorStaffResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "senior_staff")));
-    const [staffResult] = await db.select({ count: count() }).from(users).where(and(eq(users.isActive, true), eq(users.role, "staff")));
+
+    const enrichedDisputes = await Promise.all(
+      activeDisputes.map(async (dispute) => {
+        const votes = await this.getDisputeVotes(dispute.id);
+        return {
+          ...dispute,
+          votes,
+        };
+      })
+    );
+
+    return enrichedDisputes;
+  }
+
+  async createDisputeResolution(dispute: InsertDisputeResolution): Promise<DisputeResolution> {
+    const newDispute: DisputeResolution = {
+      id: `dispute-${Date.now()}`,
+      ...dispute,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.disputeResolutions.push(newDispute);
+    return newDispute;
+  }
+
+  async updateDisputeResolution(id: string, updates: Partial<InsertDisputeResolution>): Promise<DisputeResolution> {
+    const index = this.disputeResolutions.findIndex(d => d.id === id);
+    if (index === -1) throw new Error("Dispute resolution not found");
+    
+    this.disputeResolutions[index] = {
+      ...this.disputeResolutions[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.disputeResolutions[index];
+  }
+
+  async createDisputeVote(vote: InsertDisputeVote): Promise<DisputeVote> {
+    // Check if this voter hash already voted on this dispute
+    const existingVote = this.disputeVotes.find(v => 
+      v.disputeId === vote.disputeId && v.voterHash === vote.voterHash
+    );
+    if (existingVote) {
+      throw new Error("You have already voted on this dispute");
+    }
+
+    const newVote: DisputeVote = {
+      id: `vote-${Date.now()}`,
+      ...vote,
+      createdAt: new Date(),
+    };
+    this.disputeVotes.push(newVote);
+    return newVote;
+  }
+
+  async getDisputeVotes(disputeId: string): Promise<DisputeVote[]> {
+    return this.disputeVotes.filter(v => v.disputeId === disputeId);
+  }
+
+  // Alt detection system
+  async getAltDetectionReports(status?: string): Promise<AltDetectionReport[]> {
+    let reports = this.altDetectionReports;
+    
+    if (status) {
+      reports = reports.filter(r => r.status === status);
+    }
+
+    return reports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createAltDetectionReport(report: InsertAltDetectionReport): Promise<AltDetectionReport> {
+    const newReport: AltDetectionReport = {
+      id: `alt-report-${Date.now()}`,
+      ...report,
+      createdAt: new Date(),
+      reviewedAt: null,
+    };
+    this.altDetectionReports.push(newReport);
+    return newReport;
+  }
+
+  async updateAltDetectionReport(id: string, updates: Partial<InsertAltDetectionReport>): Promise<AltDetectionReport> {
+    const index = this.altDetectionReports.findIndex(r => r.id === id);
+    if (index === -1) throw new Error("Alt detection report not found");
+    
+    this.altDetectionReports[index] = {
+      ...this.altDetectionReports[index],
+      ...updates,
+    };
+    return this.altDetectionReports[index];
+  }
+
+  // User session tracking
+  async createUserSession(session: InsertUserSession): Promise<UserSession> {
+    const newSession: UserSession = {
+      id: `session-${Date.now()}`,
+      ...session,
+      createdAt: new Date(),
+    };
+    this.userSessions.push(newSession);
+    return newSession;
+  }
+
+  async getUserSessions(userId: string): Promise<UserSession[]> {
+    return this.userSessions.filter(s => s.userId === userId && s.isActive);
+  }
+
+  async updateUserSession(id: string, updates: Partial<InsertUserSession>): Promise<UserSession> {
+    const index = this.userSessions.findIndex(s => s.id === id);
+    if (index === -1) throw new Error("User session not found");
+    
+    this.userSessions[index] = {
+      ...this.userSessions[index],
+      ...updates,
+    };
+    return this.userSessions[index];
+  }
+
+  // Staff management
+  async getStaffPermissions(userId: string): Promise<StaffPermission[]> {
+    return this.staffPermissions.filter(p => p.userId === userId && p.isActive);
+  }
+
+  async createStaffPermission(permission: InsertStaffPermission): Promise<StaffPermission> {
+    const newPermission: StaffPermission = {
+      id: `permission-${Date.now()}`,
+      ...permission,
+      grantedAt: new Date(),
+    };
+    this.staffPermissions.push(newPermission);
+    return newPermission;
+  }
+
+  async getStaffPerformance(staffId: string, period?: string): Promise<StaffPerformance[]> {
+    let performance = this.staffPerformance.filter(p => p.staffId === staffId);
+    
+    if (period) {
+      performance = performance.filter(p => p.period === period);
+    }
+
+    return performance.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createStaffPerformance(performance: InsertStaffPerformance): Promise<StaffPerformance> {
+    const newPerformance: StaffPerformance = {
+      id: `performance-${Date.now()}`,
+      ...performance,
+      createdAt: new Date(),
+    };
+    this.staffPerformance.push(newPerformance);
+    return newPerformance;
+  }
+
+  // Utility system
+  async getUtilityCategories(): Promise<UtilityCategory[]> {
+    return this.utilityCategories.filter(c => c.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  async createUtilityCategory(category: InsertUtilityCategory): Promise<UtilityCategory> {
+    const newCategory: UtilityCategory = {
+      id: `category-${Date.now()}`,
+      ...category,
+      createdAt: new Date(),
+    };
+    this.utilityCategories.push(newCategory);
+    return newCategory;
+  }
+
+  async getUtilityDocuments(categoryId?: string): Promise<(UtilityDocument & { category: UtilityCategory; author: User })[]> {
+    let documents = this.utilityDocuments;
+    
+    if (categoryId) {
+      documents = documents.filter(d => d.categoryId === categoryId);
+    }
+
+    const enrichedDocuments = await Promise.all(
+      documents.map(async (doc) => {
+        const category = this.utilityCategories.find(c => c.id === doc.categoryId);
+        const author = await this.getUser(doc.authorId);
+        
+        return {
+          ...doc,
+          category: category!,
+          author: author!,
+        };
+      })
+    );
+
+    return enrichedDocuments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createUtilityDocument(document: InsertUtilityDocument): Promise<UtilityDocument> {
+    const newDocument: UtilityDocument = {
+      id: `document-${Date.now()}`,
+      ...document,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.utilityDocuments.push(newDocument);
+    return newDocument;
+  }
+
+  async updateUtilityDocument(id: string, updates: Partial<InsertUtilityDocument>): Promise<UtilityDocument> {
+    const index = this.utilityDocuments.findIndex(d => d.id === id);
+    if (index === -1) throw new Error("Utility document not found");
+    
+    this.utilityDocuments[index] = {
+      ...this.utilityDocuments[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.utilityDocuments[index];
+  }
+
+  async createDocumentRating(rating: InsertDocumentRating): Promise<DocumentRating> {
+    const newRating: DocumentRating = {
+      id: `rating-${Date.now()}`,
+      ...rating,
+      createdAt: new Date(),
+    };
+    this.documentRatings.push(newRating);
+
+    // Update document average rating
+    await this.updateDocumentAverageRating(rating.documentId);
+
+    return newRating;
+  }
+
+  private async updateDocumentAverageRating(documentId: string) {
+    const ratings = this.documentRatings.filter(r => r.documentId === documentId);
+    const document = this.utilityDocuments.find(d => d.id === documentId);
+    
+    if (!document || ratings.length === 0) return;
+
+    const averageRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+    document.rating = Number(averageRating.toFixed(2));
+    document.ratingCount = ratings.length;
+    document.updatedAt = new Date();
+  }
+
+  // User reputation system
+  async getUserReputation(userId: string): Promise<UserReputation | undefined> {
+    return this.userReputation.find(r => r.userId === userId);
+  }
+
+  async createUserReputation(reputation: InsertUserReputation): Promise<UserReputation> {
+    const newReputation: UserReputation = {
+      id: `reputation-${Date.now()}`,
+      ...reputation,
+      lastCalculated: new Date(),
+      updatedAt: new Date(),
+    };
+    this.userReputation.push(newReputation);
+    return newReputation;
+  }
+
+  async updateUserReputation(userId: string, updates: Partial<InsertUserReputation>): Promise<UserReputation> {
+    const index = this.userReputation.findIndex(r => r.userId === userId);
+    if (index === -1) throw new Error("User reputation not found");
+    
+    this.userReputation[index] = {
+      ...this.userReputation[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.userReputation[index];
+  }
+
+  // Audit logging
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const newLog: AuditLog = {
+      id: `audit-${Date.now()}`,
+      ...log,
+      createdAt: new Date(),
+    };
+    this.auditLogs.push(newLog);
+    return newLog;
+  }
+
+  async getAuditLogs(userId?: string, entityType?: string): Promise<AuditLog[]> {
+    let logs = this.auditLogs;
+    
+    if (userId) {
+      logs = logs.filter(l => l.userId === userId);
+    }
+    if (entityType) {
+      logs = logs.filter(l => l.entityType === entityType);
+    }
+
+    return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // Additional missing methods implementation
+  async getPasswordResetRequests(status?: string): Promise<PasswordResetRequest[]> {
+    let requests = this.passwordResetRequests;
+    
+    if (status) {
+      requests = requests.filter(r => r.status === status);
+    }
+
+    return requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getContactMessage(id: string): Promise<ContactMessage | undefined> {
+    return this.contactMessages.find(m => m.id === id);
+  }
+
+  async getStaffMembers(): Promise<User[]> {
+    return this.users.filter(u => u.role !== "user" && u.isActive);
+  }
+
+  async getStatistics(): Promise<any> {
+    const totalCases = this.cases.length;
+    const pendingCases = this.cases.filter(c => c.status === "pending").length;
+    const resolvedCases = this.cases.filter(c => c.status === "resolved").length;
+    const totalUsers = this.users.length;
+    const activeUsers = this.users.filter(u => u.isActive).length;
+    const totalVouches = this.vouches.filter(v => v.status === "vouched").length;
+    const totalDevouches = this.vouches.filter(v => v.status === "devouched").length;
+    const activeDisputes = this.disputeResolutions.filter(d => d.status === "active").length;
+    const altReports = this.altDetectionReports.filter(r => r.status === "pending").length;
 
     return {
-      ...baseStats,
-      contactMessages: {
-        total: totalContactResult.count,
-        new: newContactResult.count,
-        inProgress: inProgressContactResult.count,
-        resolved: resolvedContactResult.count,
-      },
-      staffAssignments: {
-        total: totalAssignmentsResult.count,
-        active: activeAssignmentsResult.count,
-        completed: completedAssignmentsResult.count,
-      },
-      staffMembers: {
-        total: totalStaffResult.count,
-        admin: adminResult.count,
-        tribunalHead: tribunalHeadResult.count,
-        seniorStaff: seniorStaffResult.count,
-        staff: staffResult.count,
-      },
+      totalCases,
+      pendingCases,
+      resolvedCases,
+      totalUsers,
+      activeUsers,
+      totalVouches,
+      totalDevouches,
+      activeDisputes,
+      altReports,
+      caseResolutionRate: totalCases > 0 ? ((resolvedCases / totalCases) * 100).toFixed(1) : "0",
+      averageCaseTime: "3.2 days", // Mock calculation
     };
+  }
+
+  async getDashboardStatistics(): Promise<any> {
+    return this.getStatistics();
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
