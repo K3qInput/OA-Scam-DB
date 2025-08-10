@@ -330,10 +330,12 @@ export default function Dashboard() {
             <ThreatIntelWidget />
             
             <QuickStats
-              title="This Week"
-              current={statistics?.totalCases || 0}
-              previous={Math.max(0, (statistics?.totalCases || 0) - 15)}
-              className="animate-bounce-in"
+              totalCases={statistics?.totalCases || 0}
+              pendingCases={statistics?.pendingCases || 0}
+              resolvedCases={statistics?.verifiedCases || 0}
+              averageRiskScore={5.2}
+              weeklyChange={12}
+              resolutionRate={85}
             />
             
             <ActivityFeed className="animate-fade-in" />
