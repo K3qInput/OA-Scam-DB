@@ -13,9 +13,12 @@ import {
   Mail,
   MessageSquare,
   UserCheck,
-  Gavel
+  Gavel,
+  Zap,
+  Briefcase
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import type { User } from "@shared/schema";
 
 interface SidebarProps {
   className?: string;
@@ -24,6 +27,7 @@ interface SidebarProps {
 export default function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const typedUser = user as User | null;
 
   const isActive = (href: string) => location === href;
   
@@ -49,6 +53,22 @@ export default function Sidebar({ className }: SidebarProps) {
             New Case
           </Link>
 
+          {/* Tools & Services Section */}
+          <div className="pt-4">
+            <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Tools & Services
+            </h3>
+            <Link href="/ai-tools" className={linkClass("/ai-tools")}>
+              <Zap className="mr-3 h-5 w-5" />
+              AI Tools
+            </Link>
+            
+            <Link href="/marketplace" className={linkClass("/marketplace")}>
+              <Briefcase className="mr-3 h-5 w-5" />
+              Freelancer Marketplace
+            </Link>
+          </div>
+
           {/* Contact & Support Section */}
           <div className="pt-4">
             <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -59,7 +79,7 @@ export default function Sidebar({ className }: SidebarProps) {
               Contact Us
             </Link>
             
-            {user && ["admin", "tribunal_head", "senior_staff", "staff"].includes(user.role) && (
+            {typedUser && typedUser.role && ["admin", "tribunal_head", "senior_staff", "staff"].includes(typedUser.role) && (
               <Link href="/contact-management" className={linkClass("/contact-management")}>
                 <MessageSquare className="mr-3 h-5 w-5" />
                 Manage Contacts
@@ -68,7 +88,7 @@ export default function Sidebar({ className }: SidebarProps) {
           </div>
 
           {/* Staff Management Section */}
-          {user && ["admin", "tribunal_head", "senior_staff"].includes(user.role) && (
+          {typedUser && typedUser.role && ["admin", "tribunal_head", "senior_staff"].includes(typedUser.role) && (
             <div className="pt-4">
               <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Staff Management
@@ -86,7 +106,7 @@ export default function Sidebar({ className }: SidebarProps) {
           )}
 
           {/* Tribunal Operations Section */}
-          {user && ["admin", "tribunal_head"].includes(user.role) && (
+          {typedUser && typedUser.role && ["admin", "tribunal_head"].includes(typedUser.role) && (
             <div className="pt-4">
               <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Tribunal Operations
@@ -110,7 +130,7 @@ export default function Sidebar({ className }: SidebarProps) {
           </div>
 
           {/* Admin Only */}
-          {user && user.role === "admin" && (
+          {typedUser && typedUser.role && typedUser.role === "admin" && (
             <div className="pt-4">
               <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Administration

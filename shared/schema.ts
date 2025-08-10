@@ -826,3 +826,496 @@ export type InsertUserReputation = z.infer<typeof insertUserReputationSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
+
+// ============= AI TOOLS & FREELANCER MARKETPLACE =============
+
+// AI Tool Categories and Services
+export const aiToolCategories = pgTable("ai_tool_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // "Deal Generator", "Code Checker", "Build Visualizer", etc.
+  description: text("description"),
+  icon: varchar("icon"),
+  targetRole: varchar("target_role"), // "developer", "builder", "server_owner", "all"
+  isActive: boolean("is_active").default(true).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const aiTools = pgTable("ai_tools", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description").notNull(),
+  instructions: text("instructions").notNull(), // AI prompt instructions
+  inputFields: jsonb("input_fields").notNull(), // Form field definitions
+  outputFormat: varchar("output_format").default("text").notNull(), // "text", "markdown", "json", "code"
+  requiredRole: varchar("required_role").default("user").notNull(),
+  usageCount: integer("usage_count").default(0).notNull(),
+  rating: decimal("rating", { precision: 3, scale: 2 }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const aiToolUsage = pgTable("ai_tool_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  toolId: varchar("tool_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  inputData: jsonb("input_data").notNull(),
+  outputData: jsonb("output_data"),
+  status: varchar("status").default("pending").notNull(), // "pending", "completed", "failed"
+  errorMessage: text("error_message"),
+  processingTime: integer("processing_time"), // milliseconds
+  rating: integer("rating"), // 1-5 stars
+  feedback: text("feedback"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Freelancer Marketplace
+export const freelancerProfiles = pgTable("freelancer_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  isVerified: boolean("is_verified").default(false).notNull(),
+  verificationLevel: varchar("verification_level").default("basic").notNull(), // "basic", "enhanced", "premium"
+  title: varchar("title").notNull(),
+  bio: text("bio").notNull(),
+  skills: text("skills").array().notNull(),
+  specializations: text("specializations").array(),
+  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }),
+  currency: varchar("currency").default("USD").notNull(),
+  availability: varchar("availability").default("available").notNull(), // "available", "busy", "unavailable"
+  portfolio: jsonb("portfolio"), // Links to work examples
+  experience: varchar("experience").notNull(), // "entry", "intermediate", "expert"
+  completedJobs: integer("completed_jobs").default(0).notNull(),
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }),
+  totalEarnings: decimal("total_earnings", { precision: 12, scale: 2 }).default("0").notNull(),
+  responseTime: integer("response_time"), // Average response time in hours
+  languages: text("languages").array(),
+  timezone: varchar("timezone"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const freelancerSkillEnum = pgEnum("freelancer_skill", [
+  "web_development", "mobile_development", "game_development", "ui_ux_design",
+  "graphic_design", "3d_modeling", "animation", "content_writing", "copywriting",
+  "seo", "marketing", "project_management", "data_analysis", "ai_ml", "blockchain",
+  "cybersecurity", "devops", "qa_testing", "minecraft_development", "discord_bots",
+  "server_administration", "plugin_development", "mod_development"
+]);
+
+export const projectStatusEnum = pgEnum("project_status", [
+  "draft", "open", "in_progress", "review", "completed", "cancelled", "disputed"
+]);
+
+export const projects = pgTable("projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull(),
+  freelancerId: varchar("freelancer_id"),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  requirements: text("requirements").notNull(),
+  category: varchar("category").notNull(),
+  skills: text("skills").array().notNull(),
+  budget: decimal("budget", { precision: 10, scale: 2 }),
+  budgetType: varchar("budget_type").default("fixed").notNull(), // "fixed", "hourly"
+  currency: varchar("currency").default("USD").notNull(),
+  deadline: timestamp("deadline"),
+  status: projectStatusEnum("status").default("draft").notNull(),
+  priority: priorityEnum("priority").default("medium").notNull(),
+  isPublic: boolean("is_public").default(true).notNull(),
+  isVerifiedOnly: boolean("is_verified_only").default(false).notNull(),
+  applicationCount: integer("application_count").default(0).notNull(),
+  attachments: text("attachments").array(),
+  estimatedHours: integer("estimated_hours"),
+  actualHours: integer("actual_hours"),
+  milestones: jsonb("milestones"),
+  tags: text("tags").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+export const projectApplications = pgTable("project_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  freelancerId: varchar("freelancer_id").notNull(),
+  coverLetter: text("cover_letter").notNull(),
+  proposedBudget: decimal("proposed_budget", { precision: 10, scale: 2 }),
+  proposedTimeline: text("proposed_timeline"),
+  portfolio: jsonb("portfolio"),
+  status: varchar("status").default("pending").notNull(), // "pending", "accepted", "rejected", "withdrawn"
+  clientNotes: text("client_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectReviews = pgTable("project_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  reviewerId: varchar("reviewer_id").notNull(), // Client or freelancer
+  revieweeId: varchar("reviewee_id").notNull(), // Other party
+  rating: integer("rating").notNull(), // 1-5 stars
+  review: text("review"),
+  skills: jsonb("skills"), // Skill ratings
+  wouldWorkAgain: boolean("would_work_again"),
+  isPublic: boolean("is_public").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Project Collaboration Hub
+export const collaborationSpaces = pgTable("collaboration_spaces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  ownerId: varchar("owner_id").notNull(),
+  isPublic: boolean("is_public").default(false).notNull(),
+  inviteCode: varchar("invite_code").unique(),
+  maxMembers: integer("max_members").default(10).notNull(),
+  memberCount: integer("member_count").default(1).notNull(),
+  tags: text("tags").array(),
+  category: varchar("category"),
+  rules: text("rules"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const collaborationMembers = pgTable("collaboration_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spaceId: varchar("space_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: varchar("role").default("member").notNull(), // "owner", "admin", "member", "viewer"
+  permissions: text("permissions").array(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  lastActive: timestamp("last_active").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+export const collaborationTasks = pgTable("collaboration_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spaceId: varchar("space_id").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  assignedTo: varchar("assigned_to"),
+  createdBy: varchar("created_by").notNull(),
+  status: varchar("status").default("todo").notNull(), // "todo", "in_progress", "review", "completed"
+  priority: priorityEnum("priority").default("medium").notNull(),
+  tags: text("tags").array(),
+  dueDate: timestamp("due_date"),
+  estimatedHours: integer("estimated_hours"),
+  actualHours: integer("actual_hours"),
+  attachments: text("attachments").array(),
+  dependencies: text("dependencies").array(), // Task IDs this depends on
+  progress: integer("progress").default(0).notNull(), // 0-100
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const collaborationMessages = pgTable("collaboration_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spaceId: varchar("space_id").notNull(),
+  taskId: varchar("task_id"), // Optional: message related to specific task
+  userId: varchar("user_id").notNull(),
+  content: text("content").notNull(),
+  messageType: varchar("message_type").default("text").notNull(), // "text", "file", "system", "ai_generated"
+  attachments: text("attachments").array(),
+  mentions: text("mentions").array(), // User IDs mentioned in message
+  isEdited: boolean("is_edited").default(false).notNull(),
+  editedAt: timestamp("edited_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Verification System for Freelancers
+export const verificationRequests = pgTable("verification_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  freelancerId: varchar("freelancer_id").notNull(),
+  verificationType: varchar("verification_type").notNull(), // "identity", "skills", "portfolio", "enhanced"
+  requestedLevel: varchar("requested_level").notNull(), // "basic", "enhanced", "premium"
+  submittedDocuments: jsonb("submitted_documents").notNull(),
+  status: varchar("status").default("pending").notNull(), // "pending", "approved", "rejected", "needs_revision"
+  reviewedBy: varchar("reviewed_by"),
+  reviewNotes: text("review_notes"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+// AI Tool Ratings and Feedback
+export const aiToolRatings = pgTable("ai_tool_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  toolId: varchar("tool_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  rating: integer("rating").notNull(), // 1-5 stars
+  review: text("review"),
+  isHelpful: boolean("is_helpful"),
+  improvementSuggestions: text("improvement_suggestions"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ============= RELATIONS FOR NEW TABLES =============
+
+// AI Tools Relations
+export const aiToolCategoriesRelations = relations(aiToolCategories, ({ many }) => ({
+  tools: many(aiTools),
+}));
+
+export const aiToolsRelations = relations(aiTools, ({ one, many }) => ({
+  category: one(aiToolCategories, {
+    fields: [aiTools.categoryId],
+    references: [aiToolCategories.id],
+  }),
+  usage: many(aiToolUsage),
+  ratings: many(aiToolRatings),
+}));
+
+export const aiToolUsageRelations = relations(aiToolUsage, ({ one }) => ({
+  tool: one(aiTools, {
+    fields: [aiToolUsage.toolId],
+    references: [aiTools.id],
+  }),
+  user: one(users, {
+    fields: [aiToolUsage.userId],
+    references: [users.id],
+  }),
+}));
+
+export const aiToolRatingsRelations = relations(aiToolRatings, ({ one }) => ({
+  tool: one(aiTools, {
+    fields: [aiToolRatings.toolId],
+    references: [aiTools.id],
+  }),
+  user: one(users, {
+    fields: [aiToolRatings.userId],
+    references: [users.id],
+  }),
+}));
+
+// Freelancer Marketplace Relations
+export const freelancerProfilesRelations = relations(freelancerProfiles, ({ one, many }) => ({
+  user: one(users, {
+    fields: [freelancerProfiles.userId],
+    references: [users.id],
+  }),
+  projectsAsFreelancer: many(projects, { relationName: "freelancer" }),
+  applications: many(projectApplications),
+  receivedReviews: many(projectReviews, { relationName: "reviewee" }),
+  givenReviews: many(projectReviews, { relationName: "reviewer" }),
+  verificationRequests: many(verificationRequests),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  client: one(users, {
+    fields: [projects.clientId],
+    references: [users.id],
+    relationName: "client",
+  }),
+  freelancer: one(freelancerProfiles, {
+    fields: [projects.freelancerId],
+    references: [freelancerProfiles.userId],
+    relationName: "freelancer",
+  }),
+  applications: many(projectApplications),
+  reviews: many(projectReviews),
+}));
+
+export const projectApplicationsRelations = relations(projectApplications, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectApplications.projectId],
+    references: [projects.id],
+  }),
+  freelancer: one(freelancerProfiles, {
+    fields: [projectApplications.freelancerId],
+    references: [freelancerProfiles.userId],
+  }),
+}));
+
+export const projectReviewsRelations = relations(projectReviews, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectReviews.projectId],
+    references: [projects.id],
+  }),
+  reviewer: one(users, {
+    fields: [projectReviews.reviewerId],
+    references: [users.id],
+    relationName: "reviewer",
+  }),
+  reviewee: one(users, {
+    fields: [projectReviews.revieweeId],
+    references: [users.id],
+    relationName: "reviewee",
+  }),
+}));
+
+// Collaboration Relations
+export const collaborationSpacesRelations = relations(collaborationSpaces, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [collaborationSpaces.ownerId],
+    references: [users.id],
+  }),
+  members: many(collaborationMembers),
+  tasks: many(collaborationTasks),
+  messages: many(collaborationMessages),
+}));
+
+export const collaborationMembersRelations = relations(collaborationMembers, ({ one }) => ({
+  space: one(collaborationSpaces, {
+    fields: [collaborationMembers.spaceId],
+    references: [collaborationSpaces.id],
+  }),
+  user: one(users, {
+    fields: [collaborationMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const collaborationTasksRelations = relations(collaborationTasks, ({ one, many }) => ({
+  space: one(collaborationSpaces, {
+    fields: [collaborationTasks.spaceId],
+    references: [collaborationSpaces.id],
+  }),
+  assignedToUser: one(users, {
+    fields: [collaborationTasks.assignedTo],
+    references: [users.id],
+  }),
+  createdByUser: one(users, {
+    fields: [collaborationTasks.createdBy],
+    references: [users.id],
+  }),
+  messages: many(collaborationMessages),
+}));
+
+export const collaborationMessagesRelations = relations(collaborationMessages, ({ one }) => ({
+  space: one(collaborationSpaces, {
+    fields: [collaborationMessages.spaceId],
+    references: [collaborationSpaces.id],
+  }),
+  task: one(collaborationTasks, {
+    fields: [collaborationMessages.taskId],
+    references: [collaborationTasks.id],
+  }),
+  user: one(users, {
+    fields: [collaborationMessages.userId],
+    references: [users.id],
+  }),
+}));
+
+export const verificationRequestsRelations = relations(verificationRequests, ({ one }) => ({
+  freelancer: one(freelancerProfiles, {
+    fields: [verificationRequests.freelancerId],
+    references: [freelancerProfiles.userId],
+  }),
+  reviewedByUser: one(users, {
+    fields: [verificationRequests.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+// ============= INSERT SCHEMAS FOR NEW TABLES =============
+
+export const insertAiToolCategorySchema = createInsertSchema(aiToolCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAiToolSchema = createInsertSchema(aiTools).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiToolUsageSchema = createInsertSchema(aiToolUsage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAiToolRatingSchema = createInsertSchema(aiToolRatings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFreelancerProfileSchema = createInsertSchema(freelancerProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectSchema = createInsertSchema(projects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectApplicationSchema = createInsertSchema(projectApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectReviewSchema = createInsertSchema(projectReviews).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCollaborationSpaceSchema = createInsertSchema(collaborationSpaces).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCollaborationMemberSchema = createInsertSchema(collaborationMembers).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const insertCollaborationTaskSchema = createInsertSchema(collaborationTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCollaborationMessageSchema = createInsertSchema(collaborationMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertVerificationRequestSchema = createInsertSchema(verificationRequests).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ============= TYPES FOR NEW TABLES =============
+
+export type AiToolCategory = typeof aiToolCategories.$inferSelect;
+export type InsertAiToolCategory = z.infer<typeof insertAiToolCategorySchema>;
+export type AiTool = typeof aiTools.$inferSelect;
+export type InsertAiTool = z.infer<typeof insertAiToolSchema>;
+export type AiToolUsage = typeof aiToolUsage.$inferSelect;
+export type InsertAiToolUsage = z.infer<typeof insertAiToolUsageSchema>;
+export type AiToolRating = typeof aiToolRatings.$inferSelect;
+export type InsertAiToolRating = z.infer<typeof insertAiToolRatingSchema>;
+
+export type FreelancerProfile = typeof freelancerProfiles.$inferSelect;
+export type InsertFreelancerProfile = z.infer<typeof insertFreelancerProfileSchema>;
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type ProjectApplication = typeof projectApplications.$inferSelect;
+export type InsertProjectApplication = z.infer<typeof insertProjectApplicationSchema>;
+export type ProjectReview = typeof projectReviews.$inferSelect;
+export type InsertProjectReview = z.infer<typeof insertProjectReviewSchema>;
+
+export type CollaborationSpace = typeof collaborationSpaces.$inferSelect;
+export type InsertCollaborationSpace = z.infer<typeof insertCollaborationSpaceSchema>;
+export type CollaborationMember = typeof collaborationMembers.$inferSelect;
+export type InsertCollaborationMember = z.infer<typeof insertCollaborationMemberSchema>;
+export type CollaborationTask = typeof collaborationTasks.$inferSelect;
+export type InsertCollaborationTask = z.infer<typeof insertCollaborationTaskSchema>;
+export type CollaborationMessage = typeof collaborationMessages.$inferSelect;
+export type InsertCollaborationMessage = z.infer<typeof insertCollaborationMessageSchema>;
+
+export type VerificationRequest = typeof verificationRequests.$inferSelect;
+export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;

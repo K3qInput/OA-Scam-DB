@@ -19,6 +19,8 @@ import Vouches from "@/pages/vouches";
 import Disputes from "@/pages/disputes";
 import AltDetection from "@/pages/alt-detection";
 import Utilities from "@/pages/utilities";
+import AiTools from "@/pages/ai-tools";
+import Marketplace from "@/pages/marketplace";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -69,6 +71,12 @@ function Router() {
       </Route>
       <Route path="/utilities">
         {hasToken ? <Utilities /> : <DiscordLogin />}
+      </Route>
+      <Route path="/ai-tools">
+        {hasToken ? <AiTools /> : <DiscordLogin />}
+      </Route>
+      <Route path="/marketplace">
+        {hasToken ? <Marketplace /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>
