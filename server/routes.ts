@@ -306,7 +306,10 @@ export function registerRoutes(app: Express): Server {
     try {
       const { username, password } = loginSchema.parse(req.body);
       
-      const user = await storage.authenticateUser(username, password);
+      // Trim whitespace from username to avoid issues
+      const trimmedUsername = username.trim();
+      
+      const user = await storage.authenticateUser(trimmedUsername, password);
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }

@@ -133,21 +133,26 @@ export interface IStorage {
 
   // Alt detection operations
   createAltDetectionReport(report: InsertAltDetectionReport): Promise<AltDetectionReport>;
+  getAltDetectionReports(): Promise<AltDetectionReport[]>;
+  updateAltDetectionReport(id: string, report: Partial<InsertAltDetectionReport>): Promise<AltDetectionReport>;
 
   // User session operations
   createUserSession(session: InsertUserSession): Promise<UserSession>;
 
   // Staff permission operations
   createStaffPermission(permission: InsertStaffPermission): Promise<StaffPermission>;
+  getStaffPermissions(userId?: string): Promise<StaffPermission[]>;
 
   // Staff performance operations
   createStaffPerformance(performance: InsertStaffPerformance): Promise<StaffPerformance>;
+  getStaffPerformance(userId?: string): Promise<StaffPerformance[]>;
 
   // Utility operations
   createUtilityCategory(category: InsertUtilityCategory): Promise<UtilityCategory>;
   getUtilityCategories(): Promise<UtilityCategory[]>;
   createUtilityDocument(document: InsertUtilityDocument): Promise<UtilityDocument>;
   getUtilityDocuments(categoryId?: string): Promise<UtilityDocument[]>;
+  updateUtilityDocument(id: string, document: Partial<InsertUtilityDocument>): Promise<UtilityDocument>;
   createDocumentRating(rating: InsertDocumentRating): Promise<DocumentRating>;
 
   // User reputation operations
@@ -156,6 +161,10 @@ export interface IStorage {
 
   // Audit log operations
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(): Promise<AuditLog[]>;
+  
+  // Dashboard statistics
+  getDashboardStatistics(): Promise<any>;
 
   // AI Tool operations
   getAiToolCategories(): Promise<AiToolCategory[]>;
@@ -839,6 +848,24 @@ Complex cases should be escalated to senior staff or tribunal.`,
     return report;
   }
 
+  async getAltDetectionReports(): Promise<AltDetectionReport[]> {
+    return Array.from(this.altDetectionReports.values());
+  }
+
+  async updateAltDetectionReport(id: string, reportData: Partial<InsertAltDetectionReport>): Promise<AltDetectionReport> {
+    const existing = this.altDetectionReports.get(id);
+    if (!existing) {
+      throw new Error("Alt detection report not found");
+    }
+    
+    const updated: AltDetectionReport = {
+      ...existing,
+      ...reportData,
+    };
+    this.altDetectionReports.set(id, updated);
+    return updated;
+  }
+
   // User session operations
   async createUserSession(sessionData: InsertUserSession): Promise<UserSession> {
     const id = this.generateId();
@@ -868,6 +895,11 @@ Complex cases should be escalated to senior staff or tribunal.`,
     return permission;
   }
 
+  async getStaffPermissions(userId?: string): Promise<StaffPermission[]> {
+    const permissions = Array.from(this.staffPermissions.values());
+    return userId ? permissions.filter(p => p.userId === userId) : permissions;
+  }
+
   // Staff performance operations
   async createStaffPerformance(performanceData: InsertStaffPerformance): Promise<StaffPerformance> {
     const id = this.generateId();
@@ -885,6 +917,11 @@ Complex cases should be escalated to senior staff or tribunal.`,
     };
     this.staffPerformance.set(id, performance);
     return performance;
+  }
+
+  async getStaffPerformance(userId?: string): Promise<StaffPerformance[]> {
+    const performances = Array.from(this.staffPerformance.values());
+    return userId ? performances.filter(p => p.userId === userId) : performances;
   }
 
   // Utility operations
@@ -934,6 +971,21 @@ Complex cases should be escalated to senior staff or tribunal.`,
       documents = documents.filter(doc => doc.categoryId === categoryId);
     }
     return documents;
+  }
+
+  async updateUtilityDocument(id: string, documentData: Partial<InsertUtilityDocument>): Promise<UtilityDocument> {
+    const existing = this.utilityDocuments.get(id);
+    if (!existing) {
+      throw new Error("Utility document not found");
+    }
+    
+    const updated: UtilityDocument = {
+      ...existing,
+      ...documentData,
+      updatedAt: new Date(),
+    };
+    this.utilityDocuments.set(id, updated);
+    return updated;
   }
 
   async createDocumentRating(ratingData: InsertDocumentRating): Promise<DocumentRating> {
@@ -989,6 +1041,29 @@ Complex cases should be escalated to senior staff or tribunal.`,
     };
     this.auditLogs.set(id, log);
     return log;
+  }
+
+  async getAuditLogs(): Promise<AuditLog[]> {
+    return Array.from(this.auditLogs.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  // Dashboard statistics
+  async getDashboardStatistics(): Promise<any> {
+    const totalCases = this.cases.size;
+    const totalUsers = this.users.size;
+    const pendingCases = Array.from(this.cases.values()).filter(c => c.status === "pending").length;
+    const resolvedCases = Array.from(this.cases.values()).filter(c => c.status === "resolved").length;
+    
+    return {
+      totalCases,
+      totalUsers,
+      pendingCases,
+      resolvedCases,
+      activeDisputes: this.disputeResolutions.size,
+      totalReports: this.altDetectionReports.size
+    };
   }
 
   // AI Tool operations
@@ -1383,3 +1458,98 @@ Complex cases should be escalated to senior staff or tribunal.`,
 }
 
 export const storage = new MemStorage();
+
+// Initialize default data
+async function initializeDefaultData() {
+  try {
+    // Check if admin user already exists
+    const existingAdmin = await storage.getUserByUsername("admin");
+    if (!existingAdmin) {
+      console.log("Creating default admin user...");
+      
+      // Create default admin user
+      await storage.createUser({
+        username: "admin",
+        email: "admin@ownersalliance.com",
+        passwordHash: await bcrypt.hash("admin123", 10),
+        role: "admin",
+        firstName: "System",
+        lastName: "Administrator",
+        profileImageUrl: null,
+        isActive: true,
+        department: "Administration",
+        specialization: "System Management",
+        staffId: "ADMIN-001",
+        phoneNumber: null,
+        officeLocation: null,
+        emergencyContact: null,
+        certifications: [],
+        discordId: null,
+        discordUsername: null,
+        discordDiscriminator: null,
+        discordAvatar: null,
+        twoFactorSecret: null,
+        twoFactorEnabled: false,
+        lastLoginAt: null,
+        failedLoginAttempts: 0,
+        accountLockedUntil: null,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+        emailVerified: true,
+        emailVerificationToken: null,
+        preferences: {},
+        metadata: {},
+      });
+
+      console.log("Default admin user created successfully");
+    }
+
+    // Create some default staff users for testing
+    const existingStaff = await storage.getUserByUsername("staff");
+    if (!existingStaff) {
+      console.log("Creating default staff user...");
+      
+      await storage.createUser({
+        username: "staff",
+        email: "staff@ownersalliance.com", 
+        passwordHash: await bcrypt.hash("staff123", 10),
+        role: "staff",
+        firstName: "John",
+        lastName: "Staff",
+        profileImageUrl: null,
+        isActive: true,
+        department: "Case Management",
+        specialization: "Fraud Investigation",
+        staffId: "STAFF-001",
+        phoneNumber: null,
+        officeLocation: null,
+        emergencyContact: null,
+        certifications: [],
+        discordId: null,
+        discordUsername: null,
+        discordDiscriminator: null,
+        discordAvatar: null,
+        twoFactorSecret: null,
+        twoFactorEnabled: false,
+        lastLoginAt: null,
+        failedLoginAttempts: 0,
+        accountLockedUntil: null,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+        emailVerified: true,
+        emailVerificationToken: null,
+        preferences: {},
+        metadata: {},
+      });
+
+      console.log("Default staff user created successfully");
+    }
+
+    console.log("Default data initialization completed");
+  } catch (error) {
+    console.error("Error initializing default data:", error);
+  }
+}
+
+// Initialize data after a small delay to ensure everything is set up
+setTimeout(initializeDefaultData, 1000);
