@@ -633,7 +633,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/alt-detection", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
       const { status } = req.query;
-      const reports = await storage.getAltDetectionReports(status);
+      const reports = await storage.getAltDetectionReports();
       res.json(reports);
     } catch (error) {
       console.error("Get alt detection reports error:", error);

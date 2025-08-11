@@ -58,24 +58,22 @@ export default function AiToolsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<AiToolCategory[]>({
     queryKey: ["/api/ai-tools/categories"],
   });
 
-  const { data: tools = [] } = useQuery({
+  const { data: tools = [] } = useQuery<AiTool[]>({
     queryKey: ["/api/ai-tools", selectedCategory],
     enabled: !!selectedCategory,
   });
 
   const useToolMutation = useMutation({
     mutationFn: async ({ toolId, inputData }: { toolId: string; inputData: any }) => {
-      return apiRequest(`/api/ai-tools/${toolId}/use`, {
-        method: "POST",
-        body: { inputData },
-      });
+      const response = await apiRequest("POST", `/api/ai-tools/${toolId}/use`, { inputData });
+      return response.json();
     },
-    onSuccess: (data) => {
-      setToolResult(data.outputData);
+    onSuccess: (data: any) => {
+      setToolResult(data.outputData || data);
       setIsProcessing(false);
       toast({
         title: "AI Tool Complete",

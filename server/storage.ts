@@ -921,7 +921,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
 
   async getStaffPerformance(userId?: string): Promise<StaffPerformance[]> {
     const performances = Array.from(this.staffPerformance.values());
-    return userId ? performances.filter(p => p.userId === userId) : performances;
+    return userId ? performances.filter(p => p.staffId === userId) : performances;
   }
 
   // Utility operations
@@ -1021,7 +1021,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
       lastCalculated: new Date(),
       updatedAt: new Date(),
     };
-    this.userReputation.set(userId, reputation);
+    this.userReputation.set(id, reputation);
     return reputation;
   }
 
@@ -1488,17 +1488,6 @@ async function initializeDefaultData() {
         discordUsername: null,
         discordDiscriminator: null,
         discordAvatar: null,
-        twoFactorSecret: null,
-        twoFactorEnabled: false,
-        lastLoginAt: null,
-        failedLoginAttempts: 0,
-        accountLockedUntil: null,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-        emailVerified: true,
-        emailVerificationToken: null,
-        preferences: {},
-        metadata: {},
       });
 
       console.log("Default admin user created successfully");
@@ -1529,17 +1518,6 @@ async function initializeDefaultData() {
         discordUsername: null,
         discordDiscriminator: null,
         discordAvatar: null,
-        twoFactorSecret: null,
-        twoFactorEnabled: false,
-        lastLoginAt: null,
-        failedLoginAttempts: 0,
-        accountLockedUntil: null,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-        emailVerified: true,
-        emailVerificationToken: null,
-        preferences: {},
-        metadata: {},
       });
 
       console.log("Default staff user created successfully");

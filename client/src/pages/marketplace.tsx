@@ -205,7 +205,7 @@ export default function Marketplace() {
                     <CardHeader className="pb-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12">
-                          <AvatarImage src={freelancer.avatar} />
+                          <AvatarImage src={freelancer.avatar || undefined} />
                           <AvatarFallback className="bg-oa-black text-white">
                             {freelancer.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
