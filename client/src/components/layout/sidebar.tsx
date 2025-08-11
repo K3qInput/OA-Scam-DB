@@ -156,11 +156,36 @@ function Sidebar({ className }: SidebarProps) {
             </Link>
           </div>
 
-          {/* Security */}
+          {/* Trust & Security */}
           <div className="pt-6">
             <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Security
+              Trust & Security
             </h3>
+            <Link href="/member-verification" className={linkClass("/member-verification")}>
+              <Shield className="w-5 h-5" />
+              Member Verification
+            </Link>
+            
+            <Link href="/reputation-profiles" className={linkClass("/reputation-profiles")}>
+              <Star className="w-5 h-5" />
+              Reputation Profiles
+            </Link>
+            
+            <Link href="/report-vault" className={linkClass("/report-vault")}>
+              <AlertTriangle className="w-5 h-5" />
+              Report Vault
+            </Link>
+            
+            <Link href="/blacklist-database" className={linkClass("/blacklist-database")}>
+              <Shield className="w-5 h-5" />
+              Blacklist Database
+            </Link>
+            
+            <Link href="/staff-transparency" className={linkClass("/staff-transparency")}>
+              <Users className="w-5 h-5" />
+              Staff Transparency
+            </Link>
+            
             <Link href="/threat-intel" className={linkClass("/threat-intel")}>
               <Shield className="w-5 h-5" />
               Threat Intelligence
@@ -172,10 +197,48 @@ function Sidebar({ className }: SidebarProps) {
                 Security Dashboard
               </Link>
             )}
+          </div>
+
+          {/* Collaboration & Networking */}
+          <div className="pt-6">
+            <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Collaboration & Networking
+            </h3>
+            <Link href="/marketplace" className={linkClass("/marketplace")}>
+              <ShoppingCart className="w-5 h-5" />
+              Project Marketplace
+            </Link>
+            
+            <Link href="/community-events" className={linkClass("/community-events")}>
+              <Calendar className="w-5 h-5" />
+              Community Events
+            </Link>
+          </div>
+
+          {/* Server Owner Utilities */}
+          <div className="pt-6">
+            <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Server Owner Utilities
+            </h3>
+            <Link href="/resource-hub" className={linkClass("/resource-hub")}>
+              <BookOpen className="w-5 h-5" />
+              Resource Hub
+            </Link>
             
             <Link href="/utilities" className={linkClass("/utilities")}>
               <Settings className="w-5 h-5" />
-              Utilities
+              Server Management
+            </Link>
+          </div>
+
+          {/* AI & Automation */}
+          <div className="pt-6">
+            <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              AI & Automation
+            </h3>
+            <Link href="/ai-tools" className={linkClass("/ai-tools")}>
+              <Brain className="w-5 h-5" />
+              AI Tools
             </Link>
           </div>
 

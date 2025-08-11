@@ -28,6 +28,13 @@ import ThreatIntel from "@/pages/threat-intel";
 import AdminModeration from "@/pages/admin-moderation";
 import ContentManagement from "@/pages/content-management";
 import AdvancedAnalytics from "@/pages/advanced-analytics";
+import MemberVerification from "@/pages/member-verification";
+import ReputationProfiles from "@/pages/reputation-profiles";
+import ReportVault from "@/pages/report-vault";
+import BlacklistDatabase from "@/pages/blacklist-database";
+import StaffTransparency from "@/pages/staff-transparency";
+import CommunityEvents from "@/pages/community-events";
+import ResourceHub from "@/pages/resource-hub";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -105,6 +112,27 @@ function Router() {
       </Route>
       <Route path="/advanced-analytics">
         {hasToken ? <AdvancedAnalytics /> : <DiscordLogin />}
+      </Route>
+      <Route path="/member-verification">
+        {hasToken ? <MemberVerification /> : <DiscordLogin />}
+      </Route>
+      <Route path="/reputation-profiles">
+        {hasToken ? <ReputationProfiles /> : <DiscordLogin />}
+      </Route>
+      <Route path="/report-vault">
+        {hasToken ? <ReportVault /> : <DiscordLogin />}
+      </Route>
+      <Route path="/blacklist-database">
+        {hasToken ? <BlacklistDatabase /> : <DiscordLogin />}
+      </Route>
+      <Route path="/staff-transparency">
+        {hasToken ? <StaffTransparency /> : <DiscordLogin />}
+      </Route>
+      <Route path="/community-events">
+        {hasToken ? <CommunityEvents /> : <DiscordLogin />}
+      </Route>
+      <Route path="/resource-hub">
+        {hasToken ? <ResourceHub /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>

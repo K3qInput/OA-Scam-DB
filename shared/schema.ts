@@ -447,6 +447,211 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ============ COMMUNITY PLATFORM FEATURES ============
+
+// Member Verification System
+export const memberVerifications = pgTable("member_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  verificationType: varchar("verification_type").notNull(), // "manual", "automated", "document", "social", "reputation"
+  status: varchar("status").default("pending").notNull(), // "pending", "approved", "rejected", "expired"
+  verificationData: jsonb("verification_data"), // Documents, social links, etc.
+  submittedBy: varchar("submitted_by"), // User who submitted
+  reviewedBy: varchar("reviewed_by"), // Staff who reviewed
+  reviewNotes: text("review_notes"),
+  verificationLevel: integer("verification_level").default(1).notNull(), // 1-5 verification levels
+  expiresAt: timestamp("expires_at"), // Some verifications expire
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+// Public Reputation Profiles
+export const reputationProfiles = pgTable("reputation_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  bio: text("bio"),
+  specialties: text("specialties").array(),
+  publicRoles: text("public_roles").array(), // Public-facing roles
+  isPublic: boolean("is_public").default(true).notNull(),
+  projectsCompleted: integer("projects_completed").default(0).notNull(),
+  totalEarnings: integer("total_earnings").default(0).notNull(), // In cents
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }).default("0.00"),
+  portfolioItems: jsonb("portfolio_items"),
+  socialLinks: jsonb("social_links"),
+  availabilityStatus: varchar("availability_status").default("available").notNull(), // "available", "busy", "unavailable"
+  hourlyRate: integer("hourly_rate"), // In cents
+  preferredPaymentMethods: text("preferred_payment_methods").array(),
+  lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Report Vault - Public Scammer Reports
+export const reportVault = pgTable("report_vault", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reportedUserId: varchar("reported_user_id"),
+  reportedUsername: varchar("reported_username"), // In case user is deleted
+  reportedDiscordId: varchar("reported_discord_id"),
+  scamType: varchar("scam_type").notNull(), // "payment_scam", "fake_services", "impersonation", "exit_scam"
+  description: text("description").notNull(),
+  evidenceUrls: text("evidence_urls").array(),
+  damageClaimed: integer("damage_claimed"), // In cents
+  status: varchar("status").default("confirmed").notNull(), // "confirmed", "disputed", "resolved"
+  reportedBy: varchar("reported_by").notNull(),
+  verifiedBy: varchar("verified_by"), // Staff verification
+  isPublic: boolean("is_public").default(true).notNull(),
+  warningLevel: varchar("warning_level").default("high").notNull(), // "low", "medium", "high", "critical"
+  tags: text("tags").array(),
+  caseId: varchar("case_id"), // Link to original case
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  verifiedAt: timestamp("verified_at"),
+});
+
+// Blacklist Database
+export const blacklistEntries = pgTable("blacklist_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entryType: varchar("entry_type").notNull(), // "user", "discord_id", "email", "ip_address", "domain"
+  entryValue: varchar("entry_value").notNull(), // The actual value being blacklisted
+  reason: text("reason").notNull(),
+  severity: varchar("severity").default("high").notNull(), // "low", "medium", "high", "critical"
+  evidence: jsonb("evidence"),
+  addedBy: varchar("added_by").notNull(),
+  approvedBy: varchar("approved_by"), // Requires approval for high-severity entries
+  isActive: boolean("is_active").default(true).notNull(),
+  expiresAt: timestamp("expires_at"), // Some blacklist entries can expire
+  tags: text("tags").array(),
+  relatedCases: text("related_cases").array(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  approvedAt: timestamp("approved_at"),
+});
+
+// Staff Transparency
+export const staffProfiles = pgTable("staff_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  roleHistory: jsonb("role_history"), // Array of {role, startDate, endDate, reason}
+  specializations: text("specializations").array(),
+  contactMethods: jsonb("contact_methods"), // {discord, email, availability}
+  bio: text("bio"),
+  joinedStaffAt: timestamp("joined_staff_at").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  isPublicContact: boolean("is_public_contact").default(true).notNull(),
+  caseLoad: integer("case_load").default(0).notNull(),
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }).default("0.00"),
+  commendations: integer("commendations").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Anti-Impersonation System
+export const impersonationReports = pgTable("impersonation_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  impersonatorUserId: varchar("impersonator_user_id"),
+  impersonatorDiscordId: varchar("impersonator_discord_id"),
+  targetUserId: varchar("target_user_id").notNull(),
+  evidenceType: varchar("evidence_type").notNull(), // "username_similarity", "avatar_theft", "role_claim", "fake_profile"
+  similarity: integer("similarity").notNull(), // 0-100 similarity score
+  evidenceData: jsonb("evidence_data"),
+  status: varchar("status").default("pending").notNull(), // "pending", "confirmed", "false_positive"
+  actionTaken: varchar("action_taken"), // "warning", "ban", "forced_rename", "none"
+  reportedBy: varchar("reported_by"),
+  reviewedBy: varchar("reviewed_by"),
+  autoDetected: boolean("auto_detected").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+// Server Ban Sync System
+export const serverBanSync = pgTable("server_ban_sync", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bannedUserId: varchar("banned_user_id"),
+  bannedDiscordId: varchar("banned_discord_id").notNull(),
+  originServerId: varchar("origin_server_id").notNull(),
+  reason: text("reason").notNull(),
+  evidence: jsonb("evidence"),
+  banType: varchar("ban_type").default("permanent").notNull(), // "permanent", "temporary", "warning"
+  severity: varchar("severity").default("high").notNull(), // "low", "medium", "high", "critical"
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true).notNull(),
+  syncedServers: text("synced_servers").array(), // Server IDs that have applied this ban
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Community Events System
+export const communityEvents = pgTable("community_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  eventType: varchar("event_type").notNull(), // "competition", "dev_jam", "server_collab", "training", "webinar"
+  status: varchar("status").default("upcoming").notNull(), // "upcoming", "active", "completed", "cancelled"
+  organizerId: varchar("organizer_id").notNull(),
+  maxParticipants: integer("max_participants"),
+  currentParticipants: integer("current_participants").default(0).notNull(),
+  prizePool: integer("prize_pool"), // In cents
+  requirements: jsonb("requirements"), // Skill level, tools needed, etc.
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  registrationDeadline: timestamp("registration_deadline"),
+  discordChannelId: varchar("discord_channel_id"),
+  externalLinks: jsonb("external_links"),
+  tags: text("tags").array(),
+  isPublic: boolean("is_public").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Event Participants
+export const eventParticipants = pgTable("event_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  registrationData: jsonb("registration_data"), // Application details, team info, etc.
+  status: varchar("status").default("registered").notNull(), // "registered", "accepted", "rejected", "completed", "disqualified"
+  teamName: varchar("team_name"),
+  submission: jsonb("submission"), // For competitions
+  ranking: integer("ranking"),
+  prizeAwarded: integer("prize_awarded"), // In cents
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Resource Hub for Server Owners
+export const resourceCategories = pgTable("resource_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  icon: varchar("icon"),
+  targetAudience: varchar("target_audience").default("all").notNull(), // "server_owners", "developers", "builders", "all"
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const resourceItems = pgTable("resource_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  type: varchar("type").notNull(), // "plugin", "script", "hosting", "service", "tutorial", "tool"
+  url: varchar("url").notNull(),
+  price: varchar("price"), // "Free", "$5/month", "One-time $20", etc.
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
+  reviewCount: integer("review_count").default(0).notNull(),
+  tags: text("tags").array(),
+  verifiedBy: varchar("verified_by"), // Staff verification
+  isSponsored: boolean("is_sponsored").default(false).notNull(),
+  isTrusted: boolean("is_trusted").default(false).notNull(),
+  addedBy: varchar("added_by").notNull(),
+  lastChecked: timestamp("last_checked"),
+  metadata: jsonb("metadata"), // Version info, compatibility, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   reportedCases: many(cases, { relationName: "reportedUser" }),
