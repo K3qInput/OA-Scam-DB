@@ -19,6 +19,7 @@ import Vouches from "@/pages/vouches";
 import VouchSystem from "@/pages/vouch-system";
 import Disputes from "@/pages/disputes";
 import AltDetection from "@/pages/alt-detection";
+import SecurityDashboard from "@/pages/admin/SecurityDashboard";
 import Utilities from "@/pages/utilities";
 import AiTools from "@/pages/ai-tools";
 import Marketplace from "@/pages/marketplace";
@@ -80,6 +81,9 @@ function Router() {
       </Route>
       <Route path="/alt-detection">
         {hasToken ? <AltDetection /> : <DiscordLogin />}
+      </Route>
+      <Route path="/security-dashboard">
+        {hasToken ? <SecurityDashboard /> : <DiscordLogin />}
       </Route>
       <Route path="/utilities">
         {hasToken ? <Utilities /> : <DiscordLogin />}

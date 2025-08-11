@@ -46,6 +46,7 @@ import { sendPasswordResetApprovalRequest, sendPasswordResetToken } from "./emai
 import crypto from "crypto";
 import passport from "passport";
 import { analyzeCaseReport, generateModerationAdvice } from "./ai-analysis";
+import RateLimitMiddleware, { rateLimitConfigs } from './middleware/rateLimiting';
 
 // AI Tool Processing Function
 async function processAiTool(tool: any, inputData: any): Promise<any> {
@@ -291,6 +292,9 @@ const createAuditLog = async (userId: string, action: string, entityType: string
 };
 
 export function registerRoutes(app: Express): Server {
+  // Initialize rate limiting middleware for beta testing
+  const rateLimiter = new RateLimitMiddleware(storage);
+  
   // Configure Discord OAuth
   configureDiscordAuth(app);
 
@@ -301,33 +305,80 @@ export function registerRoutes(app: Express): Server {
 
   // ============ AUTHENTICATION ROUTES ============
   
-  // Login route
-  app.post("/api/auth/login", async (req, res) => {
+  // Enhanced login route with alt detection and rate limiting
+  app.post("/api/auth/login", rateLimiter.createLimiter(rateLimitConfigs.auth), async (req, res) => {
     try {
-      const { username, password } = loginSchema.parse(req.body);
+      const { username, password, deviceFingerprint, sessionData = {} } = req.body;
+      const parsedCreds = loginSchema.parse({ username, password });
       
       // Trim whitespace from username to avoid issues
-      const trimmedUsername = username.trim();
+      const trimmedUsername = parsedCreds.username.trim();
       
-      const user = await storage.authenticateUser(trimmedUsername, password);
+      const user = await storage.authenticateUser(trimmedUsername, parsedCreds.password);
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+      const ipAddress = req.ip || req.connection?.remoteAddress || "unknown";
       
-      // Create user session
+      // Create enhanced user session with device fingerprinting
       await storage.createUserSession({
         userId: user.id,
-        ipAddress: req.ip || req.connection?.remoteAddress || "unknown",
+        ipAddress,
         userAgent: req.get('User-Agent') || "unknown",
-        deviceFingerprint: null,
+        deviceFingerprint: deviceFingerprint || null,
         sessionToken: token,
         isActive: true,
         lastActivity: new Date(),
+        // Enhanced fingerprinting data
+        screenResolution: sessionData.screenResolution || null,
+        timezone: sessionData.timezone || null,
+        language: sessionData.language || null,
+        platform: sessionData.platform || null,
+        browserVersion: sessionData.browserVersion || null,
+        plugins: sessionData.plugins || [],
+        fonts: sessionData.fonts || [],
+        hardwareConcurrency: sessionData.hardwareConcurrency || null,
+        deviceMemory: sessionData.deviceMemory || null,
+        connectionType: sessionData.connectionType || null,
+        suspiciousActivity: false,
+        riskScore: sessionData.riskScore || 0,
       });
 
-      await createAuditLog(user.id, "login", "user", user.id, null, null, req);
+      // Beta testing: Advanced alt account detection
+      let altDetectionResult = null;
+      try {
+        const AltDetectionEngine = (await import('./utils/altDetection')).default;
+        const detector = new AltDetectionEngine(storage);
+        
+        const altReports = await detector.detectAltAccounts(
+          user.id,
+          ipAddress,
+          deviceFingerprint,
+          user.email
+        );
+        
+        altDetectionResult = {
+          reportsGenerated: altReports.length,
+          highConfidenceDetections: altReports.filter(r => r.confidenceScore >= 75).length,
+          maxConfidence: Math.max(0, ...altReports.map(r => r.confidenceScore))
+        };
+        
+        // If high-confidence alt detected, create security event
+        if (altReports.some(report => report.confidenceScore >= 75)) {
+          console.log(`High-confidence alt account detected for user ${user.id}`);
+        }
+      } catch (error) {
+        console.error('Alt detection error during login:', error);
+        // Don't fail login if alt detection fails
+      }
+
+      await createAuditLog(user.id, "login", "user", user.id, null, { 
+        altDetection: altDetectionResult,
+        deviceFingerprint,
+        riskScore: sessionData.riskScore
+      }, req);
 
       res.json({ 
         token, 
@@ -339,6 +390,12 @@ export function registerRoutes(app: Express): Server {
           firstName: user.firstName,
           lastName: user.lastName,
           profileImageUrl: user.profileImageUrl
+        },
+        // Beta testing: Include security analysis in response
+        securityAnalysis: {
+          riskScore: sessionData.riskScore || 0,
+          altDetection: altDetectionResult,
+          requiresVerification: altDetectionResult?.maxConfidence >= 75
         }
       });
     } catch (error) {
@@ -355,24 +412,112 @@ export function registerRoutes(app: Express): Server {
     async (req: any, res) => {
       const user = req.user;
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+      const ipAddress = req.ip || req.connection?.remoteAddress || "unknown";
       
-      // Create user session
+      // Create user session with basic fingerprinting
       await storage.createUserSession({
         userId: user.id,
-        ipAddress: req.ip || req.connection?.remoteAddress || "unknown",
+        ipAddress,
         userAgent: req.get('User-Agent') || "unknown",
         deviceFingerprint: null,
         sessionToken: token,
         isActive: true,
         lastActivity: new Date(),
+        // Basic data from user agent and request
+        timezone: req.headers['timezone'] as string || null,
+        language: req.headers['accept-language']?.split(',')[0] || null,
+        platform: null,
+        browserVersion: null,
+        plugins: [],
+        fonts: [],
+        hardwareConcurrency: null,
+        deviceMemory: null,
+        connectionType: null,
+        suspiciousActivity: false,
+        riskScore: 0,
       });
 
-      await createAuditLog(user.id, "discord_login", "user", user.id, null, null, req);
+      // Beta testing: Check for alt accounts even on Discord login
+      let altDetectionResult = null;
+      try {
+        const AltDetectionEngine = (await import('./utils/altDetection')).default;
+        const detector = new AltDetectionEngine(storage);
+        
+        const altReports = await detector.detectAltAccounts(
+          user.id,
+          ipAddress,
+          null, // No device fingerprint for Discord OAuth
+          user.email
+        );
+        
+        altDetectionResult = {
+          reportsGenerated: altReports.length,
+          highConfidenceDetections: altReports.filter(r => r.confidenceScore >= 60).length, // Lower threshold for Discord
+          maxConfidence: Math.max(0, ...altReports.map(r => r.confidenceScore))
+        };
+      } catch (error) {
+        console.error('Alt detection error during Discord login:', error);
+      }
+
+      await createAuditLog(user.id, "discord_login", "user", user.id, null, { 
+        altDetection: altDetectionResult,
+        discordId: user.discordId
+      }, req);
       
-      // Redirect to frontend with token
-      res.redirect(`/dashboard?token=${token}`);
+      // Beta testing: Include security analysis in redirect
+      const securityParams = altDetectionResult ? 
+        `&security_analysis=${encodeURIComponent(JSON.stringify(altDetectionResult))}` : '';
+      
+      // Redirect to frontend with token and security analysis
+      res.redirect(`/dashboard?token=${token}&discord_success=true${securityParams}`);
     }
   );
+
+  // Beta testing: Rate limiting status endpoint
+  app.get("/api/rate-limit/status", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
+    try {
+      const stats = rateLimiter.getStats();
+      const now = Date.now();
+      
+      const rateLimitStatus = {
+        totalActiveLimits: stats.length,
+        activeLimits: stats.filter(stat => now < stat.resetTime),
+        expiredLimits: stats.filter(stat => now >= stat.resetTime),
+        topAbusers: stats.slice(0, 10),
+        summary: {
+          averageRequests: stats.length > 0 ? stats.reduce((sum, s) => sum + s.count, 0) / stats.length : 0,
+          maxRequests: Math.max(0, ...stats.map(s => s.count)),
+        }
+      };
+      
+      res.json(rateLimitStatus);
+    } catch (error) {
+      console.error("Rate limit status error:", error);
+      res.status(500).json({ message: "Failed to get rate limit status" });
+    }
+  });
+
+  // Beta testing: Clear rate limits (emergency use)
+  app.post("/api/rate-limit/clear", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const { key, clearAll } = req.body;
+      
+      if (clearAll) {
+        rateLimiter.clearAllLimits();
+        await createAuditLog(req.user.id, "clear_all_rate_limits", "rate_limit", "all", null, { action: "clear_all" }, req);
+        res.json({ message: "All rate limits cleared", clearedCount: "all" });
+      } else if (key) {
+        const cleared = rateLimiter.clearLimit(key);
+        await createAuditLog(req.user.id, "clear_rate_limit", "rate_limit", key, null, { key, success: cleared }, req);
+        res.json({ message: cleared ? "Rate limit cleared" : "Rate limit not found", key, success: cleared });
+      } else {
+        res.status(400).json({ message: "Either 'key' or 'clearAll' parameter required" });
+      }
+    } catch (error) {
+      console.error("Clear rate limit error:", error);
+      res.status(500).json({ message: "Failed to clear rate limits" });
+    }
+  });
 
   // Get current user
   app.get("/api/auth/user", authenticateToken, async (req: any, res) => {
@@ -672,6 +817,79 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Update alt detection report error:", error);
       res.status(400).json({ message: "Failed to update alt detection report" });
+    }
+  });
+
+  // ============ BETA TESTING - SECURITY DASHBOARD ROUTES ============
+  
+  // Get security events
+  app.get("/api/security-events", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const events = await storage.getSecurityEvents?.() || [];
+      res.json(events);
+    } catch (error) {
+      console.error("Get security events error:", error);
+      res.status(500).json({ message: "Failed to fetch security events" });
+    }
+  });
+
+  // Get user sessions for security analysis
+  app.get("/api/user-sessions", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const sessions = await storage.getUserSessions?.() || [];
+      // Limit to recent sessions for performance
+      const recentSessions = sessions.slice(0, 100);
+      res.json(recentSessions);
+    } catch (error) {
+      console.error("Get user sessions error:", error);
+      res.status(500).json({ message: "Failed to fetch user sessions" });
+    }
+  });
+
+  // Create security event (for system use)
+  app.post("/api/security-events", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
+    try {
+      const eventData = req.body;
+      const event = await storage.createSecurityEvent?.(eventData);
+      
+      await createAuditLog(req.user.id, "create_security_event", "security_event", event?.id || "", null, event, req);
+      
+      res.status(201).json(event);
+    } catch (error) {
+      console.error("Create security event error:", error);
+      res.status(400).json({ message: "Failed to create security event" });
+    }
+  });
+
+  // Beta testing: Device fingerprint validation endpoint
+  app.post("/api/validate-device", authenticateToken, async (req: any, res) => {
+    try {
+      const { deviceFingerprint } = req.body;
+      
+      if (!deviceFingerprint) {
+        return res.status(400).json({ message: "Device fingerprint required" });
+      }
+
+      // Check if device fingerprint is associated with multiple users
+      const allSessions = await storage.getAllUserSessions?.() || [];
+      const matchingSessions = allSessions.filter(s => s.deviceFingerprint === deviceFingerprint);
+      const uniqueUsers = [...new Set(matchingSessions.map(s => s.userId))];
+      
+      const isValid = uniqueUsers.length <= 1 || uniqueUsers.includes(req.user.id);
+      const riskLevel = uniqueUsers.length > 3 ? 'high' : 
+                       uniqueUsers.length > 1 ? 'medium' : 'low';
+
+      res.json({
+        isValid,
+        riskLevel,
+        associatedUsers: uniqueUsers.length,
+        sessions: matchingSessions.length,
+        lastSeen: matchingSessions.length > 0 ? 
+          Math.max(...matchingSessions.map(s => new Date(s.lastActivity).getTime())) : null
+      });
+    } catch (error) {
+      console.error("Device validation error:", error);
+      res.status(500).json({ message: "Device validation failed" });
     }
   });
 

@@ -20,11 +20,49 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData): Promise<AuthResponse> => {
-      console.log("Starting traditional login...");
-      console.log("Attempting login with:", { username: credentials.username });
-      const response = await apiRequest("POST", "/api/auth/login", credentials);
+      console.log("Starting enhanced login with device fingerprinting...");
+      
+      // Generate device fingerprint for alt account prevention
+      const { generateDeviceFingerprint } = await import('../utils/deviceFingerprint');
+      const deviceData = await generateDeviceFingerprint();
+      
+      const enhancedCredentials = {
+        ...credentials,
+        deviceFingerprint: deviceData.fingerprint,
+        sessionData: {
+          screenResolution: deviceData.screenResolution,
+          timezone: deviceData.timezone,
+          language: deviceData.language,
+          platform: deviceData.platform,
+          browserVersion: deviceData.browserVersion,
+          plugins: deviceData.plugins,
+          fonts: deviceData.fonts,
+          hardwareConcurrency: deviceData.hardwareConcurrency,
+          deviceMemory: deviceData.deviceMemory,
+          connectionType: deviceData.connectionType,
+          riskScore: deviceData.riskScore,
+        }
+      };
+      
+      console.log("Attempting login with:", { 
+        username: credentials.username, 
+        deviceRiskScore: deviceData.riskScore,
+        fingerprint: deviceData.fingerprint
+      });
+      
+      const response = await apiRequest("POST", "/api/auth/login", enhancedCredentials);
       const data = await response.json();
-      console.log("Login successful:", { user: data.user?.username, hasToken: !!data.token });
+      
+      console.log("Login successful:", { 
+        user: data.user?.username, 
+        hasToken: !!data.token,
+        securityAnalysis: data.securityAnalysis
+      });
+      
+      // Store device fingerprint for future validation
+      const { setStoredFingerprint } = await import('../utils/deviceFingerprint');
+      setStoredFingerprint(deviceData.fingerprint);
+      
       return data;
     },
     onSuccess: (data) => {

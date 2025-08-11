@@ -166,6 +166,13 @@ function Sidebar({ className }: SidebarProps) {
               Threat Intelligence
             </Link>
             
+            {typedUser && typedUser.role && ["admin", "tribunal_head", "senior_staff"].includes(typedUser.role) && (
+              <Link href="/security-dashboard" className={linkClass("/security-dashboard")}>
+                <Shield className="w-5 h-5" />
+                Security Dashboard
+              </Link>
+            )}
+            
             <Link href="/utilities" className={linkClass("/utilities")}>
               <Settings className="w-5 h-5" />
               Utilities
