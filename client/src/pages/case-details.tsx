@@ -14,7 +14,7 @@ export default function CaseDetails() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
 
-  const { data: caseData, isLoading } = useQuery({
+  const { data: caseData, isLoading, error } = useQuery({
     queryKey: ["/api/cases", id],
     enabled: !!id,
     queryFn: async () => {
@@ -23,6 +23,9 @@ export default function CaseDetails() {
           Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
         },
       });
+      if (!response.ok) {
+        throw new Error('Case not found');
+      }
       return response.json();
     },
   });
@@ -61,7 +64,7 @@ export default function CaseDetails() {
     );
   }
 
-  if (!caseData) {
+  if (error || (!caseData && !isLoading)) {
     return (
       <div className="flex h-screen bg-oa-black">
         <Sidebar />
