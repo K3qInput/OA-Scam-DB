@@ -25,7 +25,7 @@ interface SidebarProps {
   className?: string;
 }
 
-export default function Sidebar({ className }: SidebarProps) {
+function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const typedUser = user as User | null;
@@ -187,3 +187,6 @@ export default function Sidebar({ className }: SidebarProps) {
     </nav>
   );
 }
+
+export default Sidebar;
+export { Sidebar };

@@ -734,7 +734,6 @@ Complex cases should be escalated to senior staff or tribunal.`,
     const assignment: StaffAssignment = {
       id,
       ...assignmentData,
-      assignedBy: assignmentData.assignedBy || "admin-1", // Default to admin if not provided
       caseId: assignmentData.caseId || null,
       contactId: assignmentData.contactId || null,
       notes: assignmentData.notes || null,

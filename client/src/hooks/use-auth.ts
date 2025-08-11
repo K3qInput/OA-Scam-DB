@@ -10,7 +10,7 @@ interface AuthResponse {
 export function useAuth() {
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
     enabled: !!localStorage.getItem("auth_token"),

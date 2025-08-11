@@ -701,7 +701,6 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
 export const insertStaffAssignmentSchema = createInsertSchema(staffAssignments).omit({
   id: true,
   assignedAt: true,
-  assignedBy: true,
 });
 
 export const insertTribunalProceedingSchema = createInsertSchema(tribunalProceedings).omit({

@@ -18,7 +18,7 @@ interface HeaderProps {
   onSearch?: (query: string) => void;
 }
 
-export default function Header({ onMenuToggle, onSearch }: HeaderProps) {
+function Header({ onMenuToggle, onSearch }: HeaderProps) {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -84,7 +84,7 @@ export default function Header({ onMenuToggle, onSearch }: HeaderProps) {
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage 
-                    src={user?.profileImageUrl} 
+                    src={user?.profileImageUrl || undefined} 
                     alt={user?.username || "User"} 
                   />
                   <AvatarFallback className="bg-oa-blue text-white">
@@ -126,3 +126,6 @@ export default function Header({ onMenuToggle, onSearch }: HeaderProps) {
     </header>
   );
 }
+
+export default Header;
+export { Header };

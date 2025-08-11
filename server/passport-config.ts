@@ -6,13 +6,19 @@ import { nanoid } from "nanoid";
 // Use provided Discord credentials if environment variables are missing
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || "1403800460476944424";
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "7KEyIeFI7N6jJN48WG_ieSREyvftCdU0";
-const BASE_URL = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : "http://localhost:5000";
 
-if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
-  console.error("Discord OAuth credentials are missing!");
-  console.error("Please set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET environment variables");
-} else {
+// Determine the base URL dynamically
+const BASE_URL = process.env.REPLIT_DOMAINS 
+  ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
+  : process.env.BASE_URL || "http://localhost:5000";
+
+// Only configure Discord OAuth if both credentials are available
+let isDiscordConfigured = false;
+if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
   console.log("Discord OAuth configured with client ID:", DISCORD_CLIENT_ID);
+  isDiscordConfigured = true;
+} else {
+  console.log("Discord OAuth not configured - missing client ID or secret");
 }
 
 // Serialize user for session
@@ -30,13 +36,14 @@ passport.deserializeUser(async (id: string, done) => {
   }
 });
 
-// Discord OAuth Strategy
-passport.use(new DiscordStrategy({
-  clientID: DISCORD_CLIENT_ID!,
-  clientSecret: DISCORD_CLIENT_SECRET!,
-  callbackURL: "https://ownersalliance.org/auth/discord/callback",
-  scope: ['identify', 'email']
-}, async (accessToken, refreshToken, profile, done) => {
+// Discord OAuth Strategy - only register if configured
+if (isDiscordConfigured) {
+  passport.use(new DiscordStrategy({
+    clientID: DISCORD_CLIENT_ID!,
+    clientSecret: DISCORD_CLIENT_SECRET!,
+    callbackURL: `${BASE_URL}/auth/discord/callback`,
+    scope: ['identify', 'email']
+  }, async (accessToken, refreshToken, profile, done) => {
   try {
     console.log("Discord OAuth profile:", {
       id: profile.id,
@@ -103,5 +110,6 @@ passport.use(new DiscordStrategy({
     return done(error, false);
   }
 }));
+}
 
 export { passport };
