@@ -663,6 +663,9 @@ export const insertCaseSchema = createInsertSchema(cases).omit({
   updatedAt: true,
 }).partial({
   reporterUserId: true, // This will be set by the server from auth token
+  reportedUserId: true, // Optional, can be set later if not provided
+  staffUserId: true, // Optional staff assignment
+  resolvedAt: true, // Set when case is resolved
 });
 
 export const insertEvidenceSchema = createInsertSchema(evidence).omit({
