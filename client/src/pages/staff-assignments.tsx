@@ -236,7 +236,7 @@ export default function StaffAssignments() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-oa-dark border-oa-border">
-                              <SelectItem value="" className="text-white hover:bg-oa-light">No case</SelectItem>
+                              <SelectItem value="none" className="text-white hover:bg-oa-light">No case</SelectItem>
                               {cases.cases?.map((caseItem: any) => (
                                 <SelectItem key={caseItem.id} value={caseItem.id} className="text-white hover:bg-oa-light">
                                   {caseItem.caseNumber} - {caseItem.title}
@@ -261,7 +261,7 @@ export default function StaffAssignments() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-oa-dark border-oa-border">
-                              <SelectItem value="" className="text-white hover:bg-oa-light">No contact</SelectItem>
+                              <SelectItem value="none" className="text-white hover:bg-oa-light">No contact</SelectItem>
                               {contactMessages.map((contact: any) => (
                                 <SelectItem key={contact.id} value={contact.id} className="text-white hover:bg-oa-light">
                                   {contact.subject} - {contact.name}

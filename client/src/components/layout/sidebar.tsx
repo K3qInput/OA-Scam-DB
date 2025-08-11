@@ -13,7 +13,9 @@ import {
   Briefcase,
   ThumbsUp,
   AlertTriangle,
-  Shield
+  Shield,
+  BarChart,
+  FileText
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@shared/schema";
@@ -172,15 +174,37 @@ function Sidebar({ className }: SidebarProps) {
 
           {/* Admin Only */}
           {typedUser && typedUser.role && typedUser.role === "admin" && (
-            <div className="pt-6">
-              <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Administration
-              </h3>
-              <Link href="/admin" className={linkClass("/admin")}>
-                <Settings className="w-5 h-5" />
-                Admin Panel
-              </Link>
-            </div>
+            <>
+              <div className="pt-6">
+                <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  Administration
+                </h3>
+                <Link href="/admin" className={linkClass("/admin")}>
+                  <Settings className="w-5 h-5" />
+                  Admin Panel
+                </Link>
+              </div>
+              
+              <div className="pt-6">
+                <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  World's Best Moderation
+                </h3>
+                <Link href="/admin-moderation" className={linkClass("/admin-moderation")}>
+                  <Shield className="w-5 h-5" />
+                  Staff Moderation Center
+                </Link>
+                
+                <Link href="/content-management" className={linkClass("/content-management")}>
+                  <FileText className="w-5 h-5" />
+                  Content Management
+                </Link>
+                
+                <Link href="/advanced-analytics" className={linkClass("/advanced-analytics")}>
+                  <BarChart className="w-5 h-5" />
+                  Advanced Analytics
+                </Link>
+              </div>
+            </>
           )}
         </nav>
       </div>

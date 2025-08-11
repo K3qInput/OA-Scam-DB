@@ -1612,6 +1612,134 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // ============= MODERATION API ROUTES =============
+
+  // Get moderation logs
+  app.get("/api/moderation/logs", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const logs = await storage.getModerationLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Get moderation logs error:", error);
+      res.status(500).json({ message: "Failed to fetch moderation logs" });
+    }
+  });
+
+  // Execute moderation action
+  app.post("/api/moderation/actions", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const action = await storage.createModerationAction({
+        ...req.body,
+        moderatorId: req.user.id,
+        createdAt: new Date()
+      });
+      res.status(201).json(action);
+    } catch (error) {
+      console.error("Create moderation action error:", error);
+      res.status(400).json({ message: "Failed to execute moderation action" });
+    }
+  });
+
+  // Get moderation stats
+  app.get("/api/moderation/stats", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const stats = await storage.getModerationStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get moderation stats error:", error);
+      res.status(500).json({ message: "Failed to fetch moderation stats" });
+    }
+  });
+
+  // Get flagged content
+  app.get("/api/moderation/flagged", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const flagged = await storage.getFlaggedContent();
+      res.json(flagged);
+    } catch (error) {
+      console.error("Get flagged content error:", error);
+      res.status(500).json({ message: "Failed to fetch flagged content" });
+    }
+  });
+
+  // ============= CONTENT MANAGEMENT API ROUTES =============
+
+  // Get all content
+  app.get("/api/content", async (req: any, res) => {
+    try {
+      const content = await storage.getAllContent();
+      res.json(content);
+    } catch (error) {
+      console.error("Get content error:", error);
+      res.status(500).json({ message: "Failed to fetch content" });
+    }
+  });
+
+  // Create content
+  app.post("/api/content", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const content = await storage.createContent({
+        ...req.body,
+        authorId: req.user.id,
+        createdAt: new Date()
+      });
+      res.status(201).json(content);
+    } catch (error) {
+      console.error("Create content error:", error);
+      res.status(400).json({ message: "Failed to create content" });
+    }
+  });
+
+  // Update content
+  app.patch("/api/content/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const content = await storage.updateContent(req.params.id, req.body);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      res.json(content);
+    } catch (error) {
+      console.error("Update content error:", error);
+      res.status(500).json({ message: "Failed to update content" });
+    }
+  });
+
+  // Delete content
+  app.delete("/api/content/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      await storage.deleteContent(req.params.id);
+      res.json({ message: "Content deleted successfully" });
+    } catch (error) {
+      console.error("Delete content error:", error);
+      res.status(500).json({ message: "Failed to delete content" });
+    }
+  });
+
+  // Get content stats
+  app.get("/api/content/stats", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const stats = await storage.getContentStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get content stats error:", error);
+      res.status(500).json({ message: "Failed to fetch content stats" });
+    }
+  });
+
+  // ============= ANALYTICS API ROUTES =============
+
+  // Get analytics data
+  app.get("/api/analytics", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const timeRange = req.query.timeRange || "7d";
+      const analytics = await storage.getAnalyticsData(timeRange);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Get analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch analytics data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

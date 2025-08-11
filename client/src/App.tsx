@@ -24,6 +24,9 @@ import AiTools from "@/pages/ai-tools";
 import Marketplace from "@/pages/marketplace";
 import AdminPanel from "@/pages/admin-panel";
 import ThreatIntel from "@/pages/threat-intel";
+import AdminModeration from "@/pages/admin-moderation";
+import ContentManagement from "@/pages/content-management";
+import AdvancedAnalytics from "@/pages/advanced-analytics";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -89,6 +92,15 @@ function Router() {
       </Route>
       <Route path="/threat-intel">
         {hasToken ? <ThreatIntel /> : <DiscordLogin />}
+      </Route>
+      <Route path="/admin-moderation">
+        {hasToken ? <AdminModeration /> : <DiscordLogin />}
+      </Route>
+      <Route path="/content-management">
+        {hasToken ? <ContentManagement /> : <DiscordLogin />}
+      </Route>
+      <Route path="/advanced-analytics">
+        {hasToken ? <AdvancedAnalytics /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>

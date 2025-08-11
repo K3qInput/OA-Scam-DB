@@ -1498,6 +1498,92 @@ Complex cases should be escalated to senior staff or tribunal.`,
   async getVerificationRequests(): Promise<VerificationRequest[]> {
     return Array.from(this.verificationRequests.values());
   }
+
+  // ============= MODERATION STORAGE METHODS =============
+  
+  async getModerationLogs(): Promise<any[]> {
+    // Return mock moderation logs for now
+    return [];
+  }
+
+  async createModerationAction(data: any): Promise<any> {
+    // Return mock moderation action for now
+    return { id: "mod-" + randomBytes(8).toString("hex"), ...data };
+  }
+
+  async getModerationStats(): Promise<any> {
+    // Return mock moderation stats for now
+    return {
+      totalActions: 0,
+      pendingReviews: 0,
+      autoModActions: 0,
+      manualActions: 0,
+      bannedUsers: 0,
+      hiddenContent: 0,
+    };
+  }
+
+  async getFlaggedContent(): Promise<any[]> {
+    // Return mock flagged content for now
+    return [];
+  }
+
+  // ============= CONTENT MANAGEMENT STORAGE METHODS =============
+
+  async getAllContent(): Promise<any[]> {
+    // Return mock content for now
+    return [];
+  }
+
+  async createContent(data: any): Promise<any> {
+    // Return mock content for now
+    return { id: "content-" + randomBytes(8).toString("hex"), ...data };
+  }
+
+  async updateContent(id: string, data: any): Promise<any> {
+    // Return mock updated content for now
+    return { id, ...data };
+  }
+
+  async deleteContent(id: string): Promise<void> {
+    // Mock delete content
+    return Promise.resolve();
+  }
+
+  async getContentStats(): Promise<any> {
+    // Return mock content stats for now
+    return {
+      totalContent: 0,
+      published: 0,
+      draft: 0,
+      featured: 0,
+      totalViews: 0,
+      totalComments: 0,
+    };
+  }
+
+  // ============= ANALYTICS STORAGE METHODS =============
+
+  async getAnalyticsData(timeRange: string): Promise<any> {
+    // Return mock analytics data for now
+    return {
+      overview: {
+        totalUsers: 1247,
+        activeUsers: 892,
+        totalCases: 156,
+        resolvedCases: 134,
+        pendingCases: 22,
+        totalContent: 89,
+        totalModerationActions: 45,
+        averageResolutionTime: 3.2,
+      },
+      userActivity: [],
+      caseStats: [],
+      moderationTrends: [],
+      contentPerformance: [],
+      topPerformers: [],
+    };
+  }
 }
 
 export const storage = new MemStorage();
