@@ -33,14 +33,14 @@ function Sidebar({ className }: SidebarProps) {
   const isActive = (href: string) => location === href;
   
   const linkClass = (href: string) => cn(
-    "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+    "oa-sidebar-link",
     isActive(href) 
-      ? "bg-oa-red text-white" 
-      : "text-slate-300 hover:bg-oa-gray/20 hover:text-white"
+      ? "active" 
+      : ""
   );
 
   return (
-    <nav className={cn("bg-oa-dark border-r border-oa-gray/20 w-64 min-h-screen", className)}>
+    <nav className={cn("bg-oa-dark border-r border-oa-gray/20 w-64 min-h-screen", className)} data-testid="main-sidebar">
       <div className="p-4">
         <div className="space-y-1">
           {/* Core Navigation */}
