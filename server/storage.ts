@@ -69,6 +69,10 @@ import {
   type InsertCollaborationMessage,
   type VerificationRequest,
   type InsertVerificationRequest,
+  type SecurityEvent,
+  type InsertSecurityEvent,
+  type AccountVerification,
+  type RateLimit,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
@@ -1535,6 +1539,9 @@ Complex cases should be escalated to senior staff or tribunal.`,
     const event: SecurityEvent = {
       id,
       ...eventData,
+      userId: eventData.userId || null,
+      severity: eventData.severity || "medium",
+      userAgent: eventData.userAgent || null,
       resolved: eventData.resolved || false,
       resolvedBy: eventData.resolvedBy || null,
       resolvedAt: eventData.resolvedAt || null,
