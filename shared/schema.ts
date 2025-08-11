@@ -704,6 +704,10 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
 export const insertStaffAssignmentSchema = createInsertSchema(staffAssignments).omit({
   id: true,
   assignedAt: true,
+}).partial({
+  assignedBy: true, // Set by server from auth token
+  completedAt: true, // Set when assignment is completed
+  isActive: true, // Has default value
 });
 
 export const insertTribunalProceedingSchema = createInsertSchema(tribunalProceedings).omit({
