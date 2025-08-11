@@ -453,7 +453,7 @@ export function registerRoutes(app: Express): Server {
 
       const newCase = await storage.createCase({
         ...validatedData,
-        reporterUserId: req.user.id,
+        reporterUserId: req.user.id, // Set from authenticated user
         aiAnalysis,
         aiRiskScore,
         aiUrgencyLevel,

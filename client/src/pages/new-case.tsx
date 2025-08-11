@@ -71,10 +71,9 @@ function NewCaseForm() {
 
   const createCaseMutation = useMutation({
     mutationFn: async (data: NewCaseFormData) => {
-      const response = await apiRequest("POST", "/api/cases", data);
-      return response.json();
+      return await apiRequest("POST", "/api/cases", data);
     },
-    onSuccess: async (newCase) => {
+    onSuccess: async (newCase: any) => {
       // Upload evidence files if any
       if (uploadedFiles.length > 0) {
         for (const { file, description } of uploadedFiles) {
