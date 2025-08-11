@@ -1505,6 +1505,76 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // ============= STAFF ASSIGNMENT ROUTES =============
+
+  // Get staff assignments
+  app.get("/api/staff-assignments", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const assignments = await storage.getStaffAssignments();
+      res.json(assignments);
+    } catch (error) {
+      console.error("Get staff assignments error:", error);
+      res.status(500).json({ message: "Failed to fetch staff assignments" });
+    }
+  });
+
+  // Create staff assignment
+  app.post("/api/staff-assignments", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const validatedData = insertStaffAssignmentSchema.parse(req.body);
+      const assignment = await storage.createStaffAssignment({
+        ...validatedData,
+        assignedBy: req.user.id
+      });
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Create staff assignment error:", error);
+      res.status(400).json({ message: "Failed to create staff assignment" });
+    }
+  });
+
+  // Update staff assignment
+  app.patch("/api/staff-assignments/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const assignment = await storage.updateStaffAssignment(req.params.id, req.body);
+      if (!assignment) {
+        return res.status(404).json({ message: "Staff assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error) {
+      console.error("Update staff assignment error:", error);
+      res.status(500).json({ message: "Failed to update staff assignment" });
+    }
+  });
+
+  // Complete staff assignment
+  app.patch("/api/staff-assignments/:id/complete", authenticateToken, async (req: any, res) => {
+    try {
+      const assignment = await storage.updateStaffAssignment(req.params.id, {
+        completedAt: new Date(),
+        isActive: false
+      });
+      if (!assignment) {
+        return res.status(404).json({ message: "Staff assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error) {
+      console.error("Complete staff assignment error:", error);
+      res.status(500).json({ message: "Failed to complete staff assignment" });
+    }
+  });
+
+  // Get staff list for assignments
+  app.get("/api/staff", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const staff = await storage.getStaffMembers();
+      res.json(staff);
+    } catch (error) {
+      console.error("Get staff members error:", error);
+      res.status(500).json({ message: "Failed to fetch staff members" });
+    }
+  });
+
   // ============= DISPUTE VOTING ROUTES =============
 
   // Get active disputes for voting

@@ -117,6 +117,8 @@ export interface IStorage {
 
   // Staff assignment operations
   createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment>;
+  getStaffAssignments(): Promise<StaffAssignment[]>;
+  updateStaffAssignment(id: string, updates: Partial<StaffAssignment>): Promise<StaffAssignment>;
 
   // Tribunal proceeding operations
   createTribunalProceeding(proceeding: InsertTribunalProceeding): Promise<TribunalProceeding>;
@@ -512,11 +514,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     return isValid ? user : null;
   }
 
-  async getStaffMembers(): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => 
-      ["admin", "tribunal_head", "senior_staff", "staff"].includes(user.role)
-    );
-  }
+
 
   // Case operations
   async getCases(filters?: { status?: string; type?: string; search?: string; limit?: number; offset?: number }): Promise<Case[]> {
@@ -561,6 +559,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
       id,
       caseNumber,
       ...caseData,
+      reporterUserId: caseData.reporterUserId || "unknown",
       status: caseData.status || "pending",
       priority: caseData.priority || "medium",
       staffUserId: caseData.staffUserId || null,
@@ -735,6 +734,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     const assignment: StaffAssignment = {
       id,
       ...assignmentData,
+      assignedBy: assignmentData.assignedBy || "admin-1", // Default to admin if not provided
       caseId: assignmentData.caseId || null,
       contactId: assignmentData.contactId || null,
       notes: assignmentData.notes || null,
@@ -744,6 +744,31 @@ Complex cases should be escalated to senior staff or tribunal.`,
     };
     this.staffAssignments.set(id, assignment);
     return assignment;
+  }
+
+  async getStaffAssignments(): Promise<StaffAssignment[]> {
+    return Array.from(this.staffAssignments.values());
+  }
+
+  async updateStaffAssignment(id: string, updates: Partial<StaffAssignment>): Promise<StaffAssignment> {
+    const existing = this.staffAssignments.get(id);
+    if (!existing) {
+      throw new Error("Staff assignment not found");
+    }
+
+    const updated = {
+      ...existing,
+      ...updates,
+    };
+
+    this.staffAssignments.set(id, updated);
+    return updated;
+  }
+
+  async getStaffMembers(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(user => 
+      user.role && ["admin", "tribunal_head", "senior_staff", "staff"].includes(user.role)
+    );
   }
 
   // Tribunal proceeding operations

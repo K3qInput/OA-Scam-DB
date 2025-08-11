@@ -23,6 +23,7 @@ import Utilities from "@/pages/utilities";
 import AiTools from "@/pages/ai-tools";
 import Marketplace from "@/pages/marketplace";
 import AdminPanel from "@/pages/admin-panel";
+import ThreatIntel from "@/pages/threat-intel";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -85,6 +86,9 @@ function Router() {
       </Route>
       <Route path="/marketplace">
         {hasToken ? <Marketplace /> : <DiscordLogin />}
+      </Route>
+      <Route path="/threat-intel">
+        {hasToken ? <ThreatIntel /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>
