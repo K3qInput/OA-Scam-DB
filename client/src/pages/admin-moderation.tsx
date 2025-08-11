@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { 
   Shield, ShieldCheck, ShieldX, UserX, MessageSquareX, FileX, 
   Eye, EyeOff, Edit, Trash2, Ban, AlertTriangle, CheckCircle,
@@ -137,18 +138,15 @@ export default function AdminModeration() {
   };
 
   return (
-    <div className="container mx-auto p-6 bg-oa-dark min-h-screen text-white">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-            <Shield className="h-8 w-8 text-oa-red" />
-            Staff Moderation Center
-          </h1>
-          <p className="text-oa-gray mt-2">Complete A-Z moderation and management controls</p>
-        </div>
-        <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-oa-red hover:bg-oa-red/80">
+    <DashboardLayout 
+      title="Staff Moderation Center" 
+      subtitle="Complete A-Z moderation and management controls"
+    >
+      <div className="space-y-6">
+        <div className="flex items-center justify-end mb-6">
+          <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-oa-red hover:bg-oa-red/80">
               <Hammer className="h-4 w-4 mr-2" />
               Take Action
             </Button>
@@ -444,7 +442,8 @@ export default function AdminModeration() {
             )}
           </div>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }

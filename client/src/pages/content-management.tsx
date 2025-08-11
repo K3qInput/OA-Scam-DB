@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { 
   FileText, Edit, Trash2, Eye, EyeOff, Plus, Search, 
   Filter, MoreVertical, Globe, Lock, Users, Star,
@@ -147,15 +148,12 @@ export default function ContentManagement() {
   };
 
   return (
-    <div className="container mx-auto p-6 bg-oa-dark min-h-screen text-white">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-            <FileText className="h-8 w-8 text-oa-red" />
-            Content Management
-          </h1>
-          <p className="text-oa-gray mt-2">Create, edit, and manage all website content</p>
-        </div>
+    <DashboardLayout 
+      title="Content Management" 
+      subtitle="Create, edit, and manage all website content"
+    >
+      <div className="space-y-6">
+        <div className="flex items-center justify-end mb-6">
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-oa-red hover:bg-oa-red/80">
@@ -545,6 +543,7 @@ export default function ContentManagement() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

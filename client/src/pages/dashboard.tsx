@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
-import Footer from "@/components/layout/footer";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import DataTable from "@/components/ui/data-table";
 import CaseModal from "@/components/case-modal";
 import { apiRequest } from "@/lib/queryClient";
@@ -159,66 +157,54 @@ export default function Dashboard() {
   const pagination = casesData?.pagination || { page: 1, pages: 1, total: 0 };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      <Sidebar />
-      
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-auto">
-        <Header />
-        
-        {/* Page Header */}
-        <div className="px-8 py-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-900/90 to-black/90 backdrop-blur-sm animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div className="animate-slide-in-left">
-              <h2 className="text-3xl font-bold text-white drop-shadow-lg">Tribunal Management Dashboard</h2>
-              <p className="text-gray-200 mt-1">Comprehensive fraud tracking and tribunal operations portal</p>
-            </div>
-            
-            <div className="flex items-center space-x-4 animate-slide-in-right">
-              <div className="flex items-center space-x-2">
-                <Filter className="text-gray-300 h-4 w-4" />
-                <Select onValueChange={handleStatusFilter}>
-                  <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white w-40">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending Review</SelectItem>
-                    <SelectItem value="verified">Verified</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="appealed">Appealed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Select onValueChange={handleTypeFilter}>
+    <DashboardLayout title="Tribunal Management Dashboard" subtitle="Comprehensive fraud tracking and tribunal operations portal">
+      <div className="space-y-6">
+        {/* Filters and Actions */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Filter className="text-gray-300 h-4 w-4" />
+              <Select onValueChange={handleStatusFilter}>
                 <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white w-40">
-                  <SelectValue placeholder="All Types" />
+                  <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-600">
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="financial_scam">Financial Scam</SelectItem>
-                  <SelectItem value="identity_theft">Identity Theft</SelectItem>
-                  <SelectItem value="fake_services">Fake Services</SelectItem>
-                  <SelectItem value="account_fraud">Account Fraud</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending Review</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="appealed">Appealed</SelectItem>
                 </SelectContent>
               </Select>
-              
-              <Link href="/new-case">
-                <EnhancedButton variant="primary" glow pulse>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Case
-                </EnhancedButton>
-              </Link>
             </div>
+            
+            <Select onValueChange={handleTypeFilter}>
+              <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white w-40">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="financial_scam">Financial Scam</SelectItem>
+                <SelectItem value="identity_theft">Identity Theft</SelectItem>
+                <SelectItem value="fake_services">Fake Services</SelectItem>
+                <SelectItem value="account_fraud">Account Fraud</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          <Link href="/new-case">
+            <EnhancedButton variant="primary" glow pulse>
+              <Plus className="h-4 w-4 mr-2" />
+              New Case
+            </EnhancedButton>
+          </Link>
         </div>
 
-        <div className="flex">
-          {/* Left Content Area */}
-          <div className="flex-1 p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Main Content Area */}
+          <div className="lg:col-span-3 space-y-6">
             {/* Enhanced Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-slide-in-up">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatsCard
                 title="Total Cases"
                 value={statistics?.totalCases || 0}
@@ -326,7 +312,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right Sidebar with Intelligence Widgets */}
-          <aside className="w-80 border-l border-oa-surface bg-gradient-to-b from-oa-dark to-oa-black p-6 space-y-6 animate-slide-in-right">
+          <div className="lg:col-span-1 space-y-6">
             <ThreatIntelWidget />
             
             <QuickStats
@@ -354,20 +340,18 @@ export default function Dashboard() {
                   <Eye className="h-4 w-4 mr-2" />
                   Public Lookup
                 </EnhancedButton>
-              </div>
+                </div>
             </EnhancedCard>
-          </aside>
+          </div>
         </div>
         
-        <Footer />
-      </main>
-
-      {/* Case Detail Modal */}
-      <CaseModal
-        caseId={selectedCaseId}
-        isOpen={!!selectedCaseId}
-        onClose={() => setSelectedCaseId(null)}
-      />
-    </div>
+        {/* Case Detail Modal */}
+        <CaseModal
+          caseId={selectedCaseId}
+          isOpen={!!selectedCaseId}
+          onClose={() => setSelectedCaseId(null)}
+        />
+      </div>
+    </DashboardLayout>
   );
 }

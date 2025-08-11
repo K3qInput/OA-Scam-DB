@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, subDays } from "date-fns";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area 
@@ -97,33 +98,30 @@ export default function AdvancedAnalytics() {
   };
 
   return (
-    <div className="container mx-auto p-6 bg-oa-dark min-h-screen text-white">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-            <BarChart3 className="h-8 w-8 text-oa-red" />
-            Advanced Analytics
-          </h1>
-          <p className="text-oa-gray mt-2">Comprehensive insights and performance metrics</p>
+    <DashboardLayout 
+      title="Advanced Analytics" 
+      subtitle="Comprehensive insights and performance metrics"
+    >
+      <div className="space-y-6">
+        <div className="flex items-center justify-end mb-6">
+          <div className="flex items-center gap-4">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="bg-oa-light border-oa-border text-white w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-oa-dark border-oa-border">
+                <SelectItem value="1d" className="text-white hover:bg-oa-light">Last 24 hours</SelectItem>
+                <SelectItem value="7d" className="text-white hover:bg-oa-light">Last 7 days</SelectItem>
+                <SelectItem value="30d" className="text-white hover:bg-oa-light">Last 30 days</SelectItem>
+                <SelectItem value="90d" className="text-white hover:bg-oa-light">Last 90 days</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button className="bg-oa-red hover:bg-oa-red/80">
+              <Download className="h-4 w-4 mr-2" />
+              Export Report
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="bg-oa-light border-oa-border text-white w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-oa-dark border-oa-border">
-              <SelectItem value="1d" className="text-white hover:bg-oa-light">Last 24 hours</SelectItem>
-              <SelectItem value="7d" className="text-white hover:bg-oa-light">Last 7 days</SelectItem>
-              <SelectItem value="30d" className="text-white hover:bg-oa-light">Last 30 days</SelectItem>
-              <SelectItem value="90d" className="text-white hover:bg-oa-light">Last 90 days</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button className="bg-oa-red hover:bg-oa-red/80">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-        </div>
-      </div>
 
       {/* Key Metrics Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -389,6 +387,7 @@ export default function AdvancedAnalytics() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
