@@ -446,7 +446,7 @@ export function registerRoutes(app: Express): Server {
         const altReports = await detector.detectAltAccounts(
           user.id,
           ipAddress,
-          null, // No device fingerprint for Discord OAuth
+          undefined, // No device fingerprint for Discord OAuth
           user.email
         );
         

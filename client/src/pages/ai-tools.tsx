@@ -266,25 +266,132 @@ export default function AiToolsPage() {
     );
   };
 
+  // Mock categories and tools for demonstration
+  const mockCategories = [
+    {
+      id: "contract-generation",
+      name: "Contract & Deals",
+      description: "AI-powered contract generation and deal analysis tools",
+      icon: "handshake",
+      targetRole: "all",
+      isActive: true,
+      sortOrder: 1,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: "code-analysis",
+      name: "Code Analysis",
+      description: "Advanced code security and quality analysis tools",
+      icon: "code",
+      targetRole: "developer",
+      isActive: true,
+      sortOrder: 2,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: "resource-finder",
+      name: "Resource Finder",
+      description: "Find the perfect tools and resources for your projects",
+      icon: "zap",
+      targetRole: "all",
+      isActive: true,
+      sortOrder: 3,
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  const mockTools = [
+    {
+      id: "contract-generator",
+      categoryId: "contract-generation",
+      name: "AI Contract Generator",
+      description: "Create fair and comprehensive contracts for freelance work",
+      instructions: "Provide project details and requirements to generate a custom contract",
+      inputFields: {
+        projectType: {
+          type: "select",
+          label: "Project Type",
+          options: ["Web Development", "Mobile App", "Design", "Content Writing", "Marketing"],
+          required: true
+        },
+        budget: {
+          type: "number",
+          label: "Budget ($)",
+          placeholder: "Enter project budget",
+          required: true
+        },
+        timeline: {
+          type: "text",
+          label: "Timeline",
+          placeholder: "e.g. 4 weeks",
+          required: true
+        },
+        requirements: {
+          type: "textarea",
+          label: "Project Requirements",
+          placeholder: "Describe the project requirements in detail...",
+          required: true
+        }
+      },
+      outputFormat: "contract_document",
+      requiredRole: "user",
+      usageCount: 1247,
+      rating: 4.8,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: "scam-detector",
+      categoryId: "contract-generation",
+      name: "Scam Detection Analyzer",
+      description: "Analyze conversations and offers for potential scam indicators",
+      instructions: "Paste conversation logs or offer details for analysis",
+      inputFields: {
+        content: {
+          type: "textarea",
+          label: "Content to Analyze",
+          placeholder: "Paste the conversation or offer details here...",
+          required: true
+        },
+        contentType: {
+          type: "select",
+          label: "Content Type",
+          options: ["Chat Conversation", "Email", "Job Offer", "Other"],
+          required: true
+        }
+      },
+      outputFormat: "analysis_report",
+      requiredRole: "user",
+      usageCount: 892,
+      rating: 4.9,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
+
+  const displayCategories = categories.length > 0 ? categories : mockCategories;
+  const displayTools = tools.length > 0 ? tools : mockTools.filter(tool => tool.categoryId === selectedCategory);
+
   return (
     <div className="container mx-auto py-8 space-y-8">
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold">AI Tools</h1>
-        <p className="text-muted-foreground">
-          Powerful AI-driven tools to help with deal generation, code analysis, and more.
+        <h1 className="text-3xl font-bold text-white">AI Tools Suite</h1>
+        <p className="text-slate-400">
+          Powerful AI-driven tools to help with contracts, security analysis, and resource discovery.
         </p>
       </div>
 
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          {categories.map((category: AiToolCategory) => {
+        <TabsList className="grid w-full grid-cols-3 bg-slate-800">
+          {displayCategories.map((category: any) => {
             const IconComponent = iconMap[category.icon] || Zap;
             return (
               <TabsTrigger 
                 key={category.id} 
                 value={category.id}
-                data-testid={`tab-${category.name.toLowerCase().replace(/\s+/g, '-')}`}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 data-[state=active]:bg-slate-700"
               >
                 <IconComponent className="h-4 w-4" />
                 {category.name}
@@ -293,36 +400,117 @@ export default function AiToolsPage() {
           })}
         </TabsList>
 
-        {categories.map((category: AiToolCategory) => (
+        {displayCategories.map((category: any) => (
           <TabsContent key={category.id} value={category.id} className="space-y-6">
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold">{category.name}</h2>
-              <p className="text-muted-foreground">{category.description}</p>
+              <h2 className="text-2xl font-semibold text-white">{category.name}</h2>
+              <p className="text-slate-400">{category.description}</p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {tools.map((tool: AiTool) => (
-                <Card key={tool.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+              {displayTools.map((tool: any) => (
+                <Card key={tool.id} className="bg-slate-800 border-slate-700 cursor-pointer hover:border-slate-600 transition-colors">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{tool.name}</CardTitle>
+                      <CardTitle className="text-lg text-white">{tool.name}</CardTitle>
                       {tool.rating && (
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm">{tool.rating}</span>
+                          <span className="text-sm text-slate-300">{tool.rating}</span>
                         </div>
                       )}
                     </div>
-                    <CardDescription>{tool.description}</CardDescription>
+                    <CardDescription className="text-slate-400">{tool.description}</CardDescription>
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-slate-400">
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
                         {tool.usageCount} uses
                       </div>
                       <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        Quick results
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        setSelectedTool(tool);
+                        setIsToolDialogOpen(true);
+                        setToolInputs({});
+                        setToolResult(null);
+                      }}
+                    >
+                      Use Tool
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {displayTools.length === 0 && (
+                <div className="col-span-full text-center py-12 text-slate-400">
+                  <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No tools available in this category yet.</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        ))}
+
+        {/* Tool Usage Dialog */}
+        <Dialog open={isToolDialogOpen} onOpenChange={setIsToolDialogOpen}>
+          <DialogContent className="sm:max-w-2xl bg-slate-800 border-slate-700 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-white">{selectedTool?.name}</DialogTitle>
+              <DialogDescription className="text-slate-400">
+                {selectedTool?.description}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Input Fields */}
+              <div className="space-y-4">
+                {selectedTool && Object.entries(selectedTool.inputFields).map(([fieldName, fieldConfig]) =>
+                  renderInputField(fieldName, fieldConfig as any)
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleToolUse}
+                  disabled={isProcessing || !selectedTool}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => setIsToolDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+
+              {/* Results */}
+              {renderToolResult()}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </Tabs>
+    </div>
+  );
+}
                         <Clock className="h-4 w-4" />
                         {tool.outputFormat}
                       </div>
