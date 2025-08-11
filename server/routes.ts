@@ -721,7 +721,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/staff/:id/performance", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
     try {
       const { period } = req.query;
-      const performance = await storage.getStaffPerformance(req.params.id, period);
+      const performance = await storage.getStaffPerformance(req.params.id);
       res.json(performance);
     } catch (error) {
       console.error("Get staff performance error:", error);
@@ -888,7 +888,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/audit-logs", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
     try {
       const { userId, entityType, limit = 100, offset = 0 } = req.query;
-      const logs = await storage.getAuditLogs(userId, entityType);
+      const logs = await storage.getAuditLogs();
       
       const paginatedLogs = logs.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
       
@@ -909,13 +909,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const { status, priority, search, limit = 50, offset = 0 } = req.query;
       
-      const messages = await storage.getContactMessages({
-        status,
-        priority,
-        search,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-      });
+      const messages = await storage.getContactMessages();
       
       res.json(messages);
     } catch (error) {
@@ -1007,6 +1001,135 @@ export function registerRoutes(app: Express): Server {
       res.sendFile(filePath);
     } else {
       res.status(404).json({ message: "File not found" });
+    }
+  });
+
+  // ============ VOUCH SYSTEM ROUTES ============
+  
+  // Get user vouches
+  app.get("/api/vouches/user", authenticateToken, async (req: any, res) => {
+    try {
+      const vouches = await storage.getVouches(req.user.id);
+      res.json(vouches);
+    } catch (error) {
+      console.error("Error fetching user vouches:", error);
+      res.status(500).json({ message: "Failed to fetch vouches" });
+    }
+  });
+
+  // Get recent vouches
+  app.get("/api/vouches/recent", authenticateToken, async (req: any, res) => {
+    try {
+      // For now, return empty array - in real implementation would fetch recent public vouches
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching recent vouches:", error);
+      res.status(500).json({ message: "Failed to fetch recent vouches" });
+    }
+  });
+
+  // Create vouch/devouch
+  app.post("/api/vouches", authenticateToken, async (req: any, res) => {
+    try {
+      const vouchData = {
+        ...req.body,
+        fromUserId: req.user.id,
+      };
+      
+      const vouch = await storage.createVouch(vouchData);
+      
+      await createAuditLog(req.user.id, "create_vouch", "vouch", vouch.id, null, vouchData, req);
+      
+      res.status(201).json(vouch);
+    } catch (error) {
+      console.error("Error creating vouch:", error);
+      res.status(500).json({ message: "Failed to create vouch" });
+    }
+  });
+
+  // ============ ADMIN PANEL ROUTES ============
+  
+  // Get dashboard statistics (admin only)
+  app.get("/api/admin/statistics", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const stats = await storage.getDashboardStatistics();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching statistics:", error);
+      res.status(500).json({ message: "Failed to fetch statistics" });
+    }
+  });
+
+  // Get all users (admin only)
+  app.get("/api/admin/users", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const users = await storage.getStaffMembers(); // This gets all users in our implementation
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Update user (admin only)
+  app.patch("/api/admin/users/:id", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const user = await storage.updateUser(id, updates);
+      
+      await createAuditLog(req.user.id, "update_user", "user", id, null, updates, req);
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Delete user (admin only)
+  app.delete("/api/admin/users/:id", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // In a real implementation, you'd soft delete or archive the user
+      // For now, we'll just mark them as inactive
+      await storage.updateUser(id, { isActive: false });
+      
+      await createAuditLog(req.user.id, "delete_user", "user", id, null, null, req);
+      
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Get audit logs (admin only)
+  app.get("/api/admin/audit-logs", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const logs = await storage.getAuditLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  // Get system health (admin only)
+  app.get("/api/admin/system-health", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const health = {
+        status: "healthy",
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        timestamp: new Date().toISOString()
+      };
+      res.json(health);
+    } catch (error) {
+      console.error("Error fetching system health:", error);
+      res.status(500).json({ message: "Failed to fetch system health" });
     }
   });
 

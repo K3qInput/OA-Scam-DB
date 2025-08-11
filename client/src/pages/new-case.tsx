@@ -45,14 +45,14 @@ export default function NewCase() {
       <main className="flex-1 overflow-auto">
         <Header />
         <div className="px-8 py-6">
-          <EnhancedNewCase />
+          <NewCaseForm />
         </div>
       </main>
     </div>
   );
 }
 
-function LegacyNewCase() {
+function NewCaseForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();

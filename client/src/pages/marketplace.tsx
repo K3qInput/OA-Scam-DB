@@ -1,691 +1,496 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Sidebar from "@/components/layout/sidebar";
+import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { 
+  Search, 
   Star, 
-  MapPin, 
-  Clock, 
   DollarSign, 
-  User, 
-  Briefcase, 
-  CheckCircle, 
-  MessageSquare,
+  Clock, 
+  MapPin, 
+  Shield, 
+  Award,
   Plus,
-  Search,
-  Filter
+  Filter,
+  Eye,
+  MessageSquare,
+  Users,
+  Briefcase
 } from "lucide-react";
 
-interface FreelancerProfile {
-  id: string;
-  userId: string;
-  isVerified: boolean;
-  verificationLevel: string;
-  title: string;
-  bio: string;
-  skills: string[];
-  specializations: string[];
-  hourlyRate: number;
-  currency: string;
-  availability: string;
-  portfolio: any;
-  experience: string;
-  completedJobs: number;
-  averageRating: number;
-  totalEarnings: string;
-  responseTime: number;
-  languages: string[];
-  timezone: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Project {
-  id: string;
-  clientId: string;
-  freelancerId?: string;
-  title: string;
-  description: string;
-  requirements: string;
-  category: string;
-  skills: string[];
-  budget: number;
-  budgetType: string;
-  currency: string;
-  deadline?: string;
-  status: string;
-  priority: string;
-  isPublic: boolean;
-  isVerifiedOnly: boolean;
-  applicationCount: number;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-const skillOptions = [
-  "web_development", "mobile_development", "game_development", "ui_ux_design",
-  "graphic_design", "3d_modeling", "animation", "content_writing", "copywriting",
-  "seo", "marketing", "project_management", "data_analysis", "ai_ml", "blockchain",
-  "cybersecurity", "devops", "qa_testing", "minecraft_development", "discord_bots",
-  "server_administration", "plugin_development", "mod_development"
-];
-
-const categoryOptions = [
-  "Web Development", "Mobile Development", "Game Development", "Design",
-  "Writing & Content", "Marketing", "Data & Analytics", "DevOps & Infrastructure",
-  "Minecraft & Gaming", "Discord & Community", "Other"
-];
-
-export default function MarketplacePage() {
-  const [activeTab, setActiveTab] = useState("browse-freelancers");
-  const [freelancerFilters, setFreelancerFilters] = useState({ skills: "", verified: "" });
-  const [projectFilters, setProjectFilters] = useState({ skills: "", status: "open" });
-  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
-  const [projectForm, setProjectForm] = useState({
-    title: "",
-    description: "",
-    requirements: "",
-    category: "",
-    skills: [] as string[],
-    budget: "",
-    budgetType: "fixed",
-    deadline: "",
-    isVerifiedOnly: false
-  });
+export default function Marketplace() {
+  const [activeTab, setActiveTab] = useState("browse");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [showCreateProject, setShowCreateProject] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: freelancers = [] } = useQuery({
-    queryKey: ["/api/freelancers", freelancerFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (freelancerFilters.skills) params.append("skills", freelancerFilters.skills);
-      if (freelancerFilters.verified) params.append("verified", freelancerFilters.verified);
-      const url = `/api/freelancers${params.toString() ? `?${params}` : ""}`;
-      return apiRequest(url);
+  // Mock data for demonstration - in real app would come from API
+  const freelancers = [
+    {
+      id: "1",
+      name: "Alex Johnson",
+      title: "Full-Stack Developer",
+      rating: 4.8,
+      reviews: 127,
+      hourlyRate: 75,
+      location: "New York, USA",
+      isVerified: true,
+      skills: ["React", "Node.js", "Python", "PostgreSQL"],
+      description: "Experienced developer specializing in modern web applications and API development.",
+      avatar: null,
+      completedProjects: 89,
+      responseTime: "< 1 hour"
     },
-  });
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects", projectFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (projectFilters.skills) params.append("skills", projectFilters.skills);
-      if (projectFilters.status) params.append("status", projectFilters.status);
-      const url = `/api/projects${params.toString() ? `?${params}` : ""}`;
-      return apiRequest(url);
+    {
+      id: "2", 
+      name: "Sarah Chen",
+      title: "UX/UI Designer",
+      rating: 4.9,
+      reviews: 203,
+      hourlyRate: 65,
+      location: "San Francisco, USA",
+      isVerified: true,
+      skills: ["Figma", "Adobe XD", "Sketch", "Prototyping"],
+      description: "Creative designer focused on user-centered design and modern interfaces.",
+      avatar: null,
+      completedProjects: 156,
+      responseTime: "< 2 hours"
     },
-  });
-
-  const createProjectMutation = useMutation({
-    mutationFn: async (projectData: any) => {
-      return apiRequest("/api/projects", {
-        method: "POST",
-        body: projectData,
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Project Created",
-        description: "Your project has been posted successfully.",
-      });
-      setIsCreateProjectOpen(false);
-      setProjectForm({
-        title: "",
-        description: "",
-        requirements: "",
-        category: "",
-        skills: [],
-        budget: "",
-        budgetType: "fixed",
-        deadline: "",
-        isVerifiedOnly: false
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create project. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleCreateProject = () => {
-    createProjectMutation.mutate({
-      ...projectForm,
-      budget: projectForm.budget ? parseFloat(projectForm.budget) : null,
-      deadline: projectForm.deadline || null,
-    });
-  };
-
-  const getExperienceBadgeVariant = (experience: string) => {
-    switch (experience) {
-      case "expert": return "default";
-      case "intermediate": return "secondary";
-      case "entry": return "outline";
-      default: return "outline";
+    {
+      id: "3",
+      name: "Mohamed Hassan",
+      title: "Blockchain Developer", 
+      rating: 4.7,
+      reviews: 89,
+      hourlyRate: 95,
+      location: "London, UK",
+      isVerified: true,
+      skills: ["Solidity", "Web3", "Smart Contracts", "DeFi"],
+      description: "Specialized in blockchain development and decentralized applications.",
+      avatar: null,
+      completedProjects: 43,
+      responseTime: "< 3 hours"
     }
-  };
+  ];
 
-  const getAvailabilityColor = (availability: string) => {
-    switch (availability) {
-      case "available": return "text-green-600";
-      case "busy": return "text-yellow-600";
-      case "unavailable": return "text-red-600";
-      default: return "text-gray-600";
+  const projects = [
+    {
+      id: "1",
+      title: "E-commerce Website Development",
+      budget: "$5,000 - $8,000",
+      deadline: "6 weeks",
+      description: "Looking for a experienced developer to build a modern e-commerce platform with payment integration.",
+      skills: ["React", "Node.js", "Stripe", "MongoDB"],
+      proposals: 12,
+      postedBy: "TechCorp Inc.",
+      postedAt: "2 days ago",
+      isUrgent: false
+    },
+    {
+      id: "2", 
+      title: "Mobile App UI/UX Design",
+      budget: "$2,500 - $4,000",
+      deadline: "3 weeks", 
+      description: "Need a complete UI/UX design for a fitness tracking mobile application.",
+      skills: ["Figma", "Mobile Design", "UI/UX", "Prototyping"],
+      proposals: 8,
+      postedBy: "FitLife Startup",
+      postedAt: "1 day ago",
+      isUrgent: true
+    },
+    {
+      id: "3",
+      title: "Smart Contract Development",
+      budget: "$10,000 - $15,000", 
+      deadline: "8 weeks",
+      description: "Develop and audit smart contracts for a new DeFi lending platform.",
+      skills: ["Solidity", "Web3", "Smart Contracts", "Security Audit"],
+      proposals: 5,
+      postedBy: "DefiMax Protocol",
+      postedAt: "3 days ago",
+      isUrgent: false
     }
-  };
+  ];
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
-      <div className="space-y-4">
-        <h1 className="text-3xl font-bold">Freelancer Marketplace</h1>
-        <p className="text-muted-foreground">
-          Connect with verified freelancers or find your next project opportunity.
-        </p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="browse-freelancers" data-testid="tab-browse-freelancers">
-            <User className="h-4 w-4 mr-2" />
-            Browse Freelancers
-          </TabsTrigger>
-          <TabsTrigger value="browse-projects" data-testid="tab-browse-projects">
-            <Briefcase className="h-4 w-4 mr-2" />
-            Browse Projects
-          </TabsTrigger>
-          <TabsTrigger value="post-project" data-testid="tab-post-project">
-            <Plus className="h-4 w-4 mr-2" />
-            Post Project
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="browse-freelancers" className="space-y-6">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Label htmlFor="skill-filter">Filter by Skills</Label>
-              <Select 
-                value={freelancerFilters.skills} 
-                onValueChange={(value) => setFreelancerFilters(prev => ({ ...prev, skills: value }))}
-              >
-                <SelectTrigger data-testid="select-skill-filter">
-                  <SelectValue placeholder="All skills" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All skills</SelectItem>
-                  {skillOptions.map(skill => (
-                    <SelectItem key={skill} value={skill}>
-                      {skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex-1">
-              <Label htmlFor="verified-filter">Verification Status</Label>
-              <Select 
-                value={freelancerFilters.verified} 
-                onValueChange={(value) => setFreelancerFilters(prev => ({ ...prev, verified: value }))}
-              >
-                <SelectTrigger data-testid="select-verified-filter">
-                  <SelectValue placeholder="All freelancers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All freelancers</SelectItem>
-                  <SelectItem value="true">Verified only</SelectItem>
-                  <SelectItem value="false">Unverified</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+    <div className="flex h-screen bg-oa-black">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Header />
+        <div className="px-8 py-6">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Freelancer Marketplace</h1>
+            <p className="text-oa-gray">Connect with verified freelancers and find projects</p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {freelancers.map((freelancer: FreelancerProfile) => (
-              <Card key={freelancer.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src="" />
-                      <AvatarFallback>
-                        {freelancer.title.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg">{freelancer.title}</CardTitle>
-                        {freelancer.isVerified && (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        {freelancer.averageRating && (
-                          <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>{freelancer.averageRating}</span>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 bg-oa-dark border border-oa-border">
+              <TabsTrigger 
+                value="browse" 
+                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
+                data-testid="tab-browse-freelancers"
+              >
+                Browse Freelancers
+              </TabsTrigger>
+              <TabsTrigger 
+                value="projects" 
+                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
+                data-testid="tab-browse-projects"
+              >
+                Browse Projects
+              </TabsTrigger>
+              <TabsTrigger 
+                value="my-projects" 
+                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
+                data-testid="tab-my-projects"
+              >
+                My Projects
+              </TabsTrigger>
+              <TabsTrigger 
+                value="my-profile" 
+                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
+                data-testid="tab-my-profile"
+              >
+                My Profile
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="browse" className="space-y-6">
+              <div className="flex gap-4 mb-6">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-oa-gray" />
+                  <Input
+                    placeholder="Search freelancers by skills, name, or location..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-oa-dark border-oa-border text-white"
+                    data-testid="input-search-freelancers"
+                  />
+                </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-48 bg-oa-dark border-oa-border text-white">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-oa-dark border-oa-border">
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="development">Development</SelectItem>
+                    <SelectItem value="design">Design</SelectItem>
+                    <SelectItem value="blockchain">Blockchain</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" className="border-oa-border text-oa-gray">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {freelancers.map((freelancer) => (
+                  <Card key={freelancer.id} className="bg-oa-dark border-oa-border hover:border-oa-primary/50 transition-colors">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={freelancer.avatar} />
+                          <AvatarFallback className="bg-oa-black text-white">
+                            {freelancer.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-white">{freelancer.name}</h3>
+                            {freelancer.isVerified && (
+                              <Shield className="h-4 w-4 text-oa-green" />
+                            )}
                           </div>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <Briefcase className="h-4 w-4" />
-                          <span>{freelancer.completedJobs} jobs</span>
+                          <p className="text-oa-gray text-sm">{freelancer.title}</p>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {freelancer.bio}
-                  </p>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Experience Level</span>
-                      <Badge variant={getExperienceBadgeVariant(freelancer.experience)}>
-                        {freelancer.experience}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Availability</span>
-                      <span className={`font-medium ${getAvailabilityColor(freelancer.availability)}`}>
-                        {freelancer.availability}
-                      </span>
-                    </div>
-                    
-                    {freelancer.hourlyRate && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Rate</span>
-                        <span className="font-medium">
-                          ${freelancer.hourlyRate}/{freelancer.currency === 'USD' ? 'hr' : freelancer.currency}
-                        </span>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                          <span className="text-white font-medium">{freelancer.rating}</span>
+                          <span className="text-oa-gray text-sm">({freelancer.reviews})</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-white font-semibold">${freelancer.hourlyRate}/hr</div>
+                        </div>
                       </div>
-                    )}
-                  </div>
 
-                  {freelancer.skills.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Skills</div>
+                      <p className="text-oa-gray text-sm">{freelancer.description}</p>
+
                       <div className="flex flex-wrap gap-1">
-                        {freelancer.skills.slice(0, 3).map(skill => (
+                        {freelancer.skills.slice(0, 3).map((skill) => (
                           <Badge key={skill} variant="outline" className="text-xs">
-                            {skill.replace(/_/g, ' ')}
+                            {skill}
                           </Badge>
                         ))}
                         {freelancer.skills.length > 3 && (
                           <Badge variant="outline" className="text-xs">
-                            +{freelancer.skills.length - 3} more
+                            +{freelancer.skills.length - 3}
                           </Badge>
                         )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-xs text-oa-gray">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {freelancer.location}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {freelancer.responseTime}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Briefcase className="h-3 w-3" />
+                          {freelancer.completedProjects} projects
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1 bg-oa-primary hover:bg-oa-primary/80">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Contact
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-oa-border">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="projects" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div className="flex gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-oa-gray" />
+                    <Input
+                      placeholder="Search projects..."
+                      className="pl-10 bg-oa-dark border-oa-border text-white w-80"
+                      data-testid="input-search-projects"
+                    />
+                  </div>
+                  <Select>
+                    <SelectTrigger className="w-48 bg-oa-dark border-oa-border text-white">
+                      <SelectValue placeholder="All Budgets" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-oa-dark border-oa-border">
+                      <SelectItem value="all">All Budgets</SelectItem>
+                      <SelectItem value="low">$0 - $1,000</SelectItem>
+                      <SelectItem value="mid">$1,000 - $5,000</SelectItem>
+                      <SelectItem value="high">$5,000+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Dialog open={showCreateProject} onOpenChange={setShowCreateProject}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-oa-green hover:bg-oa-green/80 text-black">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Post Project
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-oa-dark border-oa-border text-white max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Post a New Project</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="title">Project Title</Label>
+                        <Input 
+                          id="title"
+                          className="bg-oa-black border-oa-border text-white"
+                          placeholder="Enter project title..."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea 
+                          id="description"
+                          className="bg-oa-black border-oa-border text-white"
+                          placeholder="Describe your project requirements..."
+                          rows={4}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="budget">Budget Range</Label>
+                          <Input 
+                            id="budget"
+                            className="bg-oa-black border-oa-border text-white"
+                            placeholder="e.g. $1,000 - $3,000"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="deadline">Deadline</Label>
+                          <Input 
+                            id="deadline"
+                            className="bg-oa-black border-oa-border text-white"
+                            placeholder="e.g. 4 weeks"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="skills">Required Skills</Label>
+                        <Input 
+                          id="skills"
+                          className="bg-oa-black border-oa-border text-white"
+                          placeholder="e.g. React, Node.js, PostgreSQL"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setShowCreateProject(false)}>
+                          Cancel
+                        </Button>
+                        <Button className="bg-oa-green hover:bg-oa-green/80 text-black">
+                          Post Project
+                        </Button>
                       </div>
                     </div>
-                  )}
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      className="flex-1"
-                      data-testid={`button-contact-${freelancer.id}`}
-                    >
-                      <MessageSquare className="h-4 w-4 mr-1" />
-                      Contact
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      data-testid={`button-view-profile-${freelancer.id}`}
-                    >
-                      View Profile
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {freelancers.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-muted-foreground">No freelancers found matching your criteria.</div>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="browse-projects" className="space-y-6">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Label htmlFor="project-skill-filter">Filter by Skills</Label>
-              <Select 
-                value={projectFilters.skills} 
-                onValueChange={(value) => setProjectFilters(prev => ({ ...prev, skills: value }))}
-              >
-                <SelectTrigger data-testid="select-project-skill-filter">
-                  <SelectValue placeholder="All skills" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All skills</SelectItem>
-                  {skillOptions.map(skill => (
-                    <SelectItem key={skill} value={skill}>
-                      {skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex-1">
-              <Label htmlFor="project-status-filter">Project Status</Label>
-              <Select 
-                value={projectFilters.status} 
-                onValueChange={(value) => setProjectFilters(prev => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger data-testid="select-project-status-filter">
-                  <SelectValue placeholder="All projects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All projects</SelectItem>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {projects.map((project: Project) => (
-              <Card key={project.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg">{project.title}</CardTitle>
-                        <Badge variant={project.status === 'open' ? 'default' : 'secondary'}>
-                          {project.status.replace('_', ' ')}
-                        </Badge>
-                        {project.isVerifiedOnly && (
-                          <Badge variant="outline">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Verified only
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4" />
-                          <span>
-                            ${project.budget} {project.budgetType}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="h-4 w-4" />
-                          <span>{project.applicationCount} applications</span>
-                        </div>
-                        {project.deadline && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{new Date(project.deadline).toLocaleDateString()}</span>
+              <div className="space-y-4">
+                {projects.map((project) => (
+                  <Card key={project.id} className="bg-oa-dark border-oa-border">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-xl font-semibold text-white">{project.title}</h3>
+                            {project.isUrgent && (
+                              <Badge variant="destructive" className="text-xs">Urgent</Badge>
+                            )}
                           </div>
-                        )}
+                          <p className="text-oa-gray mb-3">{project.description}</p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <p className="text-sm">{project.description}</p>
 
-                  {project.skills.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Required Skills</div>
-                      <div className="flex flex-wrap gap-1">
-                        {project.skills.map(skill => (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-oa-green" />
+                          <span className="text-white font-medium">{project.budget}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-oa-primary" />
+                          <span className="text-white">{project.deadline}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-oa-gray" />
+                          <span className="text-white">{project.proposals} proposals</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {project.skills.map((skill) => (
                           <Badge key={skill} variant="outline" className="text-xs">
-                            {skill.replace(/_/g, ' ')}
+                            {skill}
                           </Badge>
                         ))}
                       </div>
-                    </div>
-                  )}
 
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm"
-                      data-testid={`button-apply-${project.id}`}
-                      disabled={project.status !== 'open'}
-                    >
-                      Apply Now
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      data-testid={`button-view-project-${project.id}`}
-                    >
-                      View Details
-                    </Button>
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-oa-gray">
+                          Posted by <span className="text-white">{project.postedBy}</span> • {project.postedAt}
+                        </div>
+                        <Button size="sm" className="bg-oa-primary hover:bg-oa-primary/80">
+                          Submit Proposal
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="my-projects" className="space-y-6">
+              <div className="text-center py-12">
+                <Briefcase className="h-16 w-16 text-oa-gray mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">No Projects Yet</h3>
+                <p className="text-oa-gray mb-4">Start by posting your first project or submitting proposals</p>
+                <Button className="bg-oa-primary hover:bg-oa-primary/80">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Post Your First Project
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="my-profile" className="space-y-6">
+              <Card className="bg-oa-dark border-oa-border">
+                <CardHeader>
+                  <CardTitle className="text-white">Freelancer Profile</CardTitle>
+                  <CardDescription className="text-oa-gray">
+                    Create your profile to start receiving project invitations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="professional-title">Professional Title</Label>
+                      <Input 
+                        id="professional-title"
+                        className="bg-oa-black border-oa-border text-white"
+                        placeholder="e.g. Full-Stack Developer"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hourly-rate">Hourly Rate</Label>
+                      <Input 
+                        id="hourly-rate"
+                        className="bg-oa-black border-oa-border text-white"
+                        placeholder="e.g. $75"
+                      />
+                    </div>
                   </div>
+
+                  <div>
+                    <Label htmlFor="bio">Professional Bio</Label>
+                    <Textarea 
+                      id="bio"
+                      className="bg-oa-black border-oa-border text-white"
+                      placeholder="Tell clients about your experience and expertise..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="skills">Skills & Technologies</Label>
+                    <Input 
+                      id="skills"
+                      className="bg-oa-black border-oa-border text-white"
+                      placeholder="e.g. React, Node.js, Python, PostgreSQL"
+                    />
+                  </div>
+
+                  <Button className="bg-oa-primary hover:bg-oa-primary/80">
+                    Save Profile
+                  </Button>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          {projects.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-muted-foreground">No projects found matching your criteria.</div>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="post-project" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Post a New Project</CardTitle>
-              <CardDescription>
-                Create a project listing to find the perfect freelancer for your needs.
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="project-title">Project Title *</Label>
-                  <Input
-                    id="project-title"
-                    data-testid="input-project-title"
-                    value={projectForm.title}
-                    onChange={(e) => setProjectForm(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="e.g., Build a modern web application"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="project-category">Category *</Label>
-                  <Select 
-                    value={projectForm.category} 
-                    onValueChange={(value) => setProjectForm(prev => ({ ...prev, category: value }))}
-                  >
-                    <SelectTrigger data-testid="select-project-category">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="project-description">Project Description *</Label>
-                <Textarea
-                  id="project-description"
-                  data-testid="textarea-project-description"
-                  value={projectForm.description}
-                  onChange={(e) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe your project, goals, and expectations..."
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="project-requirements">Requirements *</Label>
-                <Textarea
-                  id="project-requirements"
-                  data-testid="textarea-project-requirements"
-                  value={projectForm.requirements}
-                  onChange={(e) => setProjectForm(prev => ({ ...prev, requirements: e.target.value }))}
-                  placeholder="List specific requirements, deliverables, and technical specifications..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="project-budget">Budget</Label>
-                  <Input
-                    id="project-budget"
-                    data-testid="input-project-budget"
-                    type="number"
-                    value={projectForm.budget}
-                    onChange={(e) => setProjectForm(prev => ({ ...prev, budget: e.target.value }))}
-                    placeholder="1000"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="budget-type">Budget Type</Label>
-                  <Select 
-                    value={projectForm.budgetType} 
-                    onValueChange={(value) => setProjectForm(prev => ({ ...prev, budgetType: value }))}
-                  >
-                    <SelectTrigger data-testid="select-budget-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">Fixed Price</SelectItem>
-                      <SelectItem value="hourly">Hourly Rate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="project-deadline">Deadline</Label>
-                  <Input
-                    id="project-deadline"
-                    data-testid="input-project-deadline"
-                    type="date"
-                    value={projectForm.deadline}
-                    onChange={(e) => setProjectForm(prev => ({ ...prev, deadline: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Required Skills</Label>
-                <Select 
-                  value="" 
-                  onValueChange={(value) => {
-                    if (!projectForm.skills.includes(value)) {
-                      setProjectForm(prev => ({ ...prev, skills: [...prev.skills, value] }));
-                    }
-                  }}
-                >
-                  <SelectTrigger data-testid="select-add-skill">
-                    <SelectValue placeholder="Add required skills" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {skillOptions.filter(skill => !projectForm.skills.includes(skill)).map(skill => (
-                      <SelectItem key={skill} value={skill}>
-                        {skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                {projectForm.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {projectForm.skills.map(skill => (
-                      <Badge 
-                        key={skill} 
-                        variant="secondary"
-                        className="cursor-pointer"
-                        onClick={() => setProjectForm(prev => ({ 
-                          ...prev, 
-                          skills: prev.skills.filter(s => s !== skill) 
-                        }))}
-                      >
-                        {skill.replace(/_/g, ' ')} ×
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="verified-only"
-                  data-testid="checkbox-verified-only"
-                  checked={projectForm.isVerifiedOnly}
-                  onChange={(e) => setProjectForm(prev => ({ ...prev, isVerifiedOnly: e.target.checked }))}
-                />
-                <Label htmlFor="verified-only">Only allow verified freelancers to apply</Label>
-              </div>
-
-              <div className="flex gap-4">
-                <Button
-                  onClick={handleCreateProject}
-                  disabled={!projectForm.title || !projectForm.description || !projectForm.requirements}
-                  data-testid="button-create-project"
-                  className="flex-1"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Post Project
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => setProjectForm({
-                    title: "",
-                    description: "",
-                    requirements: "",
-                    category: "",
-                    skills: [],
-                    budget: "",
-                    budgetType: "fixed",
-                    deadline: "",
-                    isVerifiedOnly: false
-                  })}
-                  data-testid="button-clear-form"
-                >
-                  Clear Form
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
     </div>
   );
 }

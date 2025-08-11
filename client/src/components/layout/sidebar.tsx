@@ -15,7 +15,8 @@ import {
   UserCheck,
   Gavel,
   Zap,
-  Briefcase
+  Briefcase,
+  ThumbsUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@shared/schema";
@@ -118,6 +119,32 @@ export default function Sidebar({ className }: SidebarProps) {
             </div>
           )}
 
+          {/* Community Section */}
+          <div className="pt-4">
+            <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Community
+            </h3>
+            <Link href="/vouches" className={linkClass("/vouches")}>
+              <UserCheck className="mr-3 h-5 w-5" />
+              Vouches
+            </Link>
+            
+            <Link href="/vouch-system" className={linkClass("/vouch-system")}>
+              <ThumbsUp className="mr-3 h-5 w-5" />
+              Vouch System
+            </Link>
+            
+            <Link href="/disputes" className={linkClass("/disputes")}>
+              <Gavel className="mr-3 h-5 w-5" />
+              Disputes
+            </Link>
+            
+            <Link href="/alt-detection" className={linkClass("/alt-detection")}>
+              <AlertTriangle className="mr-3 h-5 w-5" />
+              Alt Detection
+            </Link>
+          </div>
+
           {/* Security Section */}
           <div className="pt-4">
             <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -126,6 +153,11 @@ export default function Sidebar({ className }: SidebarProps) {
             <Link href="/threat-intel" className={linkClass("/threat-intel")}>
               <Shield className="mr-3 h-5 w-5" />
               Threat Intelligence
+            </Link>
+            
+            <Link href="/utilities" className={linkClass("/utilities")}>
+              <Settings className="mr-3 h-5 w-5" />
+              Utilities
             </Link>
           </div>
 

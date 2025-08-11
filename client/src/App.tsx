@@ -16,11 +16,13 @@ import TribunalProceedings from "@/pages/tribunal-proceedings";
 import ContactManagement from "@/pages/contact-management";
 import StaffAssignments from "@/pages/staff-assignments";
 import Vouches from "@/pages/vouches";
+import VouchSystem from "@/pages/vouch-system";
 import Disputes from "@/pages/disputes";
 import AltDetection from "@/pages/alt-detection";
 import Utilities from "@/pages/utilities";
 import AiTools from "@/pages/ai-tools";
 import Marketplace from "@/pages/marketplace";
+import AdminPanel from "@/pages/admin-panel";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -62,6 +64,12 @@ function Router() {
       </Route>
       <Route path="/vouches">
         {hasToken ? <Vouches /> : <DiscordLogin />}
+      </Route>
+      <Route path="/vouch-system">
+        {hasToken ? <VouchSystem /> : <DiscordLogin />}
+      </Route>
+      <Route path="/admin">
+        {hasToken ? <AdminPanel /> : <DiscordLogin />}
       </Route>
       <Route path="/disputes">
         {hasToken ? <Disputes /> : <DiscordLogin />}
