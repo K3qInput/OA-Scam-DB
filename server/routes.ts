@@ -395,7 +395,7 @@ export function registerRoutes(app: Express): Server {
         securityAnalysis: {
           riskScore: sessionData.riskScore || 0,
           altDetection: altDetectionResult,
-          requiresVerification: altDetectionResult?.maxConfidence >= 75
+          requiresVerification: (altDetectionResult?.maxConfidence || 0) >= 75
         }
       });
     } catch (error) {
@@ -419,7 +419,7 @@ export function registerRoutes(app: Express): Server {
         userId: user.id,
         ipAddress,
         userAgent: req.get('User-Agent') || "unknown",
-        deviceFingerprint: null,
+        deviceFingerprint: "",
         sessionToken: token,
         isActive: true,
         lastActivity: new Date(),
@@ -873,7 +873,7 @@ export function registerRoutes(app: Express): Server {
       // Check if device fingerprint is associated with multiple users
       const allSessions = await storage.getAllUserSessions?.() || [];
       const matchingSessions = allSessions.filter(s => s.deviceFingerprint === deviceFingerprint);
-      const uniqueUsers = [...new Set(matchingSessions.map(s => s.userId))];
+      const uniqueUsers = Array.from(new Set(matchingSessions.map(s => s.userId)));
       
       const isValid = uniqueUsers.length <= 1 || uniqueUsers.includes(req.user.id);
       const riskLevel = uniqueUsers.length > 3 ? 'high' : 

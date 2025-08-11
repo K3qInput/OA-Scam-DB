@@ -1,275 +1,427 @@
 import { useState } from "react";
-import { Search, Filter, Calendar, User, Tag, MapPin, DollarSign, X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import EnhancedCard from "./enhanced-card";
-import EnhancedButton from "./enhanced-button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/calendar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, Filter, X, ChevronDown, ChevronUp } from "lucide-react";
 
-interface SearchFilters {
-  query: string;
-  status: string[];
-  types: string[];
-  dateRange: {
-    from: string;
-    to: string;
-  };
-  amountRange: {
-    min: number;
-    max: number;
-  };
-  reporter: string;
-  tags: string[];
-  location: string;
-}
+const searchSchema = z.object({
+  query: z.string().optional(),
+  status: z.string().optional(),
+  type: z.string().optional(),
+  severity: z.string().optional(),
+  dateFrom: z.date().optional(),
+  dateTo: z.date().optional(),
+  assignedTo: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  hasEvidence: z.boolean().optional(),
+  minAmount: z.number().optional(),
+  maxAmount: z.number().optional(),
+});
+
+type SearchFormData = z.infer<typeof searchSchema>;
 
 interface AdvancedSearchProps {
-  onSearch: (filters: SearchFilters) => void;
+  onSearch: (filters: SearchFormData) => void;
   onClear: () => void;
-  className?: string;
+  loading?: boolean;
+  resultCount?: number;
 }
 
-export default function AdvancedSearch({ onSearch, onClear, className = "" }: AdvancedSearchProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [filters, setFilters] = useState<SearchFilters>({
-    query: "",
-    status: [],
-    types: [],
-    dateRange: { from: "", to: "" },
-    amountRange: { min: 0, max: 1000000 },
-    reporter: "",
-    tags: [],
-    location: ""
+const statusOptions = [
+  { value: "pending", label: "Pending" },
+  { value: "under_review", label: "Under Review" },
+  { value: "verified", label: "Verified" },
+  { value: "rejected", label: "Rejected" },
+  { value: "appealed", label: "Appealed" },
+  { value: "resolved", label: "Resolved" },
+  { value: "archived", label: "Archived" },
+];
+
+const typeOptions = [
+  { value: "financial_scam", label: "Financial Scam" },
+  { value: "fake_services", label: "Fake Services" },
+  { value: "identity_theft", label: "Identity Theft" },
+  { value: "account_fraud", label: "Account Fraud" },
+  { value: "impersonation", label: "Impersonation" },
+  { value: "other", label: "Other" },
+];
+
+const severityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+];
+
+const availableTags = [
+  "Discord", "Minecraft", "Gaming", "Cryptocurrency", "NFT", "Commission", 
+  "Service", "Freelance", "Server", "Bot", "Plugin", "Website"
+];
+
+export default function AdvancedSearch({ onSearch, onClear, loading, resultCount }: AdvancedSearchProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  const form = useForm<SearchFormData>({
+    resolver: zodResolver(searchSchema),
+    defaultValues: {
+      tags: [],
+      hasEvidence: false,
+    },
   });
 
-  const handleSearch = () => {
-    onSearch(filters);
+  const onSubmit = (data: SearchFormData) => {
+    const searchData = {
+      ...data,
+      tags: selectedTags,
+    };
+    onSearch(searchData);
   };
 
   const handleClear = () => {
-    setFilters({
-      query: "",
-      status: [],
-      types: [],
-      dateRange: { from: "", to: "" },
-      amountRange: { min: 0, max: 1000000 },
-      reporter: "",
-      tags: [],
-      location: ""
-    });
+    form.reset();
+    setSelectedTags([]);
     onClear();
   };
 
-  const toggleStatus = (status: string) => {
-    setFilters(prev => ({
-      ...prev,
-      status: prev.status.includes(status)
-        ? prev.status.filter(s => s !== status)
-        : [...prev.status, status]
-    }));
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
   };
 
-  const toggleType = (type: string) => {
-    setFilters(prev => ({
-      ...prev,
-      types: prev.types.includes(type)
-        ? prev.types.filter(t => t !== type)
-        : [...prev.types, type]
-    }));
+  const removeTag = (tag: string) => {
+    setSelectedTags(prev => prev.filter(t => t !== tag));
   };
 
-  const statusOptions = [
-    { value: "pending", label: "Pending", color: "bg-yellow-500" },
-    { value: "verified", label: "Verified", color: "bg-green-500" },
-    { value: "resolved", label: "Resolved", color: "bg-blue-500" },
-    { value: "rejected", label: "Rejected", color: "bg-red-500" },
-    { value: "appealed", label: "Appealed", color: "bg-purple-500" }
-  ];
-
-  const typeOptions = [
-    { value: "financial_scam", label: "Financial Scam" },
-    { value: "identity_theft", label: "Identity Theft" },
-    { value: "fake_services", label: "Fake Services" },
-    { value: "account_fraud", label: "Account Fraud" },
-    { value: "other", label: "Other" }
-  ];
+  const hasActiveFilters = () => {
+    const values = form.getValues();
+    return Object.values(values).some(value => 
+      value !== undefined && value !== "" && value !== false
+    ) || selectedTags.length > 0;
+  };
 
   return (
-    <EnhancedCard className={`p-6 ${className}`}>
-      <div className="space-y-4">
-        {/* Basic Search */}
-        <div className="flex items-center space-x-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search cases, IDs, descriptions..."
-              value={filters.query}
-              onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
-              className="pl-10 oa-input"
-            />
+    <Card className="bg-slate-800 border-slate-700">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Advanced Search
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Find cases with specific criteria
+              {resultCount !== undefined && (
+                <span className="ml-2 text-blue-400 font-medium">
+                  ({resultCount} results)
+                </span>
+              )}
+            </CardDescription>
           </div>
-          <EnhancedButton
-            variant="secondary"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center space-x-2"
-          >
-            <Filter className="h-4 w-4" />
-            <span>{isExpanded ? "Simple" : "Advanced"}</span>
-          </EnhancedButton>
-          <EnhancedButton variant="primary" onClick={handleSearch}>
-            Search
-          </EnhancedButton>
+          <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Filter className="h-4 w-4 mr-1" />
+                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+          </Collapsible>
         </div>
+      </CardHeader>
 
-        {/* Advanced Filters */}
-        {isExpanded && (
-          <div className="space-y-6 pt-4 border-t border-oa-surface animate-slide-in-up">
-            {/* Status Filters */}
-            <div>
-              <label className="text-sm font-medium text-gray-300 mb-3 block">Status</label>
-              <div className="flex flex-wrap gap-2">
-                {statusOptions.map(status => (
-                  <button
-                    key={status.value}
-                    onClick={() => toggleStatus(status.value)}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                      filters.status.includes(status.value)
-                        ? `${status.color} text-white`
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    }`}
-                  >
-                    {status.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleContent>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Basic Search */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="query"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Search Query</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Search cases, users, descriptions..."
+                            className="bg-slate-700 border-slate-600 text-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-            {/* Type Filters */}
-            <div>
-              <label className="text-sm font-medium text-gray-300 mb-3 block">Case Types</label>
-              <div className="flex flex-wrap gap-2">
-                {typeOptions.map(type => (
-                  <button
-                    key={type.value}
-                    onClick={() => toggleType(type.value)}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                      filters.types.includes(type.value)
-                        ? "bg-red-500 text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {/* Filters Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Status</FormLabel>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                              <SelectValue placeholder="Any status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-700 border-slate-600">
+                            <SelectItem value="">Any status</SelectItem>
+                            {statusOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            {/* Date Range */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  From Date
-                </label>
-                <Input
-                  type="date"
-                  value={filters.dateRange.from}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    dateRange: { ...prev.dateRange, from: e.target.value }
-                  }))}
-                  className="oa-input"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">To Date</label>
-                <Input
-                  type="date"
-                  value={filters.dateRange.to}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    dateRange: { ...prev.dateRange, to: e.target.value }
-                  }))}
-                  className="oa-input"
-                />
-              </div>
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Type</FormLabel>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                              <SelectValue placeholder="Any type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-700 border-slate-600">
+                            <SelectItem value="">Any type</SelectItem>
+                            {typeOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            {/* Amount Range */}
-            <div>
-              <label className="text-sm font-medium text-gray-300 mb-3 block flex items-center">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Amount Range
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  type="number"
-                  placeholder="Min amount"
-                  value={filters.amountRange.min || ""}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    amountRange: { ...prev.amountRange, min: parseInt(e.target.value) || 0 }
-                  }))}
-                  className="oa-input"
-                />
-                <Input
-                  type="number"
-                  placeholder="Max amount"
-                  value={filters.amountRange.max || ""}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    amountRange: { ...prev.amountRange, max: parseInt(e.target.value) || 1000000 }
-                  }))}
-                  className="oa-input"
-                />
-              </div>
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="severity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Severity</FormLabel>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                              <SelectValue placeholder="Any severity" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-700 border-slate-600">
+                            <SelectItem value="">Any severity</SelectItem>
+                            {severityOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-            {/* Additional Filters */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block flex items-center">
-                  <User className="h-4 w-4 mr-2" />
-                  Reporter
-                </label>
-                <Input
-                  placeholder="Reporter name or ID"
-                  value={filters.reporter}
-                  onChange={(e) => setFilters(prev => ({ ...prev, reporter: e.target.value }))}
-                  className="oa-input"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block flex items-center">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Location
-                </label>
-                <Input
-                  placeholder="City, state, or country"
-                  value={filters.location}
-                  onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
-                  className="oa-input"
-                />
-              </div>
-            </div>
+                {/* Date Range */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="dateFrom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">From Date</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            className="bg-slate-700 border-slate-600 text-white"
+                            {...field}
+                            value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            {/* Action Buttons */}
-            <div className="flex justify-between pt-4">
-              <EnhancedButton variant="secondary" onClick={handleClear}>
-                <X className="h-4 w-4 mr-2" />
-                Clear All
-              </EnhancedButton>
-              <div className="space-x-2">
-                <EnhancedButton variant="secondary" onClick={() => setIsExpanded(false)}>
-                  Cancel
-                </EnhancedButton>
-                <EnhancedButton variant="primary" onClick={handleSearch}>
-                  Apply Filters
-                </EnhancedButton>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </EnhancedCard>
+                  <FormField
+                    control={form.control}
+                    name="dateTo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">To Date</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            className="bg-slate-700 border-slate-600 text-white"
+                            {...field}
+                            value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Amount Range */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="minAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Min Amount ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            className="bg-slate-700 border-slate-600 text-white"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="maxAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Max Amount ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="10000"
+                            className="bg-slate-700 border-slate-600 text-white"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-3">
+                  <Label className="text-slate-300">Tags</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.map((tag) => (
+                      <Button
+                        key={tag}
+                        type="button"
+                        variant={selectedTags.includes(tag) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleTagToggle(tag)}
+                        className="text-xs"
+                      >
+                        {tag}
+                      </Button>
+                    ))}
+                  </div>
+                  {selectedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedTags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="bg-blue-900 text-blue-200"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            className="ml-1 hover:text-red-400"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Options */}
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="hasEvidence"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="text-slate-300 font-normal">
+                          Cases with evidence only
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-700">
+                  <div className="flex gap-2">
+                    <Button type="submit" disabled={loading}>
+                      {loading ? "Searching..." : "Search"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleClear}
+                      disabled={!hasActiveFilters()}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                  
+                  {hasActiveFilters() && (
+                    <Badge variant="secondary" className="bg-blue-900 text-blue-200">
+                      Active filters
+                    </Badge>
+                  )}
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
   );
 }

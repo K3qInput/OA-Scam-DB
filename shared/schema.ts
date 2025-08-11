@@ -1128,6 +1128,8 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
 
+
+
 // ============= AI TOOLS & FREELANCER MARKETPLACE =============
 
 // AI Tool Categories and Services
@@ -1591,6 +1593,7 @@ export const insertVerificationRequestSchema = createInsertSchema(verificationRe
 
 // ============= TYPES FOR NEW TABLES =============
 
+// AI Tools types
 export type AiToolCategory = typeof aiToolCategories.$inferSelect;
 export type InsertAiToolCategory = z.infer<typeof insertAiToolCategorySchema>;
 export type AiTool = typeof aiTools.$inferSelect;
@@ -1600,6 +1603,7 @@ export type InsertAiToolUsage = z.infer<typeof insertAiToolUsageSchema>;
 export type AiToolRating = typeof aiToolRatings.$inferSelect;
 export type InsertAiToolRating = z.infer<typeof insertAiToolRatingSchema>;
 
+// Freelancer marketplace types
 export type FreelancerProfile = typeof freelancerProfiles.$inferSelect;
 export type InsertFreelancerProfile = z.infer<typeof insertFreelancerProfileSchema>;
 export type Project = typeof projects.$inferSelect;
@@ -1609,6 +1613,7 @@ export type InsertProjectApplication = z.infer<typeof insertProjectApplicationSc
 export type ProjectReview = typeof projectReviews.$inferSelect;
 export type InsertProjectReview = z.infer<typeof insertProjectReviewSchema>;
 
+// Collaboration system types
 export type CollaborationSpace = typeof collaborationSpaces.$inferSelect;
 export type InsertCollaborationSpace = z.infer<typeof insertCollaborationSpaceSchema>;
 export type CollaborationMember = typeof collaborationMembers.$inferSelect;
@@ -1618,5 +1623,8 @@ export type InsertCollaborationTask = z.infer<typeof insertCollaborationTaskSche
 export type CollaborationMessage = typeof collaborationMessages.$inferSelect;
 export type InsertCollaborationMessage = z.infer<typeof insertCollaborationMessageSchema>;
 
+// Verification and community types
 export type VerificationRequest = typeof verificationRequests.$inferSelect;
 export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
+
+

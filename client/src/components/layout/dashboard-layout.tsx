@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Sidebar } from "@/components/layout/sidebar";
+import Sidebar from "@/components/layout/sidebar";
 import type { User } from "@shared/schema";
 
 interface DashboardLayoutProps {

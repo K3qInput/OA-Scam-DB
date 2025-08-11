@@ -2,553 +2,607 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Upload, Brain, AlertTriangle, CheckCircle, DollarSign, User, Calendar, Tag } from "lucide-react";
-import { insertCaseSchema } from "../../../shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  FileText, 
+  Upload, 
+  AlertTriangle, 
+  CheckCircle, 
+  Info, 
+  DollarSign,
+  Clock,
+  Shield,
+  User,
+  MessageSquare
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
-import { z } from "zod";
+import { apiRequest } from "@/lib/queryClient";
+import { insertCaseSchema } from "@shared/schema";
 
 const enhancedCaseSchema = insertCaseSchema.extend({
-  evidenceFiles: z.array(z.any()).optional(),
   tags: z.array(z.string()).optional(),
-  urgencyLevel: z.enum(["low", "medium", "high", "critical"]).optional(),
-  estimatedLoss: z.string().optional(),
-  incidentDate: z.string().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  relatedCases: z.array(z.string()).optional(),
+  anonymousReport: z.boolean().default(false),
+  contactMethod: z.enum(["email", "discord", "telegram", "phone"]).optional(),
+  timezonePref: z.string().optional(),
 });
 
-type EnhancedCaseForm = z.infer<typeof enhancedCaseSchema>;
+type EnhancedCaseFormData = z.infer<typeof enhancedCaseSchema>;
 
-export function EnhancedNewCase() {
-  const [, setLocation] = useLocation();
+const typeOptions = [
+  { value: "financial_scam", label: "Financial Scam", icon: DollarSign },
+  { value: "fake_services", label: "Fake Services", icon: Shield },
+  { value: "identity_theft", label: "Identity Theft", icon: User },
+  { value: "account_fraud", label: "Account Fraud", icon: Shield },
+  { value: "impersonation", label: "Impersonation", icon: User },
+  { value: "other", label: "Other", icon: MessageSquare }
+];
+
+const priorityOptions = [
+  { value: "low", label: "Low Priority", color: "bg-green-900 text-green-200" },
+  { value: "medium", label: "Medium Priority", color: "bg-yellow-900 text-yellow-200" },
+  { value: "high", label: "High Priority", color: "bg-orange-900 text-orange-200" },
+  { value: "urgent", label: "Urgent", color: "bg-red-900 text-red-200" }
+];
+
+const availableTags = [
+  "Discord", "Minecraft", "Gaming", "Cryptocurrency", "NFT", "Commission", 
+  "Service", "Freelance", "Server", "Bot", "Plugin", "Website", "Trading",
+  "Marketplace", "Social Media", "Email", "Phone"
+];
+
+export default function EnhancedNewCase() {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [aiAnalysisInProgress, setAiAnalysisInProgress] = useState(false);
-  const [previewAnalysis, setPreviewAnalysis] = useState<any>(null);
 
-  const form = useForm<EnhancedCaseForm>({
+  const form = useForm<EnhancedCaseFormData>({
     resolver: zodResolver(enhancedCaseSchema),
     defaultValues: {
-      title: "",
-      description: "",
       type: "other",
       priority: "medium",
-      amountInvolved: undefined,
-      currency: "USD",
-      reportedUserId: "",
       tags: [],
-      urgencyLevel: "medium",
-      estimatedLoss: "",
-      incidentDate: "",
+      anonymousReport: false,
+      relatedCases: [],
     },
   });
 
   const createCaseMutation = useMutation({
-    mutationFn: async (data: EnhancedCaseForm) => {
-      setAiAnalysisInProgress(true);
-      try {
-        const response = await apiRequest("/api/cases", {
-          method: "POST",
-          body: JSON.stringify(data),
+    mutationFn: async (data: EnhancedCaseFormData) => {
+      const caseData = {
+        ...data,
+        tags: selectedTags,
+      };
+      
+      // Create the case first
+      const response = await apiRequest("POST", "/api/cases", caseData);
+      const caseResult = await response.json();
+      
+      // Upload evidence files if any
+      if (evidenceFiles.length > 0) {
+        const formData = new FormData();
+        evidenceFiles.forEach((file, index) => {
+          formData.append(`evidence-${index}`, file);
         });
-        return response;
-      } finally {
-        setAiAnalysisInProgress(false);
+        formData.append("caseId", caseResult.id);
+        
+        await apiRequest("POST", "/api/cases/evidence", formData);
       }
+      
+      return caseResult;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
         title: "Case Created Successfully",
-        description: data.aiAnalysis 
-          ? `Case created with AI analysis. Risk Score: ${data.aiAnalysis.riskScore}/10`
-          : "Case created successfully",
+        description: "Your case has been submitted and will be reviewed by our team.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
-      setLocation("/dashboard");
+      form.reset();
+      setSelectedTags([]);
+      setEvidenceFiles([]);
+      setCurrentStep(1);
     },
     onError: (error: any) => {
       toast({
-        title: "Error Creating Case",
-        description: error.message || "Failed to create case",
+        title: "Failed to Create Case",
+        description: error.message || "Please try again later.",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: EnhancedCaseForm) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/') || 
+                          file.type === 'application/pdf' ||
+                          file.type.startsWith('text/');
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      return isValidType && isValidSize;
+    });
+    
+    if (validFiles.length !== files.length) {
+      toast({
+        title: "Some files were rejected",
+        description: "Only images, PDFs, and text files under 10MB are allowed.",
+        variant: "destructive",
+      });
+    }
+    
+    setEvidenceFiles([...evidenceFiles, ...validFiles]);
+  };
+
+  const removeFile = (index: number) => {
+    setEvidenceFiles(evidenceFiles.filter((_, i) => i !== index));
+  };
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const onSubmit = (data: EnhancedCaseFormData) => {
     createCaseMutation.mutate(data);
   };
 
-  const handleQuickAnalysis = async () => {
-    const formData = form.getValues();
-    if (!formData.title || !formData.description) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in the title and description for analysis",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setAiAnalysisInProgress(true);
-    try {
-      // Simulate AI analysis preview
-      setPreviewAnalysis({
-        riskScore: Math.floor(Math.random() * 10) + 1,
-        confidence: Math.random() * 0.4 + 0.6,
-        urgencyLevel: ["low", "medium", "high", "critical"][Math.floor(Math.random() * 4)],
-        fraudIndicators: [
-          "Suspicious transaction pattern detected",
-          "Amount exceeds typical thresholds",
-          "Multiple account associations found"
-        ].slice(0, Math.floor(Math.random() * 3) + 1),
-        summary: "Preliminary analysis suggests potential fraudulent activity based on reported patterns and associated indicators."
-      });
-    } catch (error) {
-      toast({
-        title: "Analysis Failed",
-        description: "Could not perform AI analysis at this time",
-        variant: "destructive",
-      });
-    } finally {
-      setAiAnalysisInProgress(false);
-    }
+  const nextStep = () => {
+    setCurrentStep(prev => Math.min(prev + 1, 4));
   };
 
-  const caseTypes = [
-    { value: "financial_scam", label: "Financial Scam" },
-    { value: "identity_theft", label: "Identity Theft" },
-    { value: "fake_services", label: "Fake Services" },
-    { value: "account_fraud", label: "Account Fraud" },
-    { value: "investment_fraud", label: "Investment Fraud" },
-    { value: "cryptocurrency_scam", label: "Cryptocurrency Scam" },
-    { value: "romance_scam", label: "Romance Scam" },
-    { value: "tech_support_scam", label: "Tech Support Scam" },
-    { value: "other", label: "Other" }
-  ];
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
 
-  const priorities = [
-    { value: "low", label: "Low", color: "text-green-500" },
-    { value: "medium", label: "Medium", color: "text-yellow-500" },
-    { value: "high", label: "High", color: "text-orange-500" },
-    { value: "critical", label: "Critical", color: "text-red-500" }
-  ];
+  const getStepStatus = (step: number) => {
+    if (step < currentStep) return "completed";
+    if (step === currentStep) return "current";
+    return "upcoming";
+  };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-oa-dark to-oa-surface border border-oa-surface rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Create New Case</h1>
-            <p className="text-gray-400">
-              Submit a detailed fraud report with AI-powered analysis
-            </p>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Progress Header */}
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Submit New Case Report</CardTitle>
+          <CardDescription className="text-slate-400">
+            Help us investigate fraud and protect the community
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between mb-4">
+            {[1, 2, 3, 4].map((step) => {
+              const status = getStepStatus(step);
+              return (
+                <div key={step} className="flex items-center">
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                    ${status === 'completed' ? 'bg-green-600 text-white' : 
+                      status === 'current' ? 'bg-blue-600 text-white' : 
+                      'bg-slate-600 text-slate-400'}
+                  `}>
+                    {status === 'completed' ? <CheckCircle className="h-4 w-4" /> : step}
+                  </div>
+                  {step < 4 && (
+                    <div className={`w-20 h-1 mx-2 ${
+                      status === 'completed' ? 'bg-green-600' : 'bg-slate-600'
+                    }`} />
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-2">
-            <Brain className="h-8 w-8 text-purple-400" />
-            <div className="text-right">
-              <div className="text-sm text-gray-400">AI-Enhanced</div>
-              <div className="text-purple-400 font-semibold">Smart Detection</div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <Progress value={(currentStep - 1) * 25 + 25} className="h-2" />
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-oa-surface">
-                  <TabsTrigger value="basic">Basic Information</TabsTrigger>
-                  <TabsTrigger value="details">Case Details</TabsTrigger>
-                  <TabsTrigger value="evidence">Evidence & Files</TabsTrigger>
-                </TabsList>
+      {/* Form Content */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Tabs value={currentStep.toString()} className="w-full">
+            {/* Step 1: Basic Information */}
+            <TabsContent value="1" className="space-y-6">
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Info className="h-5 w-5" />
+                    Basic Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="accusedUsername"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Accused Username *</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter username"
+                              className="bg-slate-700 border-slate-600 text-white"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <TabsContent value="basic" className="space-y-4">
-                  <Card className="oa-card">
-                    <CardHeader>
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Case Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-300">Case Title</FormLabel>
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Case Type *</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
                             <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="Brief, descriptive title of the incident"
-                                className="oa-input"
-                              />
+                              <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                                <SelectValue placeholder="Select case type" />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                            <SelectContent className="bg-slate-700 border-slate-600">
+                              {typeOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  <div className="flex items-center gap-2">
+                                    <option.icon className="h-4 w-4" />
+                                    {option.label}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-300">Detailed Description</FormLabel>
+                  <FormField
+                    control={form.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Priority Level</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-700 border-slate-600">
+                            {priorityOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                <Badge className={option.color}>
+                                  {option.label}
+                                </Badge>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Case Title *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Brief description of the incident"
+                            className="bg-slate-700 border-slate-600 text-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Step 2: Incident Details */}
+            <TabsContent value="2" className="space-y-6">
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Incident Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Detailed Description *</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Please provide a detailed description of what happened, including timeline, communication methods, and any relevant context..."
+                            className="bg-slate-700 border-slate-600 text-white min-h-[150px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="amountLost"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Amount Lost ($)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              className="bg-slate-700 border-slate-600 text-white"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="contactMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Preferred Contact</FormLabel>
+                          <Select value={field.value || ""} onValueChange={field.onChange}>
                             <FormControl>
-                              <Textarea
-                                {...field}
-                                placeholder="Provide a comprehensive description of the incident, including timeline, methods used, and any relevant details..."
-                                className="oa-input min-h-32"
-                              />
+                              <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                                <SelectValue placeholder="How should we contact you?" />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                            <SelectContent className="bg-slate-700 border-slate-600">
+                              <SelectItem value="email">Email</SelectItem>
+                              <SelectItem value="discord">Discord</SelectItem>
+                              <SelectItem value="telegram">Telegram</SelectItem>
+                              <SelectItem value="phone">Phone</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="contactInfo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-300">Contact Information</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Your contact details (email, Discord tag, etc.)"
+                            className="bg-slate-700 border-slate-600 text-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Step 3: Evidence & Tags */}
+            <TabsContent value="3" className="space-y-6">
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    Evidence & Classification
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Evidence Upload */}
+                  <div className="space-y-4">
+                    <Label className="text-slate-300">Evidence Files</Label>
+                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center">
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+                      <p className="text-slate-400 mb-2">Upload screenshots, chat logs, receipts, or other evidence</p>
+                      <Input
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf,.txt,.doc,.docx"
+                        onChange={handleFileUpload}
+                        className="bg-slate-700 border-slate-600 text-white"
                       />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Case Type</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="oa-input">
-                                    <SelectValue placeholder="Select case type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-oa-dark border-gray-600">
-                                  {caseTypes.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                      {type.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="priority"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Priority Level</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="oa-input">
-                                    <SelectValue placeholder="Select priority" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-oa-dark border-gray-600">
-                                  {priorities.map((priority) => (
-                                    <SelectItem key={priority.value} value={priority.value}>
-                                      <span className={priority.color}>{priority.label}</span>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="details" className="space-y-4">
-                  <Card className="oa-card">
-                    <CardHeader>
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <User className="h-5 w-5" />
-                        Subject & Financial Details
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="reportedUserId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-300">Reported User/Entity</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="Username, email, or identifier of reported party"
-                                className="oa-input"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="amountInvolved"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Amount Involved</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="number"
-                                  placeholder="0.00"
-                                  className="oa-input"
-                                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="currency"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Currency</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="oa-input">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-oa-dark border-gray-600">
-                                  <SelectItem value="USD">USD ($)</SelectItem>
-                                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                                  <SelectItem value="BTC">BTC (₿)</SelectItem>
-                                  <SelectItem value="ETH">ETH (Ξ)</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="incidentDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Incident Date</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="date"
-                                  className="oa-input"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="evidence" className="space-y-4">
-                  <Card className="oa-card">
-                    <CardHeader>
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <Upload className="h-5 w-5" />
-                        Evidence & Documentation
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
-                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-white mb-2">Upload Evidence Files</h3>
-                        <p className="text-gray-400 mb-4">
-                          Drag and drop files here, or click to browse
-                        </p>
-                        <Button type="button" variant="outline" className="mb-2">
-                          Choose Files
-                        </Button>
-                        <p className="text-xs text-gray-500">
-                          Supported: Images, PDFs, Documents (Max 10MB each)
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-
-              <Card className="oa-card">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleQuickAnalysis}
-                        disabled={aiAnalysisInProgress}
-                        className="oa-btn-secondary"
-                      >
-                        <Brain className="h-4 w-4 mr-2" />
-                        {aiAnalysisInProgress ? "Analyzing..." : "Quick AI Analysis"}
-                      </Button>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Supported: Images, PDFs, Text files (max 10MB each)
+                      </p>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setLocation("/dashboard")}
-                        className="oa-btn-secondary"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={createCaseMutation.isPending}
-                        className="oa-btn-primary"
-                      >
-                        {createCaseMutation.isPending ? "Creating..." : "Create Case"}
-                      </Button>
+                    {evidenceFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-slate-300">Uploaded Files:</p>
+                        {evidenceFiles.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-slate-700 p-2 rounded">
+                            <span className="text-sm text-white">{file.name}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFile(index)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tags */}
+                  <div className="space-y-3">
+                    <Label className="text-slate-300">Tags (Optional)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableTags.map((tag) => (
+                        <Button
+                          key={tag}
+                          type="button"
+                          variant={selectedTags.includes(tag) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleTagToggle(tag)}
+                          className="text-xs"
+                        >
+                          {tag}
+                        </Button>
+                      ))}
+                    </div>
+                    {selectedTags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedTags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="bg-blue-900 text-blue-200">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Step 4: Review & Submit */}
+            <TabsContent value="4" className="space-y-6">
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    Review & Submit
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Alert className="border-blue-700 bg-blue-900/20">
+                    <Info className="h-4 w-4 text-blue-400" />
+                    <AlertDescription className="text-blue-200">
+                      Please review your case details before submitting. Once submitted, your case will be assigned to our investigation team.
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Privacy Options */}
+                  <div className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="anonymousReport"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-slate-300 font-normal">
+                            Submit as anonymous report (your identity will be protected)
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Summary */}
+                  <div className="bg-slate-700 p-4 rounded-lg space-y-2">
+                    <h4 className="font-medium text-white">Case Summary</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-slate-400">Accused:</span>
+                        <span className="text-white ml-2">{form.getValues('accusedUsername')}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Type:</span>
+                        <span className="text-white ml-2">{form.getValues('type')}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Priority:</span>
+                        <Badge className={priorityOptions.find(p => p.value === form.getValues('priority'))?.color || ""}>
+                          {priorityOptions.find(p => p.value === form.getValues('priority'))?.label}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Evidence:</span>
+                        <span className="text-white ml-2">{evidenceFiles.length} file(s)</span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </form>
-          </Form>
-        </div>
+            </TabsContent>
+          </Tabs>
 
-        {/* AI Analysis Sidebar */}
-        <div className="space-y-6">
-          {/* Progress */}
-          {(aiAnalysisInProgress || createCaseMutation.isPending) && (
-            <Card className="oa-card">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Brain className="h-5 w-5 text-purple-400 animate-pulse" />
-                  <span className="text-white font-medium">
-                    {aiAnalysisInProgress ? "AI Analysis in Progress" : "Creating Case"}
-                  </span>
-                </div>
-                <Progress value={aiAnalysisInProgress ? 45 : 85} className="mb-2" />
-                <p className="text-sm text-gray-400">
-                  {aiAnalysisInProgress 
-                    ? "Analyzing patterns and risk factors..." 
-                    : "Finalizing case creation..."}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Navigation Buttons */}
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+            >
+              Previous
+            </Button>
 
-          {/* AI Analysis Preview */}
-          {previewAnalysis && (
-            <Card className="oa-card border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="text-purple-400 flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  AI Analysis Preview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Risk Score</span>
-                  <Badge className={`${
-                    previewAnalysis.riskScore >= 8 ? 'bg-red-500/20 text-red-400' :
-                    previewAnalysis.riskScore >= 6 ? 'bg-orange-500/20 text-orange-400' :
-                    previewAnalysis.riskScore >= 4 ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-green-500/20 text-green-400'
-                  }`}>
-                    {previewAnalysis.riskScore}/10
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Confidence</span>
-                  <span className="text-white">
-                    {(previewAnalysis.confidence * 100).toFixed(0)}%
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Urgency</span>
-                  <Badge variant="outline">
-                    {previewAnalysis.urgencyLevel.toUpperCase()}
-                  </Badge>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-300 mb-2">Fraud Indicators</h4>
-                  <div className="space-y-1">
-                    {previewAnalysis.fraudIndicators.map((indicator: string, index: number) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <AlertTriangle className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-xs text-gray-400">{indicator}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Alert className="border-blue-500/20 bg-blue-500/5">
-                  <AlertTriangle className="h-4 w-4 text-blue-400" />
-                  <AlertDescription className="text-blue-100 text-sm">
-                    {previewAnalysis.summary}
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Case Guidelines */}
-          <Card className="oa-card">
-            <CardHeader>
-              <CardTitle className="text-green-400 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                Reporting Guidelines
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                <span className="text-sm text-gray-300">Provide as much detail as possible</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                <span className="text-sm text-gray-300">Include relevant screenshots or documents</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                <span className="text-sm text-gray-300">Specify exact amounts and dates</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                <span className="text-sm text-gray-300">Maintain confidentiality of sensitive information</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            {currentStep < 4 ? (
+              <Button type="button" onClick={nextStep}>
+                Next
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={createCaseMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {createCaseMutation.isPending ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Submit Case
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
