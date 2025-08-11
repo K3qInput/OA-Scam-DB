@@ -121,6 +121,7 @@ export interface IStorage {
   // Tribunal proceeding operations
   createTribunalProceeding(proceeding: InsertTribunalProceeding): Promise<TribunalProceeding>;
   getTribunalProceedings(): Promise<TribunalProceeding[]>;
+  updateTribunalProceeding(id: string, updates: Partial<TribunalProceeding>): Promise<TribunalProceeding>;
 
   // Vouch/Devouch operations
   createVouch(vouch: InsertVouch): Promise<Vouch>;
@@ -750,9 +751,11 @@ Complex cases should be escalated to senior staff or tribunal.`,
     const id = this.generateId();
     const proceeding: TribunalProceeding = {
       id,
-      ...proceedingData,
+      caseId: proceedingData.caseId,
+      proceedingType: proceedingData.proceedingType,
       scheduledDate: proceedingData.scheduledDate || null,
       actualDate: proceedingData.actualDate || null,
+      chairperson: proceedingData.chairperson || "admin-1", // Default chairperson
       panelMembers: proceedingData.panelMembers || [],
       outcome: proceedingData.outcome || null,
       decisionReason: proceedingData.decisionReason || null,
@@ -768,6 +771,22 @@ Complex cases should be escalated to senior staff or tribunal.`,
 
   async getTribunalProceedings(): Promise<TribunalProceeding[]> {
     return Array.from(this.tribunalProceedings.values());
+  }
+
+  async updateTribunalProceeding(id: string, updates: Partial<TribunalProceeding>): Promise<TribunalProceeding> {
+    const existing = this.tribunalProceedings.get(id);
+    if (!existing) {
+      throw new Error("Tribunal proceeding not found");
+    }
+
+    const updated = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    this.tribunalProceedings.set(id, updated);
+    return updated;
   }
 
   // Vouch/Devouch operations

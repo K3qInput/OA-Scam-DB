@@ -1459,6 +1459,52 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // ============= TRIBUNAL PROCEEDINGS ROUTES =============
+  
+  // Get tribunal proceedings
+  app.get("/api/tribunal-proceedings", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
+    try {
+      const proceedings = await storage.getTribunalProceedings();
+      res.json(proceedings);
+    } catch (error) {
+      console.error("Get tribunal proceedings error:", error);
+      res.status(500).json({ message: "Failed to fetch tribunal proceedings" });
+    }
+  });
+
+  // Create tribunal proceeding
+  app.post("/api/tribunal-proceedings", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const validatedData = insertTribunalProceedingSchema.parse(req.body);
+      
+      const proceeding = await storage.createTribunalProceeding({
+        ...validatedData,
+        chairperson: req.user.id, // Set current user as chairperson
+      });
+
+      await createAuditLog(req.user.id, "create_tribunal_proceeding", "tribunal_proceeding", proceeding.id, null, proceeding, req);
+
+      res.status(201).json(proceeding);
+    } catch (error) {
+      console.error("Create tribunal proceeding error:", error);
+      res.status(400).json({ message: "Failed to create tribunal proceeding" });
+    }
+  });
+
+  // Update tribunal proceeding
+  app.patch("/api/tribunal-proceedings/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
+    try {
+      const updatedProceeding = await storage.updateTribunalProceeding(req.params.id, req.body);
+      
+      await createAuditLog(req.user.id, "update_tribunal_proceeding", "tribunal_proceeding", req.params.id, null, updatedProceeding, req);
+
+      res.json(updatedProceeding);
+    } catch (error) {
+      console.error("Update tribunal proceeding error:", error);
+      res.status(400).json({ message: "Failed to update tribunal proceeding" });
+    }
+  });
+
   // ============= DISPUTE VOTING ROUTES =============
 
   // Get active disputes for voting

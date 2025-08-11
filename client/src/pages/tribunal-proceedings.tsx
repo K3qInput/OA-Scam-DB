@@ -19,7 +19,7 @@ import { Plus, Gavel, Calendar, Users, FileText, Clock, CheckCircle, XCircle, Al
 const createProceedingSchema = z.object({
   caseId: z.string().min(1, "Case is required"),
   proceedingType: z.enum(["hearing", "review", "appeal", "final_decision"]),
-  scheduledDate: z.string().min(1, "Scheduled date is required").transform(str => new Date(str)),
+  scheduledDate: z.string().min(1, "Scheduled date is required"),
   panelMembers: z.array(z.string()).default([]),
   decisionReason: z.string().default(""),
   nextSteps: z.string().default(""),
@@ -157,7 +157,7 @@ export default function TribunalProceedings() {
     }
   };
 
-  const updateOutcome = (proceedingId: string, outcome: string) => {
+  const updateOutcome = (proceedingId: string, outcome: "approved" | "rejected" | "pending" | "deferred") => {
     updateProceedingMutation.mutate({ id: proceedingId, outcome });
   };
 
@@ -202,7 +202,7 @@ export default function TribunalProceedings() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-gray-800 border-gray-600">
-                              {cases.cases?.map((caseItem: any) => (
+                              {cases?.map((caseItem: any) => (
                                 <SelectItem key={caseItem.id} value={caseItem.id} className="text-white hover:bg-gray-700">
                                   {caseItem.caseNumber} - {caseItem.title || caseItem.description || "Case"}
                                 </SelectItem>
@@ -248,6 +248,7 @@ export default function TribunalProceedings() {
                           <Input
                             type="datetime-local"
                             {...field}
+                            className="bg-gray-800/80 border-gray-600 text-white"
                           />
                         </FormControl>
                         <FormMessage className="text-red-400" />

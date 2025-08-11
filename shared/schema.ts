@@ -707,6 +707,10 @@ export const insertTribunalProceedingSchema = createInsertSchema(tribunalProceed
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  chairperson: z.string().optional(),
+  scheduledDate: z.union([z.string(), z.date()]).optional().transform(val => val ? new Date(val) : null),
+  actualDate: z.union([z.string(), z.date()]).optional().transform(val => val ? new Date(val) : null),
 });
 
 // New insert schemas for all new tables
