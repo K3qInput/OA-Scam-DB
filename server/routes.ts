@@ -405,10 +405,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Discord OAuth routes
-  app.get("/api/auth/discord", passport.authenticate("discord"));
+  app.get("/auth/discord", passport.authenticate("discord"));
   
-  app.get("/api/auth/discord/callback", 
-    passport.authenticate("discord", { failureRedirect: "/login" }),
+  app.get("/auth/discord/callback", 
+    passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
     async (req: any, res) => {
       const user = req.user;
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
@@ -469,7 +469,7 @@ export function registerRoutes(app: Express): Server {
         `&security_analysis=${encodeURIComponent(JSON.stringify(altDetectionResult))}` : '';
       
       // Redirect to frontend with token and security analysis
-      res.redirect(`/dashboard?token=${token}&discord_success=true${securityParams}`);
+      res.redirect(`/login?token=${token}&discord_success=true${securityParams}`);
     }
   );
 
