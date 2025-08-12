@@ -19,6 +19,7 @@ import EnhancedCard, { StatsCard } from "@/components/enhanced-card";
 import ActivityFeed from "@/components/activity-feed";
 import ThreatIntelWidget from "@/components/threat-intel-widget";
 import QuickStats from "@/components/quick-stats";
+import { RealTimeTimestamp, CurrentTime } from "@/components/real-time-timestamp";
 
 interface Filters {
   status?: string;
@@ -315,14 +316,7 @@ export default function Dashboard() {
           <div className="lg:col-span-1 space-y-6">
             <ThreatIntelWidget />
             
-            <QuickStats
-              totalCases={statistics?.totalCases || 0}
-              pendingCases={statistics?.pendingCases || 0}
-              resolvedCases={statistics?.verifiedCases || 0}
-              averageRiskScore={5.2}
-              weeklyChange={12}
-              resolutionRate={85}
-            />
+            <QuickStats />
             
             <ActivityFeed className="animate-fade-in" />
             

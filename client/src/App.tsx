@@ -35,6 +35,8 @@ import BlacklistDatabase from "@/pages/blacklist-database";
 import StaffTransparency from "@/pages/staff-transparency";
 import CommunityEvents from "@/pages/community-events";
 import ResourceHub from "@/pages/resource-hub";
+import Settings from "@/pages/settings";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -133,6 +135,12 @@ function Router() {
       </Route>
       <Route path="/resource-hub">
         {hasToken ? <ResourceHub /> : <DiscordLogin />}
+      </Route>
+      <Route path="/settings">
+        {hasToken ? <Settings /> : <DiscordLogin />}
+      </Route>
+      <Route path="/profile">
+        {hasToken ? <Profile /> : <DiscordLogin />}
       </Route>
       <Route component={NotFound} />
     </Switch>

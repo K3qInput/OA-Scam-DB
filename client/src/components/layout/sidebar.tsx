@@ -37,21 +37,21 @@ function Sidebar({ className }: SidebarProps) {
   const isActive = (href: string) => location === href;
   
   const linkClass = (href: string) => cn(
-    "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200",
+    "flex items-center gap-3 px-2 lg:px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200",
     isActive(href) 
       ? "bg-red-500 text-white shadow-lg" 
       : "text-gray-300 hover:bg-gray-800 hover:text-white"
   );
 
   return (
-    <aside className={cn("bg-gray-900 border-r border-gray-700 w-64 min-h-screen flex flex-col", className)}>
+    <aside className={cn("bg-gray-900 border-r border-gray-700 w-16 lg:w-64 min-h-screen flex flex-col", className)}>
       {/* Header */}
-      <div className="p-6">
+      <div className="p-3 lg:p-6">
         <div className="flex items-center gap-2 mb-8">
           <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
           </div>
-          <div>
+          <div className="hidden lg:block">
             <h1 className="text-xl font-bold text-white">OwnersAlliance</h1>
             <p className="text-sm text-gray-400">Portal</p>
           </div>
@@ -62,44 +62,54 @@ function Sidebar({ className }: SidebarProps) {
           {/* Core Navigation */}
           <Link href="/dashboard" className={linkClass("/dashboard")}>
             <Home className="w-5 h-5" />
-            Dashboard
+            <span className="hidden lg:inline">Dashboard</span>
           </Link>
           
           <Link href="/new-case" className={linkClass("/new-case")}>
             <Plus className="w-5 h-5" />
-            New Case
+            <span className="hidden lg:inline">New Case</span>
+          </Link>
+
+          <Link href="/profile" className={linkClass("/profile")}>
+            <Users className="w-5 h-5" />
+            <span className="hidden lg:inline">Profile</span>
+          </Link>
+
+          <Link href="/settings" className={linkClass("/settings")}>
+            <Settings className="w-5 h-5" />
+            <span className="hidden lg:inline">Settings</span>
           </Link>
 
           {/* Tools & Services */}
           <div className="pt-6">
-            <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="hidden lg:block px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Tools & Services
             </h3>
             <Link href="/ai-tools" className={linkClass("/ai-tools")}>
               <Zap className="w-5 h-5" />
-              AI Tools
+              <span className="hidden lg:inline">AI Tools</span>
             </Link>
             
             <Link href="/marketplace" className={linkClass("/marketplace")}>
               <Briefcase className="w-5 h-5" />
-              Freelancer Marketplace
+              <span className="hidden lg:inline">Freelancer Marketplace</span>
             </Link>
           </div>
 
           {/* Contact & Support */}
           <div className="pt-6">
-            <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="hidden lg:block px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Contact & Support
             </h3>
             <Link href="/contact" className={linkClass("/contact")}>
               <Mail className="w-5 h-5" />
-              Contact Us
+              <span className="hidden lg:inline">Contact Us</span>
             </Link>
             
             {typedUser && typedUser.role && ["admin", "tribunal_head", "senior_staff", "staff"].includes(typedUser.role) && (
               <Link href="/contact-management" className={linkClass("/contact-management")}>
                 <MessageSquare className="w-5 h-5" />
-                Manage Contacts
+                <span className="hidden lg:inline">Manage Contacts</span>
               </Link>
             )}
           </div>
@@ -107,17 +117,17 @@ function Sidebar({ className }: SidebarProps) {
           {/* Staff Management */}
           {typedUser && typedUser.role && ["admin", "tribunal_head", "senior_staff"].includes(typedUser.role) && (
             <div className="pt-6">
-              <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              <h3 className="hidden lg:block px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                 Staff Management
               </h3>
               <Link href="/staff-management" className={linkClass("/staff-management")}>
                 <Users className="w-5 h-5" />
-                Staff Members
+                <span className="hidden lg:inline">Staff Members</span>
               </Link>
               
               <Link href="/staff-assignments" className={linkClass("/staff-assignments")}>
                 <UserCheck className="w-5 h-5" />
-                Assignments
+                <span className="hidden lg:inline">Assignments</span>
               </Link>
             </div>
           )}
@@ -285,11 +295,16 @@ function Sidebar({ className }: SidebarProps) {
       </div>
 
       {/* Footer */}
-      <div className="mt-auto p-6 border-t border-gray-700">
+      <div className="mt-auto p-3 lg:p-6 border-t border-gray-700">
         <div className="text-center text-xs text-gray-500">
-          <p>Made by Kiro.java</p>
-          <p>"I was too lazy 💀"</p>
-          <p>Copyright 2025</p>
+          <div className="hidden lg:block">
+            <p>Made by Kiro.java</p>
+            <p>"I was too lazy 💀"</p>
+            <p>Copyright 2025</p>
+          </div>
+          <div className="lg:hidden">
+            <p>©2025</p>
+          </div>
         </div>
       </div>
     </aside>

@@ -17,8 +17,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import { formatDistanceToNow } from "date-fns";
 
 const newCaseSchema = z.object({
   reportedUserId: z.string().min(1, "Reported user ID is required"),
@@ -40,15 +40,9 @@ interface UploadedFile {
 
 export default function NewCase() {
   return (
-    <div className="flex h-screen bg-oa-black">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <Header />
-        <div className="px-8 py-6">
-          <NewCaseForm />
-        </div>
-      </main>
-    </div>
+    <DashboardLayout title="Create New Case" subtitle="Report fraud, scams, or disputes for investigation">
+      <NewCaseForm />
+    </DashboardLayout>
   );
 }
 
@@ -168,194 +162,191 @@ function NewCaseForm() {
   };
 
   return (
-    <div className="flex h-screen bg-oa-black">
-      <Sidebar />
-      
-      <main className="flex-1 overflow-auto">
-        <Header />
-        
-        {/* Page Header */}
-        <div className="px-8 py-6 border-b border-oa-surface">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation("/dashboard")}
-              className="text-gray-400 hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-            <div>
-              <h2 className="text-2xl font-bold text-white">Report New Case</h2>
-              <p className="text-gray-400">Submit a new scam report to the database</p>
-            </div>
-          </div>
+    <div className="max-w-4xl mx-auto">
+      {/* Header with real-time info */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/dashboard")}
+            className="text-gray-400 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
         </div>
+        <div className="text-sm text-gray-400 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <span>Created: {formatDistanceToNow(new Date())} ago</span>
+          <span>Priority: Real-time submission</span>
+          <span>Status: Draft</span>
+        </div>
+      </div>
 
-        <div className="px-8 py-6">
-          <div className="max-w-4xl mx-auto">
-            <Card className="oa-card">
-              <CardHeader>
-                <CardTitle className="text-white">Case Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Left Column */}
-                      <div className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="reportedUserId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Reported User ID/Username</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Enter user ID or username"
-                                  className="oa-input"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-400" />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Scam Type</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="oa-input">
-                                    <SelectValue placeholder="Select scam type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-oa-dark border-oa-surface">
-                                  <SelectItem value="financial_scam">Financial Scam</SelectItem>
-                                  <SelectItem value="identity_theft">Identity Theft</SelectItem>
-                                  <SelectItem value="fake_services">Fake Services</SelectItem>
-                                  <SelectItem value="account_fraud">Account Fraud</SelectItem>
-                                  <SelectItem value="other">Other</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="text-red-400" />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="priority"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Priority Level</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="oa-input">
-                                    <SelectValue placeholder="Select priority" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-oa-dark border-oa-surface">
-                                  <SelectItem value="low">Low</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="high">High</SelectItem>
-                                  <SelectItem value="critical">Critical</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="text-red-400" />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* Right Column */}
-                      <div className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="title"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Case Title</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Brief title describing the case"
-                                  className="oa-input"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-400" />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="amountInvolved"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-gray-300">Amount Involved (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    className="oa-input"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage className="text-red-400" />
-                              </FormItem>
-                            )}
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Case Information</CardTitle>
+          <p className="text-slate-400 text-sm">
+            Case will be automatically assigned ID after submission • Created: {new Date().toLocaleString()}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="reportedUserId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Reported User ID/Username</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter user ID or username"
+                            className="bg-slate-900 border-slate-600 text-white"
+                            {...field}
                           />
+                        </FormControl>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
 
-                          <FormField
-                            control={form.control}
-                            name="currency"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-gray-300">Currency</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="oa-input">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="bg-oa-dark border-oa-surface">
-                                    <SelectItem value="USD">USD</SelectItem>
-                                    <SelectItem value="EUR">EUR</SelectItem>
-                                    <SelectItem value="GBP">GBP</SelectItem>
-                                    <SelectItem value="BTC">BTC</SelectItem>
-                                    <SelectItem value="ETH">ETH</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage className="text-red-400" />
-                              </FormItem>
-                            )}
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Scam Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+                              <SelectValue placeholder="Select scam type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-800 border-slate-600">
+                            <SelectItem value="financial_scam">Financial Scam</SelectItem>
+                            <SelectItem value="identity_theft">Identity Theft</SelectItem>
+                            <SelectItem value="fake_services">Fake Services</SelectItem>
+                            <SelectItem value="account_fraud">Account Fraud</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Priority Level</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-800 border-slate-600">
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="critical">Critical</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Case Title</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Brief title describing the case"
+                            className="bg-slate-900 border-slate-600 text-white"
+                            {...field}
                           />
-                        </div>
-                      </div>
-                    </div>
+                        </FormControl>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
 
-                    {/* Description */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="description"
+                      name="amountInvolved"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-300">Detailed Description</FormLabel>
+                          <FormLabel className="text-white">Amount Involved (Optional)</FormLabel>
                           <FormControl>
-                            <Textarea
-                              placeholder="Provide a detailed description of the scam, including what happened, how you were contacted, and any relevant details..."
-                              className="oa-input min-h-[120px] resize-none"
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              className="bg-slate-900 border-slate-600 text-white"
                               {...field}
                             />
                           </FormControl>
+                          <FormMessage className="text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">Currency</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-800 border-slate-600">
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                              <SelectItem value="BTC">BTC</SelectItem>
+                              <SelectItem value="ETH">ETH</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Detailed Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide a detailed description of the scam, including what happened, how you were contacted, and any relevant details..."
+                        className="bg-slate-900 border-slate-600 text-white min-h-[120px] resize-none"
+                        {...field}
+                      />
+                    </FormControl>
                           <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
@@ -443,13 +434,10 @@ function NewCaseForm() {
                         Cancel
                       </Button>
                     </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

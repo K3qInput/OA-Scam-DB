@@ -15,6 +15,7 @@ import {
   Activity
 } from "lucide-react";
 import AnimatedCounter from "@/components/animated-counter";
+import { RealTimeTimestamp, CurrentTime } from "@/components/real-time-timestamp";
 
 interface QuickStatsData {
   cases: {
