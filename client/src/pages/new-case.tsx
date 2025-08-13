@@ -19,6 +19,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { formatDistanceToNow } from "date-fns";
+import { CurrentTime } from "@/components/real-time-timestamp";
 
 const newCaseSchema = z.object({
   reportedUserId: z.string().min(1, "Reported user ID is required"),

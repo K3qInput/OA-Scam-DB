@@ -20,7 +20,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
       <main className="flex-1 overflow-auto">
         <Header />
 
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-4 sm:mb-6">
               <h1 className="text-2xl sm:text-3xl font-bold text-white">{title}</h1>

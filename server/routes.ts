@@ -47,14 +47,17 @@ import crypto from "crypto";
 import passport from "passport";
 import { analyzeCaseReport, generateModerationAdvice } from "./ai-analysis";
 import RateLimitMiddleware, { rateLimitConfigs } from './middleware/rateLimiting';
+import { eq, sql } from 'drizzle-orm';
+import { cases, users } from './db/schema'; // Assuming these are your Drizzle schema definitions
+import { db } from './db/client'; // Assuming this is your Drizzle client instance
 
 // AI Tool Processing Function
 async function processAiTool(tool: any, inputData: any): Promise<any> {
   // This is a simplified mock implementation
   // In a real application, this would integrate with OpenAI or other AI services
-  
+
   const { name, instructions } = tool;
-  
+
   switch (name) {
     case "Quick Deal Generator":
       return {
@@ -91,7 +94,7 @@ Party B: _________________________ Date: _________
           "Ensure all parties understand their obligations"
         ]
       };
-      
+
     case "Code Security Analyzer":
       return {
         securityScore: Math.floor(Math.random() * 40) + 60, // 60-100
@@ -122,7 +125,7 @@ Party B: _________________________ Date: _________
           "Review third-party dependencies for security updates"
         ]
       };
-      
+
     default:
       return {
         result: `AI analysis completed for ${name}`,
@@ -205,7 +208,7 @@ const configureDiscordAuth = (app: Express) => {
   }
 
   const DiscordStrategy = require("passport-discord").Strategy;
-  
+
   passport.use(new DiscordStrategy({
     clientID: process.env.DISCORD_CLIENT_ID,
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
@@ -215,7 +218,7 @@ const configureDiscordAuth = (app: Express) => {
     try {
       // Check if user exists with this Discord ID
       let user = await storage.getUserByDiscordId(profile.id);
-      
+
       if (user) {
         // Update Discord info if needed
         user = await storage.updateUser(user.id, {
@@ -294,7 +297,7 @@ const createAuditLog = async (userId: string, action: string, entityType: string
 export function registerRoutes(app: Express): Server {
   // Initialize rate limiting middleware for beta testing
   const rateLimiter = new RateLimitMiddleware(storage);
-  
+
   // Configure Discord OAuth
   configureDiscordAuth(app);
 
@@ -304,16 +307,16 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ AUTHENTICATION ROUTES ============
-  
+
   // Enhanced login route with alt detection and rate limiting
   app.post("/api/auth/login", rateLimiter.createLimiter(rateLimitConfigs.auth), async (req, res) => {
     try {
       const { username, password, deviceFingerprint, sessionData = {} } = req.body;
       const parsedCreds = loginSchema.parse({ username, password });
-      
+
       // Trim whitespace from username to avoid issues
       const trimmedUsername = parsedCreds.username.trim();
-      
+
       const user = await storage.authenticateUser(trimmedUsername, parsedCreds.password);
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -321,7 +324,7 @@ export function registerRoutes(app: Express): Server {
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
       const ipAddress = req.ip || req.connection?.remoteAddress || "unknown";
-      
+
       // Create enhanced user session with device fingerprinting
       await storage.createUserSession({
         userId: user.id,
@@ -346,25 +349,25 @@ export function registerRoutes(app: Express): Server {
         riskScore: sessionData.riskScore || 0,
       });
 
-      // Beta testing: Advanced alt account detection
+      // Beta testing: Alt account detection
       let altDetectionResult = null;
       try {
         const AltDetectionEngine = (await import('./utils/altDetection')).default;
         const detector = new AltDetectionEngine(storage);
-        
+
         const altReports = await detector.detectAltAccounts(
           user.id,
           ipAddress,
           deviceFingerprint,
           user.email
         );
-        
+
         altDetectionResult = {
           reportsGenerated: altReports.length,
           highConfidenceDetections: altReports.filter(r => r.confidenceScore >= 75).length,
           maxConfidence: Math.max(0, ...altReports.map(r => r.confidenceScore))
         };
-        
+
         // If high-confidence alt detected, create security event
         if (altReports.some(report => report.confidenceScore >= 75)) {
           console.log(`High-confidence alt account detected for user ${user.id}`);
@@ -406,14 +409,14 @@ export function registerRoutes(app: Express): Server {
 
   // Discord OAuth routes
   app.get("/auth/discord", passport.authenticate("discord"));
-  
+
   app.get("/auth/discord/callback", 
     passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
     async (req: any, res) => {
       const user = req.user;
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
       const ipAddress = req.ip || req.connection?.remoteAddress || "unknown";
-      
+
       // Create user session with basic fingerprinting
       await storage.createUserSession({
         userId: user.id,
@@ -442,14 +445,14 @@ export function registerRoutes(app: Express): Server {
       try {
         const AltDetectionEngine = (await import('./utils/altDetection')).default;
         const detector = new AltDetectionEngine(storage);
-        
+
         const altReports = await detector.detectAltAccounts(
           user.id,
           ipAddress,
           undefined, // No device fingerprint for Discord OAuth
           user.email
         );
-        
+
         altDetectionResult = {
           reportsGenerated: altReports.length,
           highConfidenceDetections: altReports.filter(r => r.confidenceScore >= 60).length, // Lower threshold for Discord
@@ -463,11 +466,11 @@ export function registerRoutes(app: Express): Server {
         altDetection: altDetectionResult,
         discordId: user.discordId
       }, req);
-      
+
       // Beta testing: Include security analysis in redirect
       const securityParams = altDetectionResult ? 
         `&security_analysis=${encodeURIComponent(JSON.stringify(altDetectionResult))}` : '';
-      
+
       // Redirect to frontend with token and security analysis
       res.redirect(`/login?token=${token}&discord_success=true${securityParams}`);
     }
@@ -478,7 +481,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const stats = rateLimiter.getStats();
       const now = Date.now();
-      
+
       const rateLimitStatus = {
         totalActiveLimits: stats.length,
         activeLimits: stats.filter(stat => now < stat.resetTime),
@@ -489,7 +492,7 @@ export function registerRoutes(app: Express): Server {
           maxRequests: Math.max(0, ...stats.map(s => s.count)),
         }
       };
-      
+
       res.json(rateLimitStatus);
     } catch (error) {
       console.error("Rate limit status error:", error);
@@ -501,7 +504,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/rate-limit/clear", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
     try {
       const { key, clearAll } = req.body;
-      
+
       if (clearAll) {
         rateLimiter.clearAllLimits();
         await createAuditLog(req.user.id, "clear_all_rate_limits", "rate_limit", "all", null, { action: "clear_all" }, req);
@@ -523,7 +526,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/auth/user", authenticateToken, async (req: any, res) => {
     const user = req.user;
     const reputation = await storage.getUserReputation(user.id);
-    
+
     res.json({
       ...user,
       reputation
@@ -537,12 +540,12 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ CASE MANAGEMENT ROUTES ============
-  
+
   // Get cases with filtering
   app.get("/api/cases", authenticateToken, async (req: any, res) => {
     try {
       const { status, type, search, limit = 50, offset = 0 } = req.query;
-      
+
       const cases = await storage.getCases({
         status,
         type,
@@ -550,9 +553,9 @@ export function registerRoutes(app: Express): Server {
         limit: parseInt(limit),
         offset: parseInt(offset),
       });
-      
+
       const total = await storage.getCaseCount({ status, type, search });
-      
+
       res.json({ cases, total });
     } catch (error) {
       console.error("Get cases error:", error);
@@ -578,7 +581,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/cases", authenticateToken, upload.array("evidence"), async (req: any, res) => {
     try {
       const validatedData = insertCaseSchema.parse(req.body);
-      
+
       // AI analysis if available
       let aiAnalysis = null;
       let aiRiskScore = null;
@@ -640,7 +643,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       const updatedCase = await storage.updateCase(req.params.id, req.body);
-      
+
       await createAuditLog(req.user.id, "update_case", "case", req.params.id, oldCase, updatedCase, req);
 
       res.json(updatedCase);
@@ -651,7 +654,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ VOUCH/DEVOUCH SYSTEM ROUTES ============
-  
+
   // Get vouches for a user
   app.get("/api/vouches/:userId", authenticateToken, async (req, res) => {
     try {
@@ -667,7 +670,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/vouches", authenticateToken, async (req: any, res) => {
     try {
       const validatedData = insertVouchSchema.parse(req.body);
-      
+
       // Check if user is trying to vouch themselves
       if (validatedData.targetUserId === req.user.id) {
         return res.status(400).json({ message: "You cannot vouch for yourself" });
@@ -698,7 +701,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ DISPUTE RESOLUTION & VOTING ROUTES ============
-  
+
   // Get active disputes for voting
   app.get("/api/disputes/active", authenticateToken, async (req, res) => {
     try {
@@ -714,7 +717,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/disputes", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
       const validatedData = insertDisputeResolutionSchema.parse(req.body);
-      
+
       const dispute = await storage.createDisputeResolution({
         ...validatedData,
         proposedBy: req.user.id,
@@ -733,10 +736,10 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/disputes/:id/vote", authenticateToken, async (req: any, res) => {
     try {
       const validatedData = insertDisputeVoteSchema.parse(req.body);
-      
+
       // Generate anonymous voter hash
       const voterHash = generateVoterHash(req.user.id, req.params.id);
-      
+
       // Get voter's reputation for weight calculation
       const voterReputation = await storage.getUserReputation(req.user.id);
       const weight = voterReputation?.trustLevel === "platinum" ? 3 : 
@@ -774,7 +777,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ ALT DETECTION SYSTEM ROUTES ============
-  
+
   // Get alt detection reports
   app.get("/api/alt-detection", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
@@ -791,7 +794,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/alt-detection", authenticateToken, async (req: any, res) => {
     try {
       const validatedData = insertAltDetectionReportSchema.parse(req.body);
-      
+
       const report = await storage.createAltDetectionReport({
         ...validatedData,
         reportedBy: validatedData.reportedBy || req.user.id,
@@ -810,7 +813,7 @@ export function registerRoutes(app: Express): Server {
   app.put("/api/alt-detection/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
       const updatedReport = await storage.updateAltDetectionReport(req.params.id, req.body);
-      
+
       await createAuditLog(req.user.id, "update_alt_report", "alt_report", req.params.id, null, updatedReport, req);
 
       res.json(updatedReport);
@@ -821,7 +824,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ BETA TESTING - SECURITY DASHBOARD ROUTES ============
-  
+
   // Get security events
   app.get("/api/security-events", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
     try {
@@ -851,9 +854,9 @@ export function registerRoutes(app: Express): Server {
     try {
       const eventData = req.body;
       const event = await storage.createSecurityEvent?.(eventData);
-      
+
       await createAuditLog(req.user.id, "create_security_event", "security_event", event?.id || "", null, event, req);
-      
+
       res.status(201).json(event);
     } catch (error) {
       console.error("Create security event error:", error);
@@ -865,7 +868,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/validate-device", authenticateToken, async (req: any, res) => {
     try {
       const { deviceFingerprint } = req.body;
-      
+
       if (!deviceFingerprint) {
         return res.status(400).json({ message: "Device fingerprint required" });
       }
@@ -874,7 +877,7 @@ export function registerRoutes(app: Express): Server {
       const allSessions = await storage.getAllUserSessions?.() || [];
       const matchingSessions = allSessions.filter(s => s.deviceFingerprint === deviceFingerprint);
       const uniqueUsers = Array.from(new Set(matchingSessions.map(s => s.userId)));
-      
+
       const isValid = uniqueUsers.length <= 1 || uniqueUsers.includes(req.user.id);
       const riskLevel = uniqueUsers.length > 3 ? 'high' : 
                        uniqueUsers.length > 1 ? 'medium' : 'low';
@@ -894,7 +897,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ STAFF MANAGEMENT ROUTES ============
-  
+
   // Get staff members
   app.get("/api/staff", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req, res) => {
     try {
@@ -921,7 +924,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/staff/permissions", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
     try {
       const validatedData = insertStaffPermissionSchema.parse(req.body);
-      
+
       const permission = await storage.createStaffPermission({
         ...validatedData,
         grantedBy: req.user.id,
@@ -952,7 +955,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/staff/performance", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
     try {
       const validatedData = insertStaffPerformanceSchema.parse(req.body);
-      
+
       const performance = await storage.createStaffPerformance({
         ...validatedData,
         evaluatedBy: req.user.id,
@@ -968,7 +971,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ UTILITY SYSTEM ROUTES ============
-  
+
   // Get utility categories
   app.get("/api/utility/categories", authenticateToken, async (req, res) => {
     try {
@@ -984,7 +987,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/utility/categories", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
     try {
       const validatedData = insertUtilityCategorySchema.parse(req.body);
-      
+
       const category = await storage.createUtilityCategory(validatedData);
 
       await createAuditLog(req.user.id, "create_utility_category", "utility_category", category.id, null, category, req);
@@ -1001,7 +1004,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const { categoryId } = req.query;
       const documents = await storage.getUtilityDocuments(categoryId);
-      
+
       // Filter by access level
       const filteredDocuments = documents.filter(doc => {
         if (doc.accessLevel === "all") return true;
@@ -1010,7 +1013,7 @@ export function registerRoutes(app: Express): Server {
         if (doc.accessLevel === "admin" && req.user.role === "admin") return true;
         return false;
       });
-      
+
       res.json(filteredDocuments);
     } catch (error) {
       console.error("Get utility documents error:", error);
@@ -1022,7 +1025,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/utility/documents", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
       const validatedData = insertUtilityDocumentSchema.parse(req.body);
-      
+
       const document = await storage.createUtilityDocument({
         ...validatedData,
         authorId: req.user.id,
@@ -1058,7 +1061,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/utility/documents/:id/rate", authenticateToken, async (req: any, res) => {
     try {
       const validatedData = insertDocumentRatingSchema.parse(req.body);
-      
+
       const rating = await storage.createDocumentRating({
         ...validatedData,
         documentId: req.params.id,
@@ -1073,7 +1076,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ USER REPUTATION ROUTES ============
-  
+
   // Get user reputation
   app.get("/api/reputation/:userId", authenticateToken, async (req, res) => {
     try {
@@ -1089,28 +1092,53 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ STATISTICS & DASHBOARD ROUTES ============
-  
-  // Get dashboard statistics
-  app.get("/api/statistics", authenticateToken, async (req, res) => {
+
+  // Dashboard statistics with real-time data
+  app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     try {
-      const stats = await storage.getDashboardStatistics();
-      res.json(stats);
+      const totalCases = await db.select({ count: sql<number>`count(*)` }).from(cases);
+      const activeCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "investigating"));
+      const resolvedCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "resolved"));
+      const pendingCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "open"));
+      const totalUsers = await db.select({ count: sql<number>`count(*)` }).from(users);
+
+      // Get recent activity count (last 24 hours)
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const recentCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(sql`${cases.createdAt} > ${yesterday}`);
+
+      // Get case type distribution
+      const caseTypes = await db.select({
+        type: cases.type,
+        count: sql<number>`count(*)`
+      }).from(cases).groupBy(cases.type);
+
+      res.json({
+        totalCases: totalCases[0]?.count || 0,
+        activeCases: activeCases[0]?.count || 0,
+        resolvedCases: resolvedCases[0]?.count || 0,
+        pendingCases: pendingCases[0]?.count || 0,
+        totalUsers: totalUsers[0]?.count || 0,
+        recentCases: recentCases[0]?.count || 0,
+        caseTypes: caseTypes || [],
+        lastUpdated: new Date().toISOString(),
+        systemStatus: "online"
+      });
     } catch (error) {
-      console.error("Get statistics error:", error);
-      res.status(500).json({ message: "Failed to fetch statistics" });
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ error: "Failed to fetch dashboard statistics" });
     }
   });
 
   // ============ AUDIT LOG ROUTES ============
-  
+
   // Get audit logs
   app.get("/api/audit-logs", authenticateToken, requireRole(["admin", "tribunal_head"]), async (req: any, res) => {
     try {
       const { userId, entityType, limit = 100, offset = 0 } = req.query;
       const logs = await storage.getAuditLogs();
-      
+
       const paginatedLogs = logs.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
-      
+
       res.json({
         logs: paginatedLogs,
         total: logs.length
@@ -1122,14 +1150,14 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ EXISTING ROUTES (LEGACY COMPATIBILITY) ============
-  
+
   // Contact messages, appeals, tribunal proceedings, etc. (keeping existing functionality)
   app.get("/api/contact", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
       const { status, priority, search, limit = 50, offset = 0 } = req.query;
-      
+
       const messages = await storage.getContactMessages();
-      
+
       res.json(messages);
     } catch (error) {
       console.error("Get contact messages error:", error);
@@ -1162,7 +1190,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/appeals", authenticateToken, async (req: any, res) => {
     try {
       const validatedData = insertAppealSchema.parse(req.body);
-      
+
       const appeal = await storage.createAppeal({
         ...validatedData,
         appealedBy: req.user.id,
@@ -1224,7 +1252,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ VOUCH SYSTEM ROUTES ============
-  
+
   // Get user vouches
   app.get("/api/vouches/user", authenticateToken, async (req: any, res) => {
     try {
@@ -1254,11 +1282,11 @@ export function registerRoutes(app: Express): Server {
         ...req.body,
         fromUserId: req.user.id,
       };
-      
+
       const vouch = await storage.createVouch(vouchData);
-      
+
       await createAuditLog(req.user.id, "create_vouch", "vouch", vouch.id, null, vouchData, req);
-      
+
       res.status(201).json(vouch);
     } catch (error) {
       console.error("Error creating vouch:", error);
@@ -1267,7 +1295,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============ ADMIN PANEL ROUTES ============
-  
+
   // Get dashboard statistics (admin only)
   app.get("/api/admin/statistics", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
     try {
@@ -1295,11 +1323,11 @@ export function registerRoutes(app: Express): Server {
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       const user = await storage.updateUser(id, updates);
-      
+
       await createAuditLog(req.user.id, "update_user", "user", id, null, updates, req);
-      
+
       res.json(user);
     } catch (error) {
       console.error("Error updating user:", error);
@@ -1311,13 +1339,13 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/admin/users/:id", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
     try {
       const { id } = req.params;
-      
+
       // In a real implementation, you'd soft delete or archive the user
       // For now, we'll just mark them as inactive
       await storage.updateUser(id, { isActive: false });
-      
+
       await createAuditLog(req.user.id, "delete_user", "user", id, null, null, req);
-      
+
       res.json({ message: "User deleted successfully" });
     } catch (error) {
       console.error("Error deleting user:", error);
@@ -1409,7 +1437,7 @@ export function registerRoutes(app: Express): Server {
 
       // Process with AI (simplified for demo - in real app would call OpenAI/etc)
       const processedOutput = await processAiTool(tool, req.body.inputData);
-      
+
       // Update usage with result
       const completedUsage = await storage.updateAiToolUsage(usage.id, {
         outputData: processedOutput,
@@ -1449,7 +1477,7 @@ export function registerRoutes(app: Express): Server {
       const filters: any = {};
       if (skills) filters.skills = skills.split(',');
       if (verified !== undefined) filters.verified = verified === 'true';
-      
+
       const profiles = await storage.getFreelancerProfiles(filters);
       res.json(profiles);
     } catch (error) {
@@ -1473,10 +1501,10 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/freelancers/me", authenticateToken, async (req: any, res) => {
     try {
       const validatedData = insertFreelancerProfileSchema.parse(req.body);
-      
+
       const existingProfile = await storage.getFreelancerProfile(req.user.id);
       let profile;
-      
+
       if (existingProfile) {
         profile = await storage.updateFreelancerProfile(req.user.id, validatedData);
       } else {
@@ -1485,7 +1513,7 @@ export function registerRoutes(app: Express): Server {
           userId: req.user.id
         });
       }
-      
+
       res.json(profile);
     } catch (error) {
       console.error("Create/update freelancer profile error:", error);
@@ -1503,7 +1531,7 @@ export function registerRoutes(app: Express): Server {
       if (status) filters.status = status;
       if (skills) filters.skills = skills.split(',');
       if (clientId) filters.clientId = clientId;
-      
+
       const projects = await storage.getProjects(filters);
       res.json(projects);
     } catch (error) {
@@ -1657,20 +1685,20 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/vouches", authenticateToken, async (req: any, res) => {
     try {
       const validatedData = insertVouchSchema.parse(req.body);
-      
+
       // Check if user already vouched for this person
       const existingVouches = await storage.getVouches(validatedData.targetUserId);
       const existingVouch = existingVouches.find(v => v.voucherUserId === req.user.id);
-      
+
       if (existingVouch) {
         return res.status(400).json({ message: "You have already vouched for this user" });
       }
-      
+
       const vouch = await storage.createVouch({
         ...validatedData,
         voucherUserId: req.user.id
       });
-      
+
       res.status(201).json(vouch);
     } catch (error) {
       console.error("Create vouch error:", error);
@@ -1679,7 +1707,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============= TRIBUNAL PROCEEDINGS ROUTES =============
-  
+
   // Get tribunal proceedings
   app.get("/api/tribunal-proceedings", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff", "staff"]), async (req: any, res) => {
     try {
@@ -1695,7 +1723,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/tribunal-proceedings", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
     try {
       const validatedData = insertTribunalProceedingSchema.parse(req.body);
-      
+
       const proceeding = await storage.createTribunalProceeding({
         ...validatedData,
         chairperson: req.user.id, // Set current user as chairperson
@@ -1714,7 +1742,7 @@ export function registerRoutes(app: Express): Server {
   app.patch("/api/tribunal-proceedings/:id", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), async (req: any, res) => {
     try {
       const updatedProceeding = await storage.updateTribunalProceeding(req.params.id, req.body);
-      
+
       await createAuditLog(req.user.id, "update_tribunal_proceeding", "tribunal_proceeding", req.params.id, null, updatedProceeding, req);
 
       res.json(updatedProceeding);
@@ -1811,18 +1839,18 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/disputes/:id/vote", async (req: any, res) => {
     try {
       const validatedData = insertDisputeVoteSchema.parse(req.body);
-      
+
       // Create anonymous voter hash from IP + user agent for vote tracking
       const voterHash = crypto.createHash('sha256')
         .update(req.ip + (req.headers['user-agent'] || ''))
         .digest('hex');
-      
+
       const vote = await storage.createDisputeVote({
         ...validatedData,
         disputeId: req.params.id,
         voterHash
       });
-      
+
       res.status(201).json({ message: "Vote recorded anonymously" });
     } catch (error) {
       console.error("Vote on dispute error:", error);
