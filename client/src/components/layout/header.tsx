@@ -5,13 +5,14 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
+import NotificationSystem from "@/components/notification-system";
+import { useLocation } from "wouter";
+
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -21,24 +22,30 @@ interface HeaderProps {
 function Header({ onMenuToggle, onSearch }: HeaderProps) {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
+
+  const handleLogout = () => {
+    logout();
+    setLocation("/login");
+  };
 
   return (
-    <header className="bg-oa-dark border-b border-oa-gray/20 px-4 py-3">
+    <header className="bg-slate-900/50 backdrop-blur-sm border-b border-slate-800 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={onMenuToggle}
-            className="md:hidden text-white hover:bg-oa-gray/20"
+            className="md:hidden text-slate-300 hover:bg-slate-800 hover:text-white"
             data-testid="button-menu-toggle"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          
+
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-white">OwnersAlliance</h1>
-            <span className="text-oa-blue text-sm">Portal</span>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">OwnersAlliance</h1>
+            <span className="hidden sm:inline-block text-blue-500 text-sm">Portal</span>
           </div>
         </div>
 
@@ -54,7 +61,7 @@ function Header({ onMenuToggle, onSearch }: HeaderProps) {
                 setSearchQuery(e.target.value);
                 onSearch?.(e.target.value);
               }}
-              className="pl-10 bg-gray-800/80 border-gray-600 text-white placeholder:text-gray-400"
+              className="pl-10 bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500"
               data-testid="input-search"
             />
           </div>
@@ -62,24 +69,14 @@ function Header({ onMenuToggle, onSearch }: HeaderProps) {
 
         <div className="flex items-center gap-3">
           {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-oa-gray/20 relative"
-            data-testid="button-notifications"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          <NotificationSystem />
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="relative h-8 w-8 rounded-full"
+                className="relative h-8 w-8 rounded-full flex items-center space-x-2 text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg"
                 data-testid="button-user-menu"
               >
                 <Avatar className="h-8 w-8">
@@ -87,33 +84,47 @@ function Header({ onMenuToggle, onSearch }: HeaderProps) {
                     src={user?.profileImageUrl || undefined} 
                     alt={user?.username || "User"} 
                   />
-                  <AvatarFallback className="bg-oa-blue text-white">
+                  <AvatarFallback className="bg-blue-600 text-white text-sm">
                     {user?.username?.substring(0, 2).toUpperCase() || "OA"}
                   </AvatarFallback>
                 </Avatar>
+                <div className="hidden sm:flex flex-col items-start">
+                  <span className="text-sm font-medium">
+                    {user?.username || "User"}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {user?.role || "Member"}
+                  </span>
+                </div>
+                <Settings className="h-4 w-4 text-slate-400" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-oa-dark border-oa-gray/30" align="end">
-              <DropdownMenuLabel className="text-white">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{user?.username}</p>
-                  <p className="text-xs text-slate-400">{user?.email}</p>
-                  <p className="text-xs text-oa-blue capitalize">{user?.role}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-oa-gray/30" />
-              <DropdownMenuItem className="text-white hover:bg-oa-gray/20">
+            <DropdownMenuContent className="w-56 bg-slate-800 border-slate-700" align="end">
+              <div className="px-3 py-2 border-b border-slate-700">
+                <p className="text-sm font-medium text-white">
+                  {user?.username || "User"}
+                </p>
+                <p className="text-xs text-slate-400">{user?.email}</p>
+              </div>
+              <DropdownMenuSeparator className="bg-slate-700" />
+              <DropdownMenuItem 
+                onClick={() => setLocation("/profile")}
+                className="text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer"
+              >
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-white hover:bg-oa-gray/20">
+              <DropdownMenuItem 
+                onClick={() => setLocation("/settings")}
+                className="text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer"
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-oa-gray/30" />
+              <DropdownMenuSeparator className="bg-slate-700" />
               <DropdownMenuItem 
-                onClick={logout}
-                className="text-red-400 hover:bg-red-500/20"
+                onClick={handleLogout}
+                className="text-red-400 hover:bg-red-900/20 hover:text-red-300 cursor-pointer"
                 data-testid="button-logout"
               >
                 <LogOut className="mr-2 h-4 w-4" />

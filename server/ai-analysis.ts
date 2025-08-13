@@ -1,7 +1,7 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 export interface AIAnalysisResult {
   riskScore: number; // 1-10 scale
@@ -23,8 +23,8 @@ export async function analyzeCaseReport(caseData: {
   evidenceFiles?: Array<{ name: string; description?: string }>;
 }): Promise<AIAnalysisResult> {
   try {
-    // If OpenAI is not configured, return fallback analysis
-    if (!openai) {
+    // If Gemini is not configured, return fallback analysis
+    if (!genAI) {
       return {
         riskScore: 5,
         fraudIndicators: ['Manual review required - AI analysis not available'],
@@ -32,7 +32,7 @@ export async function analyzeCaseReport(caseData: {
         urgencyLevel: 'medium',
         similarPatterns: [],
         evidenceAssessment: 'AI analysis not configured - manual review recommended',
-        summary: 'OpenAI API not configured, manual review required',
+        summary: 'Gemini API not configured, manual review required',
         confidence: 0.1
       };
     }
@@ -66,34 +66,42 @@ Focus on:
 - Urgency assessment
 - Similar scam tactics`;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert fraud analyst. Analyze scam reports and provide structured insights in JSON format."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" }); // Using a specific Gemini model
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
-    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+
+    let parsedResult: any;
+    try {
+      parsedResult = JSON.parse(text);
+    } catch (parseError) {
+      console.error('Gemini analysis JSON parsing failed:', parseError);
+      // If JSON parsing fails, return structured data indicating the issue
+      return {
+        riskScore: 5,
+        fraudIndicators: ['AI analysis returned non-JSON response'],
+        recommendedActions: ['Manual review required', 'Check AI prompt and response format'],
+        urgencyLevel: 'medium',
+        similarPatterns: [],
+        evidenceAssessment: 'AI analysis failed to return valid JSON',
+        summary: 'Gemini analysis failed to parse JSON response',
+        confidence: 0.1
+      };
+    }
+
+
     // Validate and sanitize the response
     return {
-      riskScore: Math.max(1, Math.min(10, result.riskScore || 5)),
-      fraudIndicators: Array.isArray(result.fraudIndicators) ? result.fraudIndicators.slice(0, 10) : [],
-      recommendedActions: Array.isArray(result.recommendedActions) ? result.recommendedActions.slice(0, 8) : [],
-      urgencyLevel: ['low', 'medium', 'high', 'critical'].includes(result.urgencyLevel) ? result.urgencyLevel : 'medium',
-      similarPatterns: Array.isArray(result.similarPatterns) ? result.similarPatterns.slice(0, 5) : [],
-      evidenceAssessment: result.evidenceAssessment || 'Unable to assess evidence quality',
-      summary: result.summary || 'Analysis completed',
-      confidence: Math.max(0, Math.min(1, result.confidence || 0.7))
+      riskScore: Math.max(1, Math.min(10, parsedResult.riskScore || 5)),
+      fraudIndicators: Array.isArray(parsedResult.fraudIndicators) ? parsedResult.fraudIndicators.slice(0, 10) : [],
+      recommendedActions: Array.isArray(parsedResult.recommendedActions) ? parsedResult.recommendedActions.slice(0, 8) : [],
+      urgencyLevel: ['low', 'medium', 'high', 'critical'].includes(parsedResult.urgencyLevel) ? parsedResult.urgencyLevel : 'medium',
+      similarPatterns: Array.isArray(parsedResult.similarPatterns) ? parsedResult.similarPatterns.slice(0, 5) : [],
+      evidenceAssessment: parsedResult.evidenceAssessment || 'Unable to assess evidence quality',
+      summary: parsedResult.summary || 'Analysis completed',
+      confidence: Math.max(0, Math.min(1, parsedResult.confidence || 0.7))
     };
   } catch (error) {
     console.error('AI analysis failed:', error);
@@ -105,7 +113,7 @@ Focus on:
       urgencyLevel: 'medium',
       similarPatterns: [],
       evidenceAssessment: 'Analysis unavailable - manual review recommended',
-      summary: 'AI analysis failed, manual review required',
+      summary: 'Gemini analysis failed, manual review required',
       confidence: 0.1
     };
   }
@@ -113,9 +121,9 @@ Focus on:
 
 export async function generateModerationAdvice(caseData: any, analysis: AIAnalysisResult): Promise<string> {
   try {
-    // If OpenAI is not configured, return fallback advice
-    if (!openai) {
-      return 'AI guidance unavailable - OpenAI not configured. Please conduct standard investigation procedures and manual review.';
+    // If Gemini is not configured, return fallback advice
+    if (!genAI) {
+      return 'AI guidance unavailable - Gemini not configured. Please conduct standard investigation procedures and manual review.';
     }
     const prompt = `
 Based on this fraud analysis, provide specific moderation advice:
@@ -129,23 +137,13 @@ Analysis Summary: ${analysis.summary}
 
 Provide concise, actionable advice for moderators in 2-3 paragraphs.`;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a senior fraud investigation advisor. Provide practical moderation guidance."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.2,
-      max_tokens: 300
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" }); // Using a specific Gemini model
 
-    return response.choices[0].message.content || 'Manual review recommended.';
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    return text || 'Manual review recommended.';
   } catch (error) {
     console.error('Failed to generate moderation advice:', error);
     return 'AI guidance unavailable. Please conduct standard investigation procedures.';

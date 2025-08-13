@@ -21,7 +21,8 @@ export const caseStatusEnum = pgEnum("case_status", [
   "resolved",
   "appealed",
   "rejected",
-  "archived"
+  "archived",
+  "investigating"
 ]);
 
 export const caseTypeEnum = pgEnum("case_type", [
@@ -304,7 +305,7 @@ export const userSessions = pgTable("user_sessions", {
   deviceMemory: integer("device_memory"),
   connectionType: varchar("connection_type"),
   suspiciousActivity: boolean("suspicious_activity").default(false).notNull(),
-  riskScore: integer("risk_score").default(0).notNull(), // 0-100
+  riskScore: integer("risk_score").default(0).notNull(),
 });
 
 // Staff Management and Permissions
@@ -1626,5 +1627,3 @@ export type InsertCollaborationMessage = z.infer<typeof insertCollaborationMessa
 // Verification and community types
 export type VerificationRequest = typeof verificationRequests.$inferSelect;
 export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
-
-

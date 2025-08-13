@@ -90,7 +90,6 @@ export default function Login() {
           
           <div className="mt-4 text-center text-sm text-gray-400">
             <p>Staff access only</p>
-            <p className="text-xs mt-1">Default: admin / admin123</p>
           </div>
         </CardContent>
       </Card>

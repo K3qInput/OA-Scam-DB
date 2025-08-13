@@ -11,65 +11,29 @@ export default function Footer() {
   });
 
   return (
-    <footer className="bg-oa-dark border-t border-oa-gray/20 py-4 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Real-time Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-          <div className="flex items-center gap-2 text-center sm:text-left">
-            <FileText className="h-4 w-4 text-blue-400" />
-            <div>
-              <div className="text-xs text-slate-500">Cases</div>
-              <div className="text-sm text-white font-medium">
-                {stats?.totalCases || 0}
-              </div>
-            </div>
+    <footer className="bg-slate-900/50 backdrop-blur-sm border-t border-slate-800 px-4 sm:px-6 py-3 sm:py-4 mt-auto">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:space-x-6 gap-3 sm:gap-0 text-xs sm:text-sm text-slate-400">
+          <div className="flex items-center space-x-2 min-w-0">
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Users: {stats?.totalUsers || 0}</span>
           </div>
-          
-          <div className="flex items-center gap-2 text-center sm:text-left">
-            <Users className="h-4 w-4 text-green-400" />
-            <div>
-              <div className="text-xs text-slate-500">Users</div>
-              <div className="text-sm text-white font-medium">
-                {stats?.totalUsers || 0}
-              </div>
-            </div>
+          <div className="flex items-center space-x-2 min-w-0">
+            <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Cases: {stats?.totalCases || 0}</span>
           </div>
-          
-          <div className="flex items-center gap-2 text-center sm:text-left">
-            <Shield className="h-4 w-4 text-yellow-400" />
-            <div>
-              <div className="text-xs text-slate-500">Active</div>
-              <div className="text-sm text-white font-medium">
-                {stats?.activeCases || 0}
-              </div>
-            </div>
+          <div className="flex items-center space-x-2 min-w-0">
+            <Shield className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Verified: {stats?.verifiedCases || 0}</span>
           </div>
-          
-          <div className="flex items-center gap-2 text-center sm:text-left">
-            <Activity className="h-4 w-4 text-purple-400" />
-            <div>
-              <div className="text-xs text-slate-500">Status</div>
-              <div className="text-sm text-green-400 font-medium">
-                Online
-              </div>
-            </div>
+          <div className="flex items-center space-x-2 min-w-0">
+            <Activity className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Active: <CurrentTime className="text-white font-medium" /></span>
           </div>
         </div>
-
-        {/* Current Time */}
-        <div className="text-center sm:text-left mb-3">
-          <div className="text-xs text-slate-500">System Time</div>
-          <CurrentTime className="text-sm text-slate-300" />
-        </div>
-
-        {/* Footer Info */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-slate-700">
-          <div className="text-xs sm:text-sm text-slate-400 text-center sm:text-left">
-            © 2025 OwnersAlliance. All rights reserved.
-          </div>
-          <div className="text-xs sm:text-sm text-slate-500 text-center sm:text-right">
-            Made by Kiro.java - "I was too lazy 💀"
-          </div>
+        <div className="text-xs text-slate-500 flex items-center space-x-1">
+          <span>Updated:</span>
+          <CurrentTime className="text-slate-400" />
         </div>
       </div>
     </footer>

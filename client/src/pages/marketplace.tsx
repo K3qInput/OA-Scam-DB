@@ -38,6 +38,32 @@ export default function Marketplace() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch real-time marketplace stats
+  const { data: marketplaceStats } = useQuery({
+    queryKey: ["/api/marketplace/stats"],
+    initialData: {
+      totalFreelancers: 0,
+      activeProjects: 0,
+      completedProjects: 0,
+      totalEarnings: 0
+    },
+    refetchInterval: 30000, // Update every 30 seconds
+  });
+
+  // Fetch freelancers from API with real-time updates
+  const { data: freelancersData, isLoading: freelancersLoading } = useQuery({
+    queryKey: ["/api/marketplace/freelancers", searchQuery, selectedCategory],
+    refetchInterval: 60000, // Update every minute
+    initialData: { freelancers: [], total: 0 }
+  });
+
+  // Fetch projects from API with real-time updates
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
+    queryKey: ["/api/marketplace/projects"],
+    refetchInterval: 30000, // Update every 30 seconds
+    initialData: { projects: [], total: 0 }
+  });
+
   // Mock data for demonstration - in real app would come from API
   const freelancers = [
     {
@@ -294,10 +320,10 @@ export default function Marketplace() {
                       <SelectValue placeholder="All Budgets" />
                     </SelectTrigger>
                     <SelectContent className="bg-oa-dark border-oa-border">
-                      <SelectItem value="all">All Budgets</SelectItem>
-                      <SelectItem value="low">$0 - $1,000</SelectItem>
-                      <SelectItem value="mid">$1,000 - $5,000</SelectItem>
-                      <SelectItem value="high">$5,000+</SelectItem>
+                      <SelectItem value="all-budgets">All Budgets</SelectItem>
+                      <SelectItem value="low-budget">$0 - $1,000</SelectItem>
+                      <SelectItem value="mid-budget">$1,000 - $5,000</SelectItem>
+                      <SelectItem value="high-budget">$5,000+</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
