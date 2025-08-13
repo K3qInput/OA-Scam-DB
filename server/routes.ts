@@ -1181,15 +1181,15 @@ export function registerRoutes(app: Express): Server {
         reporterUserId: cases.reporterUserId,
         createdAt: cases.createdAt,
         updatedAt: cases.updatedAt,
-        damageAmount: cases.damageAmount
+        priority: cases.priority
       }).from(cases)
         .orderBy(sql`${cases.updatedAt} DESC`)
         .limit(10);
 
-      // Add mock priority data
+      // Add mock damage amount data since priority is already in the schema
       const recentCases = recentCasesData.map(c => ({
         ...c,
-        priority: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)]
+        damageAmount: Math.floor(Math.random() * 50000) + 1000
       }));
 
       res.json({

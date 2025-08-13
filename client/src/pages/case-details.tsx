@@ -90,54 +90,77 @@ export default function CaseDetails() {
       <main className="flex-1 overflow-auto">
         <Header />
 
-        {/* Header */}
+        {/* Responsive Mobile-First Header */}
         <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-oa-surface bg-gradient-to-r from-oa-dark to-oa-surface">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+          <div className="max-w-7xl mx-auto">
+            {/* Mobile: Stack all elements vertically */}
+            <div className="space-y-4">
+              {/* Back Button - Always on top */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation("/dashboard")}
-                className="text-gray-400 hover:text-white self-start"
+                className="text-gray-400 hover:text-white w-fit"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
-              <div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                  <h1 className="text-2xl font-bold text-white">{caseData.title}</h1>
-                  <Badge className={`border ${getStatusColor(caseData.status)}`}>
+
+              {/* Title and Badges */}
+              <div className="space-y-3">
+                <div>
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-tight break-words">
+                    {caseData.title}
+                  </h1>
+                  <p className="text-gray-400 text-sm mt-1">Case #{caseData.caseNumber}</p>
+                </div>
+                
+                {/* Badges - Responsive grid */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={`border text-xs ${getStatusColor(caseData.status)}`}>
                     {caseData.status.toUpperCase()}
                   </Badge>
-                  <Badge className={`border ${getPriorityColor(caseData.priority)}`}>
+                  <Badge className={`border text-xs ${getPriorityColor(caseData.priority)}`}>
                     {caseData.priority.toUpperCase()}
                   </Badge>
                   {caseData.aiRiskScore && (
-                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50">
+                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50 text-xs">
                       <Brain className="h-3 w-3 mr-1" />
                       Risk: {caseData.aiRiskScore}/10
                     </Badge>
                   )}
+                  {caseData.aiUrgencyLevel && (
+                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50 text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      {caseData.aiUrgencyLevel.toUpperCase()} URGENCY
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-gray-400">Case #{caseData.caseNumber}</p>
               </div>
-            </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-sm text-gray-400">Created</div>
-                <div className="text-white">
-                  <RealTimeTimestamp date={caseData.createdAt} showFullDate={true} />
+              {/* Timestamps - Responsive grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2 border-t border-gray-700">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Created</div>
+                  <div className="text-white text-sm font-medium">
+                    <RealTimeTimestamp date={caseData.createdAt} showFullDate={true} />
+                  </div>
                 </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Last Updated</div>
+                  <div className="text-white text-sm font-medium">
+                    <RealTimeTimestamp date={caseData.updatedAt} showRelative={true} />
+                  </div>
+                </div>
+                {caseData.resolvedAt && (
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Resolved</div>
+                    <div className="text-white text-sm font-medium">
+                      <RealTimeTimestamp date={caseData.resolvedAt} showFullDate={true} />
+                    </div>
+                  </div>
+                )}
               </div>
-              {caseData.aiUrgencyLevel && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                  <AlertTriangle className="h-4 w-4 text-orange-400" />
-                  <span className="text-orange-400 text-sm font-medium">
-                    {caseData.aiUrgencyLevel.toUpperCase()} URGENCY
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -152,99 +175,202 @@ export default function CaseDetails() {
               <TabsTrigger value="timeline" className="text-xs sm:text-sm">Timeline</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="details" className="space-y-6 mt-6">
-              {/* Case Information Grid */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-                {/* Basic Information */}
+            <TabsContent value="details" className="space-y-4 sm:space-y-6 mt-6">
+              {/* Responsive Mobile-First Layout */}
+              <div className="space-y-4 sm:space-y-6">
+                
+                {/* Primary Case Information Card */}
                 <Card className="oa-card">
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
-                      <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                      Case Information
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-white flex items-center gap-2 text-lg">
+                      <User className="h-5 w-5" />
+                      Report Details (As Originally Submitted)
                     </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Reported User</label>
-                        <p className="text-white mt-1">{caseData.reportedUserId}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Case Type</label>
-                        <p className="text-white mt-1">{caseData.type?.replace('_', ' ').toUpperCase()}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Amount Involved</label>
-                        <p className="text-white mt-1">
-                          {caseData.amountInvolved ? `${caseData.currency} ${caseData.amountInvolved}` : 'Not specified'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Reporter</label>
-                        <p className="text-white mt-1">{caseData.reporterUserId}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Stats */}
-                <Card className="oa-card">
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Case Metrics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-oa-surface rounded-lg">
-                        <div className="text-2xl font-bold text-oa-red">{caseData.aiRiskScore || 'N/A'}</div>
-                        <div className="text-sm text-gray-400">AI Risk Score</div>
-                      </div>
-                      <div className="text-center p-4 bg-oa-surface rounded-lg">
-                        <div className="text-2xl font-bold text-blue-400">
-                          {Math.floor((Date.now() - new Date(caseData.createdAt).getTime()) / (1000 * 60 * 60 * 24))}
-                        </div>
-                        <div className="text-sm text-gray-400">Days Open</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Description */}
-              <Card className="oa-card">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Description
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-gray-300 whitespace-pre-wrap leading-relaxed">
-                    {caseData.description}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Tags */}
-              {caseData.tags && caseData.tags.length > 0 && (
-                <Card className="oa-card">
-                  <CardHeader>
-                    <CardTitle className="text-white">Tags</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {caseData.tags.map((tag: string, index: number) => (
-                        <Badge key={index} variant="outline">
-                          {tag}
-                        </Badge>
-                      ))}
+                    <div className="space-y-6">
+                      {/* Key Information Grid - Mobile Responsive */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Reported User</label>
+                          <p className="text-white font-medium break-all">{caseData.reportedUserId}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Reporter</label>
+                          <p className="text-white font-medium break-all">{caseData.reporterUserId}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Case Type</label>
+                          <p className="text-white font-medium capitalize">
+                            {caseData.type?.replace(/_/g, ' ')}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Priority Level</label>
+                          <Badge className={`${getPriorityColor(caseData.priority)} inline-flex w-fit`}>
+                            {caseData.priority?.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Status</label>
+                          <Badge className={`${getStatusColor(caseData.status)} inline-flex w-fit`}>
+                            {caseData.status?.toUpperCase()}
+                          </Badge>
+                        </div>
+                        {caseData.amountInvolved && (
+                          <div className="space-y-1">
+                            <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Financial Impact</label>
+                            <p className="text-white font-medium text-lg">
+                              {caseData.currency || 'USD'} {parseFloat(caseData.amountInvolved).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Case Numbers and Timing */}
+                      <div className="pt-4 border-t border-gray-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Case Number</label>
+                            <p className="text-white font-medium">#{caseData.caseNumber}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Created</label>
+                            <p className="text-white font-medium">
+                              <RealTimeTimestamp date={caseData.createdAt} showFullDate={true} />
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Last Update</label>
+                            <p className="text-white font-medium">
+                              <RealTimeTimestamp date={caseData.updatedAt} showRelative={true} />
+                            </p>
+                          </div>
+                          {caseData.staffUserId && (
+                            <div className="space-y-1">
+                              <label className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Assigned Staff</label>
+                              <p className="text-white font-medium">{caseData.staffUserId}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              )}
+
+                {/* Full Report Description Card */}
+                <Card className="oa-card">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-white flex items-center gap-2 text-lg">
+                      <FileText className="h-5 w-5" />
+                      Original Report Description
+                    </CardTitle>
+                    <p className="text-sm text-gray-400 mt-1">This is the exact description as provided by the user</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 sm:p-6">
+                      <div className="text-gray-100 whitespace-pre-wrap leading-relaxed text-sm sm:text-base">
+                        {caseData.description}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Additional User-Provided Details */}
+                {(caseData.tags && caseData.tags.length > 0) || caseData.metadata && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                    {/* Tags Section */}
+                    {caseData.tags && caseData.tags.length > 0 && (
+                      <Card className="oa-card">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-white text-lg">User-Provided Tags</CardTitle>
+                          <p className="text-sm text-gray-400">Original tags as submitted</p>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex flex-wrap gap-2">
+                            {caseData.tags.map((tag: string, index: number) => (
+                              <Badge key={index} variant="outline" className="text-blue-400 border-blue-500/50">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Metadata Section */}
+                    {caseData.metadata && Object.keys(caseData.metadata).length > 0 && (
+                      <Card className="oa-card">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-white text-lg">Additional Information</CardTitle>
+                          <p className="text-sm text-gray-400">Extra details provided by user</p>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {Object.entries(caseData.metadata).map(([key, value]: [string, any]) => (
+                              <div key={key} className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                                <span className="text-gray-400 capitalize text-sm font-medium">
+                                  {key.replace(/_/g, ' ')}:
+                                </span>
+                                <span className="text-white break-words text-sm">
+                                  {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
+                {/* AI Analysis Summary (if available) */}
+                {(caseData.aiRiskScore || caseData.aiUrgencyLevel || caseData.moderationAdvice) && (
+                  <Card className="oa-card">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-white flex items-center gap-2 text-lg">
+                        <Brain className="h-5 w-5 text-purple-400" />
+                        AI Analysis Summary
+                      </CardTitle>
+                      <p className="text-sm text-gray-400">Automated analysis of the case</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        {caseData.aiRiskScore && (
+                          <div className="text-center p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                            <div className="text-3xl font-bold text-purple-400">{caseData.aiRiskScore}/10</div>
+                            <div className="text-sm text-gray-400 mt-1">Risk Score</div>
+                          </div>
+                        )}
+                        {caseData.aiUrgencyLevel && (
+                          <div className="text-center p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                            <div className="text-xl font-bold text-orange-400 capitalize">{caseData.aiUrgencyLevel}</div>
+                            <div className="text-sm text-gray-400 mt-1">Urgency Level</div>
+                          </div>
+                        )}
+                        <div className="text-center p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                          <div className="text-xl font-bold text-blue-400">
+                            {Math.floor((Date.now() - new Date(caseData.createdAt).getTime()) / (1000 * 60 * 60 * 24))}
+                          </div>
+                          <div className="text-sm text-gray-400 mt-1">Days Since Report</div>
+                        </div>
+                      </div>
+                      {caseData.moderationAdvice && (
+                        <div className="mt-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+                          <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+                            <Brain className="h-4 w-4" />
+                            AI Moderation Advice:
+                          </h4>
+                          <p className="text-gray-300 text-sm leading-relaxed">{caseData.moderationAdvice}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </TabsContent>
+
+
 
             <TabsContent value="ai-analysis" className="mt-6">
               {caseData.aiAnalysis ? (
