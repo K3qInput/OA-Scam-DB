@@ -7,11 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import DataTable from "@/components/ui/data-table";
-import CaseModal from "@/components/case-modal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import AnimatedCounter from "@/components/animated-counter";
 import LoadingSpinner, { LoadingCard } from "@/components/loading-spinner";
 import EnhancedButton from "@/components/enhanced-button";
@@ -36,7 +35,7 @@ export default function Dashboard() {
     page: 1,
     limit: 10,
   });
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -235,7 +234,7 @@ export default function Dashboard() {
               <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl animate-fade-in">
                 <DataTable
                   cases={cases}
-                  onViewCase={(caseId) => setSelectedCaseId(caseId)}
+                  onViewCase={(caseId) => setLocation(`/case/${caseId}`)}
                   onApproveCase={handleApproveCase}
                   onDeleteCase={handleDeleteCase}
                 />
@@ -317,12 +316,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Case Detail Modal */}
-        <CaseModal
-          caseId={selectedCaseId}
-          isOpen={!!selectedCaseId}
-          onClose={() => setSelectedCaseId(null)}
-        />
+
       </div>
     </DashboardLayout>
   );
