@@ -5,7 +5,8 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
 import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";

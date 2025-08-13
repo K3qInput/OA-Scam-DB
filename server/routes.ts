@@ -408,7 +408,12 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Discord OAuth routes
-  app.get("/auth/discord", passport.authenticate("discord"));
+  app.get("/auth/discord", (req, res, next) => {
+    if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
+      return res.redirect("/login?error=discord_not_configured");
+    }
+    passport.authenticate("discord")(req, res, next);
+  });
 
   app.get("/auth/discord/callback", 
     passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),

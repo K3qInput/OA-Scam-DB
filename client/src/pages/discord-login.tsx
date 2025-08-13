@@ -36,6 +36,8 @@ export default function DiscordLogin() {
         setError("Discord authentication failed. Please try again.");
       } else if (errorParam === 'auth_failed') {
         setError("Authentication error. Please try again.");
+      } else if (errorParam === 'discord_not_configured') {
+        setError("Discord authentication is not configured. Please use traditional login.");
       }
     }
 
@@ -46,7 +48,13 @@ export default function DiscordLogin() {
   }, [setLocation]);
 
   const handleDiscordLogin = () => {
-    window.location.href = "/auth/discord";
+    setError("");
+    setSuccess("");
+    try {
+      window.location.href = "/auth/discord";
+    } catch (err) {
+      setError("Failed to redirect to Discord. Please try again.");
+    }
   };
 
   const handleTraditionalLogin = async (e: React.FormEvent) => {
