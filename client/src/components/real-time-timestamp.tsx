@@ -19,7 +19,7 @@ export function RealTimeTimestamp({
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Update every minute
+    }, 30000); // Update every 30 seconds for more frequent updates
     
     return () => clearInterval(timer);
   }, []);

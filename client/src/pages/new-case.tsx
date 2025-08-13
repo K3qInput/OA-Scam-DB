@@ -164,7 +164,7 @@ function NewCaseForm() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header with real-time info */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -176,8 +176,8 @@ function NewCaseForm() {
             Back
           </Button>
         </div>
-        <div className="text-sm text-gray-400 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <span>Created: {formatDistanceToNow(new Date())} ago</span>
+        <div className="text-sm text-gray-400 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+          <span>Created: <CurrentTime className="text-white" /></span>
           <span>Priority: Real-time submission</span>
           <span>Status: Draft</span>
         </div>
@@ -193,7 +193,7 @@ function NewCaseForm() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Left Column */}
                 <div className="space-y-4">
                   <FormField

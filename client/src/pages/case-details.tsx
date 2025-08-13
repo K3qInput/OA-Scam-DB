@@ -90,20 +90,20 @@ export default function CaseDetails() {
         <Header />
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-oa-surface bg-gradient-to-r from-oa-dark to-oa-surface">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-oa-surface bg-gradient-to-r from-oa-dark to-oa-surface">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation("/dashboard")}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white self-start"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
               <div>
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                   <h1 className="text-2xl font-bold text-white">{caseData.title}</h1>
                   <Badge className={`border ${getStatusColor(caseData.status)}`}>
                     {caseData.status.toUpperCase()}
@@ -140,28 +140,28 @@ export default function CaseDetails() {
         </div>
 
         {/* Content */}
-        <div className="px-8 py-6">
+        <div className="px-4 sm:px-6 lg:px-8 py-6">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-oa-surface">
-              <TabsTrigger value="details">Case Details</TabsTrigger>
-              <TabsTrigger value="ai-analysis">AI Analysis</TabsTrigger>
-              <TabsTrigger value="evidence">Evidence</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-oa-surface">
+              <TabsTrigger value="details" className="text-xs sm:text-sm">Details</TabsTrigger>
+              <TabsTrigger value="ai-analysis" className="text-xs sm:text-sm">AI Analysis</TabsTrigger>
+              <TabsTrigger value="evidence" className="text-xs sm:text-sm">Evidence</TabsTrigger>
+              <TabsTrigger value="timeline" className="text-xs sm:text-sm">Timeline</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="space-y-6 mt-6">
               {/* Case Information Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                 {/* Basic Information */}
                 <Card className="oa-card">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <User className="h-5 w-5" />
+                    <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5" />
                       Case Information
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-gray-400">Reported User</label>
                         <p className="text-white mt-1">{caseData.reportedUserId}</p>

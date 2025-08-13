@@ -58,7 +58,7 @@ export default function Dashboard() {
     },
   });
 
-  // Fetch enhanced statistics
+  // Fetch statistics with real-time updates
   const { data: statistics } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     initialData: {
@@ -84,7 +84,9 @@ export default function Dashboard() {
         seniorStaff: 0,
         staff: 0,
       }
-    }
+    },
+    refetchInterval: 15000, // Refetch every 15 seconds for real-time stats
+    refetchIntervalInBackground: true,
   });
 
   // Update case mutation
@@ -98,7 +100,7 @@ export default function Dashboard() {
         description: "Case updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -125,18 +127,18 @@ export default function Dashboard() {
   };
 
   const handleStatusFilter = (status: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      status: status === "all" ? undefined : status, 
-      page: 1 
+    setFilters(prev => ({
+      ...prev,
+      status: status === "all" ? undefined : status,
+      page: 1
     }));
   };
 
   const handleTypeFilter = (type: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      type: type === "all" ? undefined : type, 
-      page: 1 
+    setFilters(prev => ({
+      ...prev,
+      type: type === "all" ? undefined : type,
+      page: 1
     }));
   };
 
@@ -178,7 +180,7 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <Select onValueChange={handleTypeFilter}>
               <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white w-40">
                 <SelectValue placeholder="All Types" />
@@ -192,7 +194,7 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
           </div>
-          
+
           <Link href="/new-case">
             <EnhancedButton variant="primary" glow pulse>
               <Plus className="h-4 w-4 mr-2" />
@@ -214,7 +216,7 @@ export default function Dashboard() {
                 trendDirection="up"
                 animationDelay={0}
               />
-              
+
               <StatsCard
                 title="Pending Review"
                 value={statistics?.pendingCases || 0}
@@ -223,7 +225,7 @@ export default function Dashboard() {
                 trendDirection="down"
                 animationDelay={100}
               />
-              
+
               <StatsCard
                 title="Verified Cases"
                 value={statistics?.verifiedCases || 0}
@@ -232,7 +234,7 @@ export default function Dashboard() {
                 trendDirection="up"
                 animationDelay={200}
               />
-              
+
               <StatsCard
                 title="Staff Members"
                 value={statistics?.staffMembers?.total || 0}
@@ -315,11 +317,11 @@ export default function Dashboard() {
           {/* Right Sidebar with Intelligence Widgets */}
           <div className="lg:col-span-1 space-y-6">
             <ThreatIntelWidget />
-            
+
             <QuickStats />
-            
+
             <ActivityFeed className="animate-fade-in" />
-            
+
             {/* Additional Quick Actions */}
             <EnhancedCard className="p-4 animate-scale-in">
               <h4 className="text-sm font-semibold text-white mb-3">Quick Actions</h4>
@@ -338,7 +340,7 @@ export default function Dashboard() {
             </EnhancedCard>
           </div>
         </div>
-        
+
         {/* Case Detail Modal */}
         <CaseModal
           caseId={selectedCaseId}
