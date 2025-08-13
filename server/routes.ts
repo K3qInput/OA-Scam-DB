@@ -48,8 +48,8 @@ import passport from "passport";
 import { analyzeCaseReport, generateModerationAdvice } from "./ai-analysis";
 import RateLimitMiddleware, { rateLimitConfigs } from './middleware/rateLimiting';
 import { eq, sql } from 'drizzle-orm';
-import { cases, users } from './db/schema'; // Assuming these are your Drizzle schema definitions
-import { db } from './db/client'; // Assuming this is your Drizzle client instance
+import { cases, users } from '@shared/schema';
+import { db } from './db';
 
 // AI Tool Processing Function
 async function processAiTool(tool: any, inputData: any): Promise<any> {
