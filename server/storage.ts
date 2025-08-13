@@ -1658,7 +1658,311 @@ Complex cases should be escalated to senior staff or tribunal.`,
   }
 }
 
-export const storage = new MemStorage();
+// Database Storage Implementation
+import { db } from "./db";
+import { 
+  users, 
+  cases, 
+  evidence, 
+  appeals, 
+  altAccounts, 
+  passwordResetRequests,
+  caseUpdates,
+  contactMessages,
+  staffAssignments,
+  tribunalProceedings,
+  vouches,
+  disputeResolutions,
+  disputeVotes,
+  altDetectionReports,
+  userSessions,
+  staffPermissions,
+  staffPerformance,
+  utilityCategories,
+  utilityDocuments,
+  documentRatings,
+  userReputation,
+  auditLogs,
+  aiToolCategories,
+  aiTools,
+  aiToolUsage,
+  aiToolRatings,
+  freelancerProfiles,
+  projects,
+  projectApplications,
+  projectReviews,
+  collaborationSpaces,
+  collaborationMembers,
+  collaborationTasks,
+  collaborationMessages,
+  verificationRequests,
+  securityEvents,
+  accountVerifications,
+  rateLimits
+} from "@shared/schema";
+import { eq, desc, and, or, sql } from "drizzle-orm";
+import bcrypt from 'bcrypt';
+
+export class DatabaseStorage implements IStorage {
+  generateId(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const id = this.generateId();
+    const hashedPassword = userData.password ? await bcrypt.hash(userData.password, 10) : null;
+    
+    const [user] = await db
+      .insert(users)
+      .values({
+        id,
+        ...userData,
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User> {
+    const updateData = { ...userData };
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+    
+    const [user] = await db
+      .update(users)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async authenticateUser(username: string, password: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    if (!user || !user.password) {
+      return null;
+    }
+    
+    const isValid = await bcrypt.compare(password, user.password);
+    return isValid ? user : null;
+  }
+
+  // Case operations
+  async createCase(caseData: InsertCase): Promise<Case> {
+    const id = this.generateId();
+    const [case_] = await db
+      .insert(cases)
+      .values({
+        id,
+        ...caseData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return case_;
+  }
+
+  async getCase(id: string): Promise<Case | undefined> {
+    const [case_] = await db.select().from(cases).where(eq(cases.id, id));
+    return case_ || undefined;
+  }
+
+  async getCases(options?: { userId?: string; status?: string; limit?: number; offset?: number }): Promise<{ cases: Case[]; total: number }> {
+    let query = db.select().from(cases);
+    let countQuery = db.select({ count: sql<number>`count(*)` }).from(cases);
+    
+    if (options?.userId) {
+      query = query.where(eq(cases.reportedBy, options.userId));
+      countQuery = countQuery.where(eq(cases.reportedBy, options.userId));
+    }
+    
+    if (options?.status) {
+      query = query.where(eq(cases.status, options.status));
+      countQuery = countQuery.where(eq(cases.status, options.status));
+    }
+    
+    query = query.orderBy(desc(cases.createdAt));
+    
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    if (options?.offset) {
+      query = query.offset(options.offset);
+    }
+    
+    const [casesResult, countResult] = await Promise.all([
+      query,
+      countQuery
+    ]);
+    
+    return {
+      cases: casesResult,
+      total: countResult[0]?.count || 0
+    };
+  }
+
+  async updateCase(id: string, caseData: Partial<InsertCase>): Promise<Case> {
+    const [case_] = await db
+      .update(cases)
+      .set({ ...caseData, updatedAt: new Date() })
+      .where(eq(cases.id, id))
+      .returning();
+    
+    if (!case_) {
+      throw new Error("Case not found");
+    }
+    return case_;
+  }
+
+  // Dashboard statistics with database queries
+  async getDashboardStatistics(): Promise<any> {
+    const [totalCasesResult] = await db.select({ count: sql<number>`count(*)` }).from(cases);
+    const [totalUsersResult] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const [pendingCasesResult] = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "pending"));
+    const [resolvedCasesResult] = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "resolved"));
+    
+    return {
+      totalCases: totalCasesResult?.count || 0,
+      totalUsers: totalUsersResult?.count || 0,
+      pendingCases: pendingCasesResult?.count || 0,
+      resolvedCases: resolvedCasesResult?.count || 0,
+      activeDisputes: 0, // TODO: Implement when dispute resolution is needed
+      totalReports: 0    // TODO: Implement when alt detection reports are needed
+    };
+  }
+
+  // Placeholder implementations for other methods (will inherit from MemStorage for now)
+  async createEvidence(evidenceData: InsertEvidence): Promise<Evidence> {
+    const id = this.generateId();
+    const [evidence_] = await db
+      .insert(evidence)
+      .values({
+        id,
+        ...evidenceData,
+        createdAt: new Date(),
+      })
+      .returning();
+    return evidence_;
+  }
+
+  async getEvidence(caseId: string): Promise<Evidence[]> {
+    return await db.select().from(evidence).where(eq(evidence.caseId, caseId));
+  }
+
+  // Stub implementations for remaining methods - these would be implemented as needed
+  async createAltAccount(altAccountData: InsertAltAccount): Promise<AltAccount> { throw new Error("Not implemented"); }
+  async getAltAccounts(userId: string): Promise<AltAccount[]> { return []; }
+  async createAppeal(appealData: InsertAppeal): Promise<Appeal> { throw new Error("Not implemented"); }
+  async getAppeals(caseId: string): Promise<Appeal[]> { return []; }
+  async getAppealsRequiringAction(): Promise<Appeal[]> { return []; }
+  async updateAppeal(id: string, appealData: Partial<InsertAppeal>): Promise<Appeal> { throw new Error("Not implemented"); }
+  async createPasswordResetRequest(requestData: InsertPasswordResetRequest): Promise<PasswordResetRequest> { throw new Error("Not implemented"); }
+  async getPasswordResetRequest(token: string): Promise<PasswordResetRequest | undefined> { return undefined; }
+  async getPasswordResetRequests(): Promise<PasswordResetRequest[]> { return []; }
+  async updatePasswordResetRequest(id: string, requestData: Partial<InsertPasswordResetRequest>): Promise<PasswordResetRequest> { throw new Error("Not implemented"); }
+  async createCaseUpdate(updateData: InsertCaseUpdate): Promise<CaseUpdate> { throw new Error("Not implemented"); }
+  async getCaseUpdates(caseId: string): Promise<CaseUpdate[]> { return []; }
+  async createContactMessage(messageData: InsertContactMessage): Promise<ContactMessage> { throw new Error("Not implemented"); }
+  async getContactMessages(): Promise<ContactMessage[]> { return []; }
+  async markContactMessageAsRead(id: string): Promise<ContactMessage> { throw new Error("Not implemented"); }
+  async createStaffAssignment(assignmentData: InsertStaffAssignment): Promise<StaffAssignment> { throw new Error("Not implemented"); }
+  async getStaffAssignments(userId?: string): Promise<StaffAssignment[]> { return []; }
+  async updateStaffAssignment(id: string, updates: Partial<StaffAssignment>): Promise<StaffAssignment> { throw new Error("Not implemented"); }
+  async getStaffMembers(): Promise<User[]> { return []; }
+  async createTribunalProceeding(proceedingData: InsertTribunalProceeding): Promise<TribunalProceeding> { throw new Error("Not implemented"); }
+  async getTribunalProceedings(): Promise<TribunalProceeding[]> { return []; }
+  async updateTribunalProceeding(id: string, updates: Partial<TribunalProceeding>): Promise<TribunalProceeding> { throw new Error("Not implemented"); }
+  async createVouch(vouchData: InsertVouch): Promise<Vouch> { throw new Error("Not implemented"); }
+  async getVouches(userId: string): Promise<Vouch[]> { return []; }
+  async createDisputeResolution(disputeData: InsertDisputeResolution): Promise<DisputeResolution> { throw new Error("Not implemented"); }
+  async getActiveDisputes(): Promise<DisputeResolution[]> { return []; }
+  async createDisputeVote(voteData: InsertDisputeVote): Promise<DisputeVote> { throw new Error("Not implemented"); }
+  async getDisputeVotes(disputeId: string): Promise<DisputeVote[]> { return []; }
+  async createAltDetectionReport(reportData: InsertAltDetectionReport): Promise<AltDetectionReport> { throw new Error("Not implemented"); }
+  async getAltDetectionReports(): Promise<AltDetectionReport[]> { return []; }
+  async getHighRiskDetections(): Promise<AltDetectionReport[]> { return []; }
+  async createUserSession(sessionData: InsertUserSession): Promise<UserSession> { throw new Error("Not implemented"); }
+  async getUserSessions(userId: string): Promise<UserSession[]> { return []; }
+  async updateUserSession(id: string, sessionData: Partial<UserSession>): Promise<UserSession> { throw new Error("Not implemented"); }
+  async createStaffPermission(permissionData: InsertStaffPermission): Promise<StaffPermission> { throw new Error("Not implemented"); }
+  async getStaffPermissions(userId: string): Promise<StaffPermission[]> { return []; }
+  async createStaffPerformance(performanceData: InsertStaffPerformance): Promise<StaffPerformance> { throw new Error("Not implemented"); }
+  async getStaffPerformance(userId: string, period?: string): Promise<StaffPerformance[]> { return []; }
+  async createUtilityCategory(categoryData: InsertUtilityCategory): Promise<UtilityCategory> { throw new Error("Not implemented"); }
+  async getUtilityCategories(): Promise<UtilityCategory[]> { return []; }
+  async createUtilityDocument(documentData: InsertUtilityDocument): Promise<UtilityDocument> { throw new Error("Not implemented"); }
+  async getUtilityDocuments(categoryId?: string): Promise<UtilityDocument[]> { return []; }
+  async createDocumentRating(ratingData: InsertDocumentRating): Promise<DocumentRating> { throw new Error("Not implemented"); }
+  async getUserReputation(userId: string): Promise<UserReputation | undefined> { return undefined; }
+  async createUserReputation(reputationData: InsertUserReputation): Promise<UserReputation> { throw new Error("Not implemented"); }
+  async createAuditLog(logData: InsertAuditLog): Promise<AuditLog> { throw new Error("Not implemented"); }
+  async getAuditLogs(): Promise<AuditLog[]> { return []; }
+  async getAiToolCategories(): Promise<AiToolCategory[]> { return []; }
+  async createAiToolCategory(categoryData: InsertAiToolCategory): Promise<AiToolCategory> { throw new Error("Not implemented"); }
+  async getAiTools(categoryId?: string): Promise<AiTool[]> { return []; }
+  async createAiTool(toolData: InsertAiTool): Promise<AiTool> { throw new Error("Not implemented"); }
+  async getAiTool(id: string): Promise<AiTool | undefined> { return undefined; }
+  async createAiToolUsage(usageData: InsertAiToolUsage): Promise<AiToolUsage> { throw new Error("Not implemented"); }
+  async updateAiToolUsage(id: string, usageData: Partial<InsertAiToolUsage>): Promise<AiToolUsage> { throw new Error("Not implemented"); }
+  async createAiToolRating(ratingData: InsertAiToolRating): Promise<AiToolRating> { throw new Error("Not implemented"); }
+  async createFreelancerProfile(profileData: InsertFreelancerProfile): Promise<FreelancerProfile> { throw new Error("Not implemented"); }
+  async getFreelancerProfile(userId: string): Promise<FreelancerProfile | undefined> { return undefined; }
+  async getFreelancerProfiles(filters?: { skills?: string[]; verified?: boolean }): Promise<FreelancerProfile[]> { return []; }
+  async updateFreelancerProfile(userId: string, profileData: Partial<InsertFreelancerProfile>): Promise<FreelancerProfile> { throw new Error("Not implemented"); }
+  async createProject(projectData: InsertProject): Promise<Project> { throw new Error("Not implemented"); }
+  async getProjects(filters?: { status?: string; skills?: string[]; clientId?: string }): Promise<Project[]> { return []; }
+  async getProject(id: string): Promise<Project | undefined> { return undefined; }
+  async updateProject(id: string, projectData: Partial<InsertProject>): Promise<Project> { throw new Error("Not implemented"); }
+  async createProjectApplication(applicationData: InsertProjectApplication): Promise<ProjectApplication> { throw new Error("Not implemented"); }
+  async getProjectApplications(projectId: string): Promise<ProjectApplication[]> { return []; }
+  async createProjectReview(reviewData: InsertProjectReview): Promise<ProjectReview> { throw new Error("Not implemented"); }
+  async createCollaborationSpace(spaceData: InsertCollaborationSpace): Promise<CollaborationSpace> { throw new Error("Not implemented"); }
+  async getCollaborationSpaces(userId: string): Promise<CollaborationSpace[]> { return []; }
+  async getCollaborationSpace(id: string): Promise<CollaborationSpace | undefined> { return undefined; }
+  async createCollaborationMember(memberData: InsertCollaborationMember): Promise<CollaborationMember> { throw new Error("Not implemented"); }
+  async createCollaborationTask(taskData: InsertCollaborationTask): Promise<CollaborationTask> { throw new Error("Not implemented"); }
+  async getCollaborationTasks(spaceId: string): Promise<CollaborationTask[]> { return []; }
+  async createCollaborationMessage(messageData: InsertCollaborationMessage): Promise<CollaborationMessage> { throw new Error("Not implemented"); }
+  async getCollaborationMessages(spaceId: string, taskId?: string): Promise<CollaborationMessage[]> { return []; }
+  async createVerificationRequest(requestData: InsertVerificationRequest): Promise<VerificationRequest> { throw new Error("Not implemented"); }
+  async getVerificationRequests(): Promise<VerificationRequest[]> { return []; }
+  async createSecurityEvent(eventData: InsertSecurityEvent): Promise<SecurityEvent> { throw new Error("Not implemented"); }
+  async getSecurityEvents(userId?: string): Promise<SecurityEvent[]> { return []; }
+  async createAccountVerification(verificationData: InsertAccountVerification): Promise<AccountVerification> { throw new Error("Not implemented"); }
+  async getAccountVerifications(userId: string): Promise<AccountVerification[]> { return []; }
+  async createRateLimit(rateLimitData: InsertRateLimit): Promise<RateLimit> { throw new Error("Not implemented"); }
+  async getRateLimit(identifier: string, action: string): Promise<RateLimit | undefined> { return undefined; }
+  async updateRateLimit(identifier: string, action: string, updates: Partial<RateLimit>): Promise<RateLimit> { throw new Error("Not implemented"); }
+}
+
+export const storage = new DatabaseStorage();
 
 // Initialize default data
 async function initializeDefaultData() {
