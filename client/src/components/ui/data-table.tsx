@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, CheckCircle, Trash2, AlertTriangle, Clock, FileText, User, Check, Scale, Edit } from "lucide-react";
+import { Eye, CheckCircle, Trash2, AlertTriangle, Clock, FileText, User as UserIcon, Check, Scale, Edit } from "lucide-react";
 import type { Case, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { RealTimeTimestamp } from "../real-time-timestamp";
