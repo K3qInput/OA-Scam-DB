@@ -9,8 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import { AIAnalysisDisplay } from "@/components/ai-analysis-display";
-import RealTimeTimestamp from "@/components/real-time-timestamp"; // Assuming RealTimeTimestamp component is available
-import CurrentTime from "@/components/current-time"; // Assuming CurrentTime component is available
+import { RealTimeTimestamp, CurrentTime } from "@/components/real-time-timestamp";
 
 export default function CaseDetails() {
   const { id } = useParams<{ id: string }>();
@@ -250,8 +249,8 @@ export default function CaseDetails() {
             <TabsContent value="ai-analysis" className="mt-6">
               {caseData.aiAnalysis ? (
                 <AIAnalysisDisplay 
-                  analysis={caseData.aiAnalysis} 
-                  moderationAdvice={caseData.moderationAdvice}
+                  data={caseData.aiAnalysis} 
+                  caseId={caseData.id}
                 />
               ) : (
                 <Card className="oa-card">

@@ -66,3 +66,6 @@ export function CurrentTime({ className = "" }: { className?: string }) {
     </span>
   );
 }
+
+// Add default export for backward compatibility
+export default RealTimeTimestamp;

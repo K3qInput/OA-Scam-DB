@@ -20,6 +20,8 @@ import ActivityFeed from "@/components/activity-feed";
 import ThreatIntelWidget from "@/components/threat-intel-widget";
 import QuickStats from "@/components/quick-stats";
 import { RealTimeTimestamp, CurrentTime } from "@/components/real-time-timestamp";
+import { RealTimeDashboardStats } from "@/components/real-time-dashboard-stats";
+import { RealTimeCaseTracker } from "@/components/real-time-case-tracker";
 
 interface Filters {
   status?: string;
@@ -213,44 +215,11 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content Area */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Enhanced Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <StatsCard
-                title="Total Cases"
-                value={statistics?.totalCases || 0}
-                icon={<TrendingUp className="h-6 w-6" />}
-                trend="+12%"
-                trendDirection="up"
-                animationDelay={0}
-              />
-
-              <StatsCard
-                title="Pending Review"
-                value={statistics?.pendingCases || 0}
-                icon={<AlertTriangle className="h-6 w-6" />}
-                trend="-5%"
-                trendDirection="down"
-                animationDelay={100}
-              />
-
-              <StatsCard
-                title="Verified Cases"
-                value={statistics?.verifiedCases || 0}
-                icon={<CheckCircle className="h-6 w-6" />}
-                trend="+8%"
-                trendDirection="up"
-                animationDelay={200}
-              />
-
-              <StatsCard
-                title="Staff Members"
-                value={statistics?.staffMembers?.total || 0}
-                icon={<Users className="h-6 w-6" />}
-                trend="+2"
-                trendDirection="up"
-                animationDelay={300}
-              />
-            </div>
+            {/* Real-time Dashboard Stats */}
+            <RealTimeDashboardStats />
+            
+            {/* Real-time Case Tracker */}
+            <RealTimeCaseTracker />
 
             {/* Main Cases Table */}
             {isLoading ? (

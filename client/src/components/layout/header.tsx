@@ -8,11 +8,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react";
+import { Bell, Search, Menu, LogOut, User, Settings, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import NotificationSystem from "@/components/notification-system";
 import { useLocation } from "wouter";
+import { CurrentTime } from "@/components/real-time-timestamp";
 
 
 interface HeaderProps {
@@ -47,6 +48,10 @@ function Header({ onMenuToggle, onSearch }: HeaderProps) {
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold text-white">OwnersAlliance</h1>
             <span className="hidden sm:inline-block text-blue-500 text-sm">Portal</span>
+            <div className="hidden lg:flex items-center gap-2 ml-4 text-gray-400 text-xs">
+              <Clock className="h-3 w-3" />
+              <CurrentTime className="font-mono" />
+            </div>
           </div>
         </div>
 
