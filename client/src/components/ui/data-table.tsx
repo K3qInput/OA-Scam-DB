@@ -13,6 +13,7 @@ import type { Case, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { RealTimeTimestamp } from "../real-time-timestamp";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
 
 interface DataTableProps {
   cases: (Case & { reportedUser: User; reporterUser: User; staffUser?: User })[];

@@ -1102,7 +1102,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     try {
       const totalCases = await db.select({ count: sql<number>`count(*)` }).from(cases);
-      const activeCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "investigating"));
+      const activeCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "pending"));
       const resolvedCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "resolved"));
       const pendingCases = await db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.status, "open"));
       const totalUsers = await db.select({ count: sql<number>`count(*)` }).from(users);

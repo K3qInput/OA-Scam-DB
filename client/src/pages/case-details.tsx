@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import { AIAnalysisDisplay } from "@/components/ai-analysis-display";
+import RealTimeTimestamp from "@/components/real-time-timestamp"; // Assuming RealTimeTimestamp component is available
+import CurrentTime from "@/components/current-time"; // Assuming CurrentTime component is available
 
 export default function CaseDetails() {
   const { id } = useParams<{ id: string }>();
@@ -85,10 +87,10 @@ export default function CaseDetails() {
   return (
     <div className="flex h-screen bg-oa-black">
       <Sidebar />
-      
+
       <main className="flex-1 overflow-auto">
         <Header />
-        
+
         {/* Header */}
         <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-oa-surface bg-gradient-to-r from-oa-dark to-oa-surface">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -121,11 +123,13 @@ export default function CaseDetails() {
                 <p className="text-gray-400">Case #{caseData.caseNumber}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="text-sm text-gray-400">Created</div>
-                <div className="text-white">{new Date(caseData.createdAt).toLocaleDateString()}</div>
+                <div className="text-white">
+                  <RealTimeTimestamp date={caseData.createdAt} showFullDate={true} />
+                </div>
               </div>
               {caseData.aiUrgencyLevel && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
@@ -292,24 +296,26 @@ export default function CaseDetails() {
                       <div>
                         <div className="text-white font-medium">Case Created</div>
                         <div className="text-sm text-gray-400">
-                          {new Date(caseData.createdAt).toLocaleString()}
+                          <RealTimeTimestamp date={caseData.createdAt} showFullDate={true} />
                         </div>
                         <div className="text-sm text-gray-300 mt-1">
-                          Initial report submitted by user
+                          Initial report submitted by user (<RealTimeTimestamp date={caseData.createdAt} showRelative={true} />)
                         </div>
                       </div>
                     </div>
-                    
+
                     {caseData.aiAnalysis && (
                       <div className="flex items-start gap-4 p-4 bg-oa-surface rounded-lg">
                         <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
                         <div>
                           <div className="text-white font-medium">AI Analysis Completed</div>
                           <div className="text-sm text-gray-400">
-                            {new Date(caseData.createdAt).toLocaleString()}
+                            <RealTimeTimestamp date={caseData.updatedAt || caseData.createdAt} showFullDate={true} />
                           </div>
                           <div className="text-sm text-gray-300 mt-1">
                             Risk assessment: {caseData.aiRiskScore}/10, Urgency: {caseData.aiUrgencyLevel}
+                            <br />
+                            <RealTimeTimestamp date={caseData.updatedAt || caseData.createdAt} showRelative={true} />
                           </div>
                         </div>
                       </div>

@@ -39,21 +39,28 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   // Fetch cases
-  const { data: casesData, isLoading } = useQuery({
+  const { data: casesData, isLoading, error: casesError } = useQuery({
     queryKey: ["/api/cases", filters],
+    refetchInterval: 10000, // Refetch every 10 seconds for real-time case updates
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.status) params.append("status", filters.status);
       if (filters.type) params.append("type", filters.type);
       if (filters.search) params.append("search", filters.search);
-      params.append("page", filters.page.toString());
-      params.append("limit", filters.limit.toString());
+      params.append("limit", "50");
+      params.append("offset", ((filters.page - 1) * 50).toString());
 
       const response = await fetch(`/api/cases?${params}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
         },
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch cases");
+      }
+
       return response.json();
     },
   });
