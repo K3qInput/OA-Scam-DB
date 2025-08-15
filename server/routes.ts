@@ -50,8 +50,7 @@ import RateLimitMiddleware, { rateLimitConfigs } from './middleware/rateLimiting
 import { eq, sql } from 'drizzle-orm';
 import { cases, users } from '@shared/schema';
 import { db } from './db';
-import { aiAnalysisRoutes } from './ai-analysis';
-import { emailService } from './email';
+// import { emailService } from './email'; // Commented out for now
 import { insuranceRoutes } from './insurance';
 import { impersonationRoutes } from './impersonation';
 import { ownershipRoutes } from './ownership';
@@ -2246,6 +2245,22 @@ export function registerRoutes(app: Express): Server {
 
     res.json(newRole);
   });
+
+  // ============= REPUTATION INSURANCE ROUTES =============
+  app.get("/api/insurance/policies", authenticateToken, insuranceRoutes.getPolicies);
+  app.post("/api/insurance/policies", authenticateToken, insuranceRoutes.purchasePolicy);
+  app.post("/api/insurance/claims", authenticateToken, insuranceRoutes.submitClaim);
+
+  // ============= IMPERSONATION DETECTION ROUTES =============
+  app.get("/api/impersonation/heatmap", authenticateToken, impersonationRoutes.getHeatmap);
+  app.get("/api/impersonation/alerts", authenticateToken, impersonationRoutes.getAlerts);
+  app.post("/api/impersonation/reports", authenticateToken, impersonationRoutes.reportImpersonation);
+
+  // ============= OWNERSHIP VERIFICATION ROUTES =============
+  app.get("/api/ownership/claims", authenticateToken, ownershipRoutes.getClaims);
+  app.post("/api/ownership/claims", authenticateToken, ownershipRoutes.submitClaim);
+  app.get("/api/ownership/badges", authenticateToken, ownershipRoutes.getBadges);
+  app.post("/api/ownership/claims/:claimId/verify", authenticateToken, requireRole(["admin", "tribunal_head", "senior_staff"]), ownershipRoutes.verifyClaim);
 
   const httpServer = createServer(app);
   return httpServer;

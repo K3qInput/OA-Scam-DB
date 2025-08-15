@@ -100,6 +100,105 @@
   }
 }
 
+@layer components {
+  /* OA Components */
+  .oa-card {
+    @apply bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl backdrop-blur-sm shadow-lg;
+  }
+
+  .oa-input {
+    @apply bg-slate-800 border-2 border-slate-600 text-white placeholder:text-slate-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 rounded-lg;
+  }
+
+  .oa-btn-primary {
+    @apply bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium px-6 py-2 rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105;
+  }
+
+  .oa-btn-secondary {
+    @apply bg-slate-700 hover:bg-slate-600 text-white font-medium px-6 py-2 rounded-lg border border-slate-600 transition-all duration-200;
+  }
+
+  .oa-badge-success {
+    @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+  }
+
+  .oa-badge-warning {
+    @apply bg-amber-500/20 text-amber-400 border border-amber-500/30;
+  }
+
+  .oa-badge-error {
+    @apply bg-red-500/20 text-red-400 border border-red-500/30;
+  }
+
+  .oa-badge-info {
+    @apply bg-blue-500/20 text-blue-400 border border-blue-500/30;
+  }
+
+  /* Glass morphism effects */
+  .oa-glass {
+    @apply backdrop-blur-md bg-white/5 border border-white/10;
+  }
+
+  .oa-glass-dark {
+    @apply backdrop-blur-md bg-black/20 border border-white/5;
+  }
+
+  /* Gradient backgrounds */
+  .oa-gradient-bg {
+    background: linear-gradient(135deg, 
+      hsl(222, 20%, 4%) 0%, 
+      hsl(0, 85%, 8%) 25%, 
+      hsl(220, 84%, 3%) 75%, 
+      hsl(220, 15%, 8%) 100%);
+  }
+
+  /* Animation utilities */
+  .oa-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .oa-slide-up {
+    animation: slideInUp 0.4s ease-out;
+  }
+
+  .oa-slide-right {
+    animation: slideInRight 0.4s ease-out;
+  }
+
+  .oa-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  /* Utility classes for OA color scheme */
+  .oa-black {
+    background-color: var(--oa-black);
+  }
+
+  .oa-dark {
+    background-color: var(--oa-dark);
+  }
+
+  .oa-gray {
+    color: var(--oa-gray);
+  }
+
+  .text-oa-gray {
+    color: var(--oa-gray);
+  }
+
+  .bg-oa-black {
+    background-color: var(--oa-black);
+  }
+
+  .bg-oa-dark {
+    background-color: var(--oa-dark);
+  }
+
+  .border-oa-border {
+    border-color: var(--oa-border);
+  }
+}
+
 /* Keyframe Animations */
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
