@@ -17,3 +17,47 @@ export function setAuthHeader(headers: HeadersInit = {}): HeadersInit {
   }
   return headers;
 }
+
+export async function apiRequest(
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+): Promise<Response> {
+  const headers: HeadersInit = {};
+  
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const token = getAuthToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    let errorMessage = res.statusText;
+    try {
+      const responseText = await res.text();
+      if (responseText) {
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorData.error || responseText;
+        } catch {
+          errorMessage = responseText;
+        }
+      }
+    } catch {
+      // If we can't read the response, use status text
+    }
+    throw new Error(`${res.status}: ${errorMessage}`);
+  }
+
+  return res;
+}
