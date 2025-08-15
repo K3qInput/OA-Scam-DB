@@ -7,29 +7,76 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield } from "lucide-react";
 import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom"; // Assuming react-router-dom is the intended routing library
+
+// Mock functions for demonstration purposes
+const generateFingerprint = () => "mock-fingerprint"; // Placeholder for actual fingerprint generation
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login, isLoggingIn } = useAuth();
-  const [, setLocation] = useLocation();
+  const [isLoading, setIsLoading] = useState(false); // Added isLoading state
+  const { login, isLoggingIn } = useAuth(); // Assuming useAuth provides a login function
+  const navigate = useNavigate(); // Use useNavigate from react-router-dom
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setIsLoading(true);
+    setError('');
+    console.log('Starting traditional login...');
 
     try {
-      console.log("Submitting login form with:", { username });
-      await login({ username, password });
-      console.log("Login successful, redirecting to dashboard");
-      // Small delay to ensure auth state is updated
-      setTimeout(() => {
-        setLocation("/dashboard");
-      }, 100);
-    } catch (err: any) {
-      console.error("Login error:", err);
-      setError(err.message || "Login failed");
+      console.log('Starting enhanced login with device fingerprinting...');
+
+      const deviceRiskScore = 0; // Placeholder for device risk scoring
+      const fingerprint = generateFingerprint();
+
+      const loginData = {
+        username,
+        password,
+        deviceRiskScore,
+        fingerprint
+      };
+
+      console.log('Attempting login with:', {
+        username,
+        deviceRiskScore,
+        fingerprint
+      });
+
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
+        throw new Error(errorData.error || 'Login failed');
+      }
+
+      const data = await response.json();
+      console.log('Login successful:', {
+        user: data.user,
+        hasToken: !!data.token,
+        securityAnalysis: data.securityAnalysis
+      });
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        console.log('Login successful, redirecting to dashboard');
+        navigate('/dashboard');
+      } else {
+        throw new Error('No token received');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -52,7 +99,7 @@ export default function Login() {
                 <AlertDescription className="text-red-400">{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="username" className="text-gray-300">Username</Label>
               <Input
@@ -65,7 +112,7 @@ export default function Login() {
                 className="oa-input"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password" className="text-gray-300">Password</Label>
               <Input
@@ -78,16 +125,16 @@ export default function Login() {
                 className="oa-input"
               />
             </div>
-            
+
             <Button
               type="submit"
-              disabled={isLoggingIn}
+              disabled={isLoading} // Use isLoading state here
               className="w-full oa-btn-primary"
             >
-              {isLoggingIn ? "Signing in..." : "Sign In"}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          
+
           <div className="mt-4 text-center text-sm text-gray-400">
             <p>Staff access only</p>
           </div>
