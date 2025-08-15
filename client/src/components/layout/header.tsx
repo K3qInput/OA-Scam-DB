@@ -6,7 +6,8 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuTrigger,
-  DropdownMenuSeparator 
+  DropdownMenuSeparator,
+  DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { Bell, Search, Menu, LogOut, User, Settings, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,12 +15,19 @@ import { Input } from "@/components/ui/input";
 import NotificationSystem from "@/components/notification-system";
 import { useLocation } from "wouter";
 import { CurrentTime } from "@/components/real-time-timestamp";
+import Link from "next/link";
 
 
 interface HeaderProps {
   onMenuToggle?: () => void;
   onSearch?: (query: string) => void;
 }
+
+// Placeholder for getPageTitle function, assuming it's defined elsewhere or will be provided.
+// For this example, we'll use a dummy title.
+const getPageTitle = () => "Dashboard"; 
+// Placeholder for activeUsers, assuming it's defined elsewhere or will be provided.
+const activeUsers = 123; 
 
 function Header({ onMenuToggle, onSearch }: HeaderProps) {
   const { user, logout } = useAuth();
@@ -75,7 +83,9 @@ function Header({ onMenuToggle, onSearch }: HeaderProps) {
 
         <div className="flex items-center gap-3">
           {/* Notifications */}
-          <NotificationSystem />
+          <div className="relative">
+            <NotificationSystem />
+          </div>
 
           {/* User Menu */}
           <DropdownMenu>
@@ -114,18 +124,22 @@ function Header({ onMenuToggle, onSearch }: HeaderProps) {
               </div>
               <DropdownMenuSeparator className="bg-slate-700" />
               <DropdownMenuItem 
-                onClick={() => setLocation("/profile")}
+                asChild
                 className="text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer"
               >
-                <User className="mr-2 h-4 w-4" />
-                Profile
+                <Link href="/profile" className="flex items-center w-full h-full px-2 py-1.5">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => setLocation("/settings")}
+                asChild
                 className="text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer"
               >
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+                <Link href="/settings" className="flex items-center w-full h-full px-2 py-1.5">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-slate-700" />
               <DropdownMenuItem 

@@ -1400,6 +1400,66 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Create user with enhanced validation
+  app.post("/api/admin/users", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
+    try {
+      const { username, email, role, firstName, lastName, password } = req.body;
+
+      if (!username || !email || !role) {
+        return res.status(400).json({ message: "Username, email, and role are required" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Hash password if provided, otherwise generate a random one
+      const hashedPassword = password ?
+        await bcrypt.hash(password, 10) :
+        await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+
+      const userData = {
+        username,
+        email,
+        passwordHash: hashedPassword,
+        role,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        isActive: true,
+        profileImageUrl: null,
+        department: null,
+        specialization: null,
+        staffId: null,
+        phoneNumber: null,
+        officeLocation: null,
+        emergencyContact: null,
+        certifications: [],
+        discordId: null,
+        discordUsername: null,
+        discordDiscriminator: null,
+        discordAvatar: null
+      };
+
+      const user = await storage.createUser(userData);
+
+      // Log the creation
+      await createAuditLog(req.user.id, "create_user", "user", user.id, null, {
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }, req);
+
+      // Remove password hash from response
+      const { passwordHash, ...userResponse } = user;
+      res.status(201).json(userResponse);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   // Update user (admin only)
   app.patch("/api/admin/users/:id", authenticateToken, requireRole(["admin"]), async (req: any, res) => {
     try {

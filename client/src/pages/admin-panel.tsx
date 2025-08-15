@@ -1,7 +1,8 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/sidebar";
-import Header from "@/components/layout/header";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { apiRequest } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, 
@@ -28,36 +30,69 @@ import {
   Eye,
   EyeOff,
   Trash2,
-  Edit
+  Edit,
+  Plus,
+  Search,
+  BarChart,
+  FileText,
+  Crown
 } from "lucide-react";
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
+}
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get dashboard statistics
+  // Queries
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/admin/statistics"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/statistics");
+      return response.json();
+    },
   });
 
-  // Get all users
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/users");
+      return response.json();
+    },
   });
 
-  // Get audit logs
   const { data: auditLogs, isLoading: logsLoading } = useQuery({
     queryKey: ["/api/admin/audit-logs"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/audit-logs");
+      return response.json();
+    },
   });
 
-  // Get system health
   const { data: systemHealth } = useQuery({
     queryKey: ["/api/admin/system-health"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/system-health");
+      return response.json();
+    },
   });
 
-  // Update user mutation
+  // Mutations
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: any }) => {
       const response = await apiRequest("PATCH", `/api/admin/users/${userId}`, updates);
@@ -79,7 +114,28 @@ export default function AdminPanel() {
     },
   });
 
-  // Delete user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const response = await apiRequest("POST", "/api/admin/users", userData);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setNewUserDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       const response = await apiRequest("DELETE", `/api/admin/users/${userId}`);
@@ -115,262 +171,241 @@ export default function AdminPanel() {
     });
   };
 
+  const filteredUsers = users?.filter((user: User) =>
+    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'bg-red-500';
+      case 'tribunal_head': return 'bg-purple-500';
+      case 'senior_staff': return 'bg-blue-500';
+      case 'staff': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-oa-black">
+    <div className="flex h-screen bg-gray-950">
       <Sidebar />
-      <main className="flex-1 overflow-auto">
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <div className="px-8 py-6">
+        
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-950 p-4 lg:p-6">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Admin Panel</h1>
-            <p className="text-oa-gray">Manage users, monitor system, and control platform settings</p>
+            <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
+              <Crown className="h-8 w-8 text-red-500" />
+              Admin Control Panel
+            </h1>
+            <p className="text-gray-400">Ultimate platform management and control center</p>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 bg-oa-dark border border-oa-border">
-              <TabsTrigger 
-                value="overview" 
-                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
-                data-testid="tab-overview"
-              >
+            <TabsList className="bg-gray-800 border-gray-700">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-red-600">
+                <TrendingUp className="h-4 w-4 mr-2" />
                 Overview
               </TabsTrigger>
-              <TabsTrigger 
-                value="users" 
-                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
-                data-testid="tab-users"
-              >
-                Users
+              <TabsTrigger value="users" className="data-[state=active]:bg-red-600">
+                <Users className="h-4 w-4 mr-2" />
+                User Management
               </TabsTrigger>
-              <TabsTrigger 
-                value="audit" 
-                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
-                data-testid="tab-audit"
-              >
-                Audit Logs
+              <TabsTrigger value="moderation" className="data-[state=active]:bg-red-600">
+                <Shield className="h-4 w-4 mr-2" />
+                Moderation
               </TabsTrigger>
-              <TabsTrigger 
-                value="system" 
-                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
-                data-testid="tab-system"
-              >
+              <TabsTrigger value="system" className="data-[state=active]:bg-red-600">
+                <Database className="h-4 w-4 mr-2" />
                 System Health
               </TabsTrigger>
-              <TabsTrigger 
-                value="security" 
-                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
-                data-testid="tab-security"
-              >
-                Security
-              </TabsTrigger>
-              <TabsTrigger 
-                value="settings" 
-                className="text-oa-gray data-[state=active]:text-white data-[state=active]:bg-oa-primary/10"
-                data-testid="tab-settings"
-              >
-                Settings
+              <TabsTrigger value="audit" className="data-[state=active]:bg-red-600">
+                <FileText className="h-4 w-4 mr-2" />
+                Audit Logs
               </TabsTrigger>
             </TabsList>
 
+            {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-oa-dark border-oa-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-oa-gray">Total Users</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-white">{(stats as any)?.totalUsers || 0}</div>
-                    <div className="text-xs text-oa-green">+12% from last month</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-gray-900 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-400">Total Users</p>
+                        <p className="text-2xl font-bold text-white">{stats?.totalUsers || 0}</p>
+                      </div>
+                      <Users className="h-8 w-8 text-blue-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gray-900 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-400">Active Cases</p>
+                        <p className="text-2xl font-bold text-white">{stats?.activeCases || 0}</p>
+                      </div>
+                      <AlertTriangle className="h-8 w-8 text-orange-500" />
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-oa-dark border-oa-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-oa-gray">Total Cases</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-white">{(stats as any)?.totalCases || 0}</div>
-                    <div className="text-xs text-oa-green">+8% from last month</div>
+                <Card className="bg-gray-900 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-400">System Health</p>
+                        <p className="text-2xl font-bold text-white">{systemHealth?.status === 'healthy' ? '100%' : '0%'}</p>
+                      </div>
+                      <Activity className="h-8 w-8 text-green-500" />
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-oa-dark border-oa-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-oa-gray">Pending Cases</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-white">{(stats as any)?.pendingCases || 0}</div>
-                    <div className="text-xs text-yellow-400">Needs attention</div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-oa-dark border-oa-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-oa-gray">Active Disputes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-white">{(stats as any)?.activeDisputes || 0}</div>
-                    <div className="text-xs text-red-400">Monitor closely</div>
+                <Card className="bg-gray-900 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-400">Uptime</p>
+                        <p className="text-2xl font-bold text-white">{Math.floor((systemHealth?.uptime || 0) / 60)}m</p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-purple-500" />
+                    </div>
                   </CardContent>
                 </Card>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="bg-oa-dark border-oa-border">
+                <Card className="bg-gray-900 border-gray-700">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-oa-primary" />
-                      Recent Activity
-                    </CardTitle>
+                    <CardTitle className="text-white">Recent Activity</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {(auditLogs as any[])?.slice(0, 5).map((log: any) => (
-                      <div key={log.id} className="flex items-center justify-between">
-                        <div>
-                          <div className="text-white text-sm">{log.action}</div>
-                          <div className="text-oa-gray text-xs">{log.userId}</div>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {auditLogs?.slice(0, 5).map((log: any) => (
+                        <div key={log.id} className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-300">{log.action}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(log.createdAt).toLocaleString()}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-oa-gray text-xs">
-                          {new Date(log.createdAt).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-oa-dark border-oa-border">
+                <Card className="bg-gray-900 border-gray-700">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                      System Alerts
-                    </CardTitle>
+                    <CardTitle className="text-white">Quick Actions</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-white text-sm">High CPU Usage</div>
-                        <div className="text-oa-gray text-xs">Server load at 85%</div>
-                      </div>
-                      <Badge variant="destructive">Critical</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-white text-sm">Memory Usage</div>
-                        <div className="text-oa-gray text-xs">RAM usage at 70%</div>
-                      </div>
-                      <Badge variant="outline" className="text-yellow-400">Warning</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-white text-sm">Database Size</div>
-                        <div className="text-oa-gray text-xs">Growing rapidly</div>
-                      </div>
-                      <Badge variant="outline" className="text-oa-primary">Info</Badge>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setActiveTab("users")}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Manage Users
+                      </Button>
+                      <Button className="bg-green-600 hover:bg-green-700" onClick={() => setNewUserDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create User
+                      </Button>
+                      <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => setActiveTab("moderation")}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Moderation
+                      </Button>
+                      <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => setActiveTab("system")}>
+                        <Database className="h-4 w-4 mr-2" />
+                        System Status
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
 
+            {/* User Management Tab */}
             <TabsContent value="users" className="space-y-6">
-              <Card className="bg-oa-dark border-oa-border">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Users className="h-5 w-5 text-oa-primary" />
-                    User Management
-                  </CardTitle>
-                  <CardDescription className="text-oa-gray">
-                    Manage user accounts, roles, and permissions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex gap-4">
-                      <Input
-                        placeholder="Search users..."
-                        className="bg-oa-black border-oa-border text-white"
-                        data-testid="input-search-users"
-                      />
-                      <Select>
-                        <SelectTrigger className="w-48 bg-oa-black border-oa-border text-white">
-                          <SelectValue placeholder="Filter by role" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-oa-dark border-oa-border">
-                          <SelectItem value="all">All Roles</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="staff">Staff</SelectItem>
-                          <SelectItem value="user">User</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search users..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 bg-gray-800 border-gray-700 text-white"
+                    />
+                  </div>
+                </div>
+                <Button onClick={() => setNewUserDialogOpen(true)} className="bg-green-600 hover:bg-green-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create User
+                </Button>
+              </div>
 
+              <Card className="bg-gray-900 border-gray-700">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-oa-border">
-                          <TableHead className="text-oa-gray">User</TableHead>
-                          <TableHead className="text-oa-gray">Role</TableHead>
-                          <TableHead className="text-oa-gray">Status</TableHead>
-                          <TableHead className="text-oa-gray">Last Login</TableHead>
-                          <TableHead className="text-oa-gray">Actions</TableHead>
+                        <TableRow className="border-gray-700">
+                          <TableHead className="text-gray-300">User</TableHead>
+                          <TableHead className="text-gray-300">Role</TableHead>
+                          <TableHead className="text-gray-300">Status</TableHead>
+                          <TableHead className="text-gray-300">Last Login</TableHead>
+                          <TableHead className="text-gray-300">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(users as any[])?.map((user: any) => (
-                          <TableRow key={user.id} className="border-oa-border">
-                            <TableCell className="text-white">
-                              <div className="flex items-center gap-3">
+                        {filteredUsers.map((user: User) => (
+                          <TableRow key={user.id} className="border-gray-700">
+                            <TableCell>
+                              <div className="flex items-center space-x-3">
                                 <Avatar className="h-8 w-8">
                                   <AvatarImage src={user.profileImageUrl} />
-                                  <AvatarFallback className="bg-oa-black text-white">
-                                    {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                                  <AvatarFallback className="bg-red-600 text-white text-xs">
+                                    {user.username.slice(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <div className="font-medium">{user.firstName} {user.lastName}</div>
-                                  <div className="text-oa-gray text-sm">{user.email}</div>
+                                  <p className="font-medium text-white">{user.username}</p>
+                                  <p className="text-sm text-gray-400">{user.email}</p>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={user.role === 'admin' ? 'default' : user.role === 'staff' ? 'secondary' : 'outline'}>
+                              <Badge className={`${getRoleColor(user.role)} text-white`}>
                                 {user.role}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={user.isActive ? 'default' : 'destructive'}>
-                                {user.isActive ? 'Active' : 'Inactive'}
+                              <Badge variant={user.isActive ? "default" : "destructive"}>
+                                {user.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-oa-gray">
-                              {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
+                            <TableCell className="text-gray-400">
+                              {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center space-x-2">
                                 <Button
-                                  variant="ghost"
                                   size="sm"
+                                  variant="outline"
+                                  onClick={() => setSelectedUser(user)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={user.isActive ? "destructive" : "default"}
                                   onClick={() => toggleUserStatus(user.id, user.isActive)}
-                                  data-testid={`button-toggle-user-${user.id}`}
                                 >
                                   {user.isActive ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                                </Button>
-                                <Select onValueChange={(role) => changeUserRole(user.id, role)}>
-                                  <SelectTrigger className="w-24 h-8">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="user">User</SelectItem>
-                                    <SelectItem value="staff">Staff</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteUserMutation.mutate(user.id)}
-                                  data-testid={`button-delete-user-${user.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-400" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -383,208 +418,179 @@ export default function AdminPanel() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="audit" className="space-y-6">
-              <Card className="bg-oa-dark border-oa-border">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Eye className="h-5 w-5 text-oa-primary" />
-                    Audit Logs
-                  </CardTitle>
-                  <CardDescription className="text-oa-gray">
-                    Monitor all system activities and user actions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-oa-border">
-                        <TableHead className="text-oa-gray">Timestamp</TableHead>
-                        <TableHead className="text-oa-gray">User</TableHead>
-                        <TableHead className="text-oa-gray">Action</TableHead>
-                        <TableHead className="text-oa-gray">Entity</TableHead>
-                        <TableHead className="text-oa-gray">IP Address</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(auditLogs as any[])?.map((log: any) => (
-                        <TableRow key={log.id} className="border-oa-border">
-                          <TableCell className="text-oa-gray">
-                            {new Date(log.createdAt).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-white">{log.userId}</TableCell>
-                          <TableCell className="text-white">{log.action}</TableCell>
-                          <TableCell className="text-oa-gray">{log.entityType}</TableCell>
-                          <TableCell className="text-oa-gray">{log.ipAddress}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
+            {/* System Health Tab */}
             <TabsContent value="system" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-oa-dark border-oa-border">
+                <Card className="bg-gray-900 border-gray-700">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <Database className="h-5 w-5 text-oa-primary" />
-                      Database Health
-                    </CardTitle>
+                    <CardTitle className="text-white">System Status</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">Status</span>
-                      <Badge variant="default">Healthy</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">Connections</span>
-                      <span className="text-white">12/100</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">Size</span>
-                      <span className="text-white">2.3 GB</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">Backup</span>
-                      <span className="text-oa-green">24h ago</span>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Database</span>
+                        <Badge className="bg-green-500 text-white">Online</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">API Server</span>
+                        <Badge className="bg-green-500 text-white">Healthy</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Memory Usage</span>
+                        <span className="text-white">{Math.round((systemHealth?.memory?.used || 0) / 1024 / 1024)}MB</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-oa-dark border-oa-border">
+                <Card className="bg-gray-900 border-gray-700">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-oa-primary" />
-                      Performance Metrics
-                    </CardTitle>
+                    <CardTitle className="text-white">Performance</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">CPU Usage</span>
-                      <span className="text-yellow-400">85%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">Memory Usage</span>
-                      <span className="text-oa-green">45%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">Disk Usage</span>
-                      <span className="text-oa-green">32%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-oa-gray">Network I/O</span>
-                      <span className="text-oa-green">Normal</span>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Uptime</span>
+                        <span className="text-white">{Math.floor((systemHealth?.uptime || 0) / 60)} minutes</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Response Time</span>
+                        <span className="text-white">~50ms</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Error Rate</span>
+                        <span className="text-white">0.1%</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
 
-            <TabsContent value="security" className="space-y-6">
-              <Card className="bg-oa-dark border-oa-border">
+            {/* Audit Logs Tab */}
+            <TabsContent value="audit" className="space-y-6">
+              <Card className="bg-gray-900 border-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-oa-primary" />
-                    Security Settings
-                  </CardTitle>
-                  <CardDescription className="text-oa-gray">
-                    Configure security policies and monitor threats
+                  <CardTitle className="text-white">Recent Audit Logs</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    System and user activity logs
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <Label className="text-white">Login Attempts</Label>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-oa-gray">Max failed attempts</span>
-                          <Input type="number" defaultValue="5" className="w-20 bg-oa-black border-oa-border text-white" />
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-oa-gray">Lockout duration (minutes)</span>
-                          <Input type="number" defaultValue="30" className="w-20 bg-oa-black border-oa-border text-white" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label className="text-white">Session Management</Label>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-oa-gray">Session timeout (hours)</span>
-                          <Input type="number" defaultValue="24" className="w-20 bg-oa-black border-oa-border text-white" />
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-oa-gray">Concurrent sessions</span>
-                          <Input type="number" defaultValue="3" className="w-20 bg-oa-black border-oa-border text-white" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button className="bg-oa-primary hover:bg-oa-primary/80" data-testid="button-save-security">
-                    Save Security Settings
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-6">
-              <Card className="bg-oa-dark border-oa-border">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-oa-primary" />
-                    Platform Settings
-                  </CardTitle>
-                  <CardDescription className="text-oa-gray">
-                    Configure global platform settings and preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent>
                   <div className="space-y-4">
-                    <div>
-                      <Label className="text-white">Platform Name</Label>
-                      <Input 
-                        defaultValue="OwnersAlliance" 
-                        className="bg-oa-black border-oa-border text-white"
-                        data-testid="input-platform-name"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-white">Support Email</Label>
-                      <Input 
-                        defaultValue="support@ownersalliance.com" 
-                        className="bg-oa-black border-oa-border text-white"
-                        data-testid="input-support-email"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-white">Maintenance Mode</Label>
-                      <Select>
-                        <SelectTrigger className="bg-oa-black border-oa-border text-white">
-                          <SelectValue placeholder="Select mode" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-oa-dark border-oa-border">
-                          <SelectItem value="off">Off</SelectItem>
-                          <SelectItem value="on">On</SelectItem>
-                          <SelectItem value="scheduled">Scheduled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {auditLogs?.slice(0, 10).map((log: any) => (
+                      <div key={log.id} className="flex items-start space-x-4 p-4 bg-gray-800 rounded-lg">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-white">{log.action}</p>
+                            <span className="text-sm text-gray-400">
+                              {new Date(log.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-400 mt-1">
+                            User: {log.userId} | IP: {log.ipAddress}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-
-                  <Button className="bg-oa-primary hover:bg-oa-primary/80" data-testid="button-save-settings">
-                    Save Settings
-                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
-        </div>
-      </main>
+
+          {/* Create User Dialog */}
+          <Dialog open={newUserDialogOpen} onOpenChange={setNewUserDialogOpen}>
+            <DialogContent className="bg-gray-900 border-gray-700 text-white">
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Add a new user to the system with specified role and permissions.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Username</Label>
+                  <Input placeholder="Enter username" className="bg-gray-800 border-gray-700" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" placeholder="Enter email" className="bg-gray-800 border-gray-700" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select>
+                    <SelectTrigger className="bg-gray-800 border-gray-700">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="senior_staff">Senior Staff</SelectItem>
+                      <SelectItem value="tribunal_head">Tribunal Head</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setNewUserDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="bg-green-600 hover:bg-green-700">
+                    Create User
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit User Dialog */}
+          {selectedUser && (
+            <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
+              <DialogContent className="bg-gray-900 border-gray-700 text-white">
+                <DialogHeader>
+                  <DialogTitle>Edit User: {selectedUser.username}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Select
+                      value={selectedUser.role}
+                      onValueChange={(role) => changeUserRole(selectedUser.id, role)}
+                    >
+                      <SelectTrigger className="bg-gray-800 border-gray-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                        <SelectItem value="senior_staff">Senior Staff</SelectItem>
+                        <SelectItem value="tribunal_head">Tribunal Head</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setSelectedUser(null)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      onClick={() => {
+                        deleteUserMutation.mutate(selectedUser.id);
+                        setSelectedUser(null);
+                      }}
+                    >
+                      Delete User
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
