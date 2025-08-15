@@ -100,3 +100,100 @@ export const insuranceRoutes = {
     }
   },
 };
+export interface InsurancePolicy {
+  id: string;
+  userId: string;
+  trustScore: number;
+  premiumPaid: number;
+  coverage: {
+    falseReportProtection: boolean;
+    trustScoreGuarantee: number;
+    evidenceVerification: boolean;
+  };
+  status: 'active' | 'expired' | 'claimed';
+  createdAt: Date;
+  expiresAt: Date;
+  claims: InsuranceClaim[];
+}
+
+export interface InsuranceClaim {
+  id: string;
+  policyId: string;
+  reportId: string;
+  claimReason: string;
+  evidence: string[];
+  status: 'pending' | 'approved' | 'denied';
+  payout: number;
+  processedAt?: Date;
+}
+
+export class ReputationInsuranceSystem {
+  async createPolicy(userId: string, trustScore: number): Promise<InsurancePolicy> {
+    const premium = this.calculatePremium(trustScore);
+    
+    const policy: InsurancePolicy = {
+      id: `policy_${Date.now()}`,
+      userId,
+      trustScore,
+      premiumPaid: premium,
+      coverage: {
+        falseReportProtection: true,
+        trustScoreGuarantee: trustScore * 0.8, // Guarantee 80% of current score
+        evidenceVerification: true
+      },
+      status: 'active',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+      claims: []
+    };
+
+    // In real implementation, save to database
+    console.log('Insurance policy created:', policy.id);
+    return policy;
+  }
+
+  private calculatePremium(trustScore: number): number {
+    // Higher trust score = lower premium
+    const basePremium = 100;
+    const trustMultiplier = Math.max(0.1, (100 - trustScore) / 100);
+    return basePremium * trustMultiplier;
+  }
+
+  async fileClaim(policyId: string, reportId: string, evidence: string[]): Promise<InsuranceClaim> {
+    const claim: InsuranceClaim = {
+      id: `claim_${Date.now()}`,
+      policyId,
+      reportId,
+      claimReason: 'False report affecting trust score',
+      evidence,
+      status: 'pending',
+      payout: 0
+    };
+
+    // AI-powered evidence verification
+    const verificationResult = await this.verifyEvidence(evidence);
+    
+    if (verificationResult.confidence > 0.8) {
+      claim.status = 'approved';
+      claim.payout = this.calculatePayout(policyId, reportId);
+      claim.processedAt = new Date();
+    }
+
+    return claim;
+  }
+
+  private async verifyEvidence(evidence: string[]): Promise<{confidence: number, analysis: string}> {
+    // AI analysis of evidence authenticity
+    return {
+      confidence: Math.random() * 0.4 + 0.6, // Mock confidence 60-100%
+      analysis: 'Evidence appears authentic based on metadata and content analysis'
+    };
+  }
+
+  private calculatePayout(policyId: string, reportId: string): number {
+    // Calculate payout based on policy terms and damage assessment
+    return 50; // Mock payout
+  }
+}
+
+export const insuranceSystem = new ReputationInsuranceSystem();

@@ -2247,7 +2247,6 @@ export function registerRoutes(app: Express): Server {
     res.json(newRole);
   });
 
-
   const httpServer = createServer(app);
   return httpServer;
 }

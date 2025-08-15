@@ -125,3 +125,7 @@ export function setAuthHeader(headers: HeadersInit = {}): HeadersInit {
   }
   return headers;
 }
+
+export function isUnauthorizedError(error: any): boolean {
+  return error && error.message === "Unauthorized";
+}

@@ -1,117 +1,134 @@
 
-import { Request, Response } from 'express';
-import { db } from './db';
-import { impersonationAlerts } from '../shared/schema';
-import { eq, like, desc, count, and } from 'drizzle-orm';
+export interface ImpersonationMatch {
+  platform: string;
+  username: string;
+  profilePicture?: string;
+  similarity: number;
+  confidence: number;
+  lastSeen: Date;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+}
 
-export const impersonationRoutes = {
-  // Get impersonation heatmap data
-  async getHeatmap(req: Request, res: Response) {
-    try {
-      // Aggregate data by platform
-      const heatmapData = await db
-        .select({
-          platform: impersonationAlerts.platform,
-          count: count(),
-        })
-        .from(impersonationAlerts)
-        .where(eq(impersonationAlerts.status, 'active'))
-        .groupBy(impersonationAlerts.platform);
+export interface ImpersonationHeatmap {
+  userId: string;
+  targetUsername: string;
+  matches: ImpersonationMatch[];
+  riskScore: number;
+  lastUpdated: Date;
+  alertLevel: 'none' | 'low' | 'medium' | 'high';
+}
 
-      // Add severity calculation
-      const enhancedData = heatmapData.map(item => {
-        let severity = 'low';
-        if (item.count >= 20) severity = 'critical';
-        else if (item.count >= 10) severity = 'high';
-        else if (item.count >= 5) severity = 'medium';
-
-        return {
-          ...item,
-          severity,
-          recentActivity: [], // Will be populated separately if needed
-        };
-      });
-
-      res.json(enhancedData);
-    } catch (error) {
-      console.error('Error fetching impersonation heatmap:', error);
-      res.status(500).json({ error: 'Internal server error' });
+export class ImpersonationDetectionSystem {
+  private platforms = ['discord', 'twitter', 'reddit', 'telegram', 'forums'];
+  
+  async scanForImpersonation(username: string, profilePic?: string): Promise<ImpersonationHeatmap> {
+    const matches: ImpersonationMatch[] = [];
+    
+    for (const platform of this.platforms) {
+      const platformMatches = await this.scanPlatform(platform, username, profilePic);
+      matches.push(...platformMatches);
     }
-  },
-
-  // Get impersonation alerts with filtering
-  async getAlerts(req: Request, res: Response) {
-    try {
-      const { search, platform } = req.query;
+    
+    const riskScore = this.calculateRiskScore(matches);
+    const alertLevel = this.determineAlertLevel(riskScore);
+    
+    return {
+      userId: `user_${username}`,
+      targetUsername: username,
+      matches,
+      riskScore,
+      lastUpdated: new Date(),
+      alertLevel
+    };
+  }
+  
+  private async scanPlatform(platform: string, username: string, profilePic?: string): Promise<ImpersonationMatch[]> {
+    // Mock implementation - in reality would use APIs to scan platforms
+    const mockMatches: ImpersonationMatch[] = [];
+    
+    // Simulate finding similar usernames
+    const variations = this.generateUsernameVariations(username);
+    
+    for (const variation of variations.slice(0, 3)) { // Limit for demo
+      const similarity = this.calculateSimilarity(username, variation);
       
-      let query = db.select().from(impersonationAlerts);
-      const conditions = [];
-
-      if (search) {
-        conditions.push(like(impersonationAlerts.username, `%${search}%`));
-      }
-
-      if (platform && platform !== 'all') {
-        conditions.push(eq(impersonationAlerts.platform, platform as string));
-      }
-
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
-
-      const alerts = await query
-        .orderBy(desc(impersonationAlerts.createdAt))
-        .limit(50);
-
-      res.json(alerts);
-    } catch (error) {
-      console.error('Error fetching impersonation alerts:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  },
-
-  // Report new impersonation
-  async reportImpersonation(req: Request, res: Response) {
-    try {
-      const { platform, username, profileUrl, similarity, detectionMethod, location, screenshots } = req.body;
-
-      const [alert] = await db
-        .insert(impersonationAlerts)
-        .values({
+      if (similarity > 0.7) {
+        mockMatches.push({
           platform,
-          username,
-          profileUrl,
+          username: variation,
           similarity,
-          detectionMethod,
-          location,
-          screenshots: screenshots || [],
-          status: 'active',
-        })
-        .returning();
-
-      res.json(alert);
-    } catch (error) {
-      console.error('Error reporting impersonation:', error);
-      res.status(500).json({ error: 'Internal server error' });
+          confidence: Math.random() * 0.3 + 0.7, // 70-100% confidence
+          lastSeen: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000), // Within last week
+          riskLevel: similarity > 0.9 ? 'critical' : similarity > 0.8 ? 'high' : 'medium'
+        });
+      }
     }
-  },
-
-  // Update alert status
-  async updateAlertStatus(req: Request, res: Response) {
-    try {
-      const { alertId } = req.params;
-      const { status } = req.body;
-
-      const [updatedAlert] = await db
-        .update(impersonationAlerts)
-        .set({ status })
-        .where(eq(impersonationAlerts.id, alertId))
-        .returning();
-
-      res.json(updatedAlert);
-    } catch (error) {
-      console.error('Error updating alert status:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    
+    return mockMatches;
+  }
+  
+  private generateUsernameVariations(username: string): string[] {
+    const variations = [
+      username.replace(/o/g, '0'),
+      username.replace(/i/g, '1'),
+      username.replace(/l/g, '1'),
+      username.replace(/s/g, '5'),
+      username + '_',
+      '_' + username,
+      username + '1',
+      username.replace(/a/g, '@'),
+      username + 'official'
+    ];
+    
+    return variations;
+  }
+  
+  private calculateSimilarity(original: string, candidate: string): number {
+    // Simple Levenshtein distance-based similarity
+    const distance = this.levenshteinDistance(original.toLowerCase(), candidate.toLowerCase());
+    const maxLength = Math.max(original.length, candidate.length);
+    return 1 - (distance / maxLength);
+  }
+  
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    
+    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+    
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1, // deletion
+          matrix[j - 1][i] + 1, // insertion
+          matrix[j - 1][i - 1] + indicator // substitution
+        );
+      }
     }
-  },
-};
+    
+    return matrix[str2.length][str1.length];
+  }
+  
+  private calculateRiskScore(matches: ImpersonationMatch[]): number {
+    if (matches.length === 0) return 0;
+    
+    const totalRisk = matches.reduce((sum, match) => {
+      const riskWeight = match.riskLevel === 'critical' ? 4 : 
+                        match.riskLevel === 'high' ? 3 : 
+                        match.riskLevel === 'medium' ? 2 : 1;
+      return sum + (match.similarity * match.confidence * riskWeight);
+    }, 0);
+    
+    return Math.min(100, totalRisk * 10);
+  }
+  
+  private determineAlertLevel(riskScore: number): 'none' | 'low' | 'medium' | 'high' {
+    if (riskScore > 75) return 'high';
+    if (riskScore > 50) return 'medium';
+    if (riskScore > 25) return 'low';
+    return 'none';
+  }
+}
+
+export const impersonationDetector = new ImpersonationDetectionSystem();

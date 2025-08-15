@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import DashboardLayout from '@/components/layout/dashboard-layout';
+import { lazy } from 'react';
 
 // Import pages
 import Dashboard from '@/pages/dashboard';
@@ -31,6 +32,11 @@ import Disputes from '@/pages/disputes';
 import ReportVault from '@/pages/report-vault';
 import LiveActivityFeed from '@/pages/live-activity-feed';
 import NotFound from '@/pages/not-found';
+
+// Lazy load new pages
+const ActionPlaybooks = lazy(() => import('./pages/action-playbooks'));
+const AIModerationControls = lazy(() => import('./pages/ai-moderation-controls'));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,6 +104,11 @@ function App() {
                     <Route path="/disputes" element={<Disputes />} />
                     <Route path="/report-vault" element={<ReportVault />} />
                     <Route path="/live-activity-feed" element={<LiveActivityFeed />} />
+                    
+                    {/* New feature pages */}
+                    <Route path="/action-playbooks" element={<ActionPlaybooks />} />
+                    <Route path="/ai-moderation-controls" element={<AIModerationControls />} />
+
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </DashboardLayout>

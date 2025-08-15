@@ -1,118 +1,110 @@
-import { z } from "zod";
 
-// Trust Scoring Algorithm for OwnersAlliance
-// Calculates dynamic trust scores based on multiple factors
-
-export interface TrustFactors {
+export interface TrustScoreFactors {
   successfulTransactions: number;
-  feedbackQuality: number; // 0-100 scale
-  reportHistory: number; // Number of times reported
-  timeInCommunity: number; // Days since joining
-  verificationLevel: 'none' | 'basic' | 'advanced' | 'premium';
-  vouchCount: number;
-  devouchCount: number;
-  aiRiskScore?: number; // Optional AI-generated risk assessment
+  feedbackQuality: number;
+  reportHistory: number;
+  timeInCommunity: number;
+  aiFraudProbability: number;
+  verificationLevel: number;
+  communityEndorsements: number;
 }
 
-export interface TrustScore {
-  score: number; // 0-100
-  level: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
-  factors: TrustFactors;
+export interface TrustScoreResult {
+  score: number;
+  level: 'untrusted' | 'new' | 'trusted' | 'veteran' | 'elite';
+  factors: TrustScoreFactors;
   lastUpdated: Date;
-  nextUpdate: Date;
-  trend: 'increasing' | 'stable' | 'decreasing';
+  riskAssessment: {
+    level: 'low' | 'medium' | 'high' | 'critical';
+    reasons: string[];
+  };
 }
 
 export class TrustScoringEngine {
-  private static readonly WEIGHTS = {
+  private weights = {
     successfulTransactions: 0.25,
     feedbackQuality: 0.20,
-    reportHistory: -0.30, // Negative weight
+    reportHistory: -0.30, // negative weight for bad reports
     timeInCommunity: 0.15,
+    aiFraudProbability: -0.25, // negative weight for fraud probability
     verificationLevel: 0.10,
-    vouchBalance: 0.10, // (vouches - devouches)
+    communityEndorsements: 0.05
   };
 
-  private static readonly VERIFICATION_MULTIPLIERS = {
-    none: 1.0,
-    basic: 1.1,
-    advanced: 1.25,
-    premium: 1.5,
-  };
+  calculateTrustScore(factors: TrustScoreFactors): TrustScoreResult {
+    let rawScore = 0;
+    const reasons: string[] = [];
 
-  private static readonly TRUST_LEVELS = [
-    { min: 0, max: 20, level: 'bronze' as const },
-    { min: 21, max: 40, level: 'silver' as const },
-    { min: 41, max: 65, level: 'gold' as const },
-    { min: 66, max: 85, level: 'platinum' as const },
-    { min: 86, max: 100, level: 'diamond' as const },
-  ];
+    // Calculate weighted score
+    rawScore += factors.successfulTransactions * this.weights.successfulTransactions;
+    rawScore += factors.feedbackQuality * this.weights.feedbackQuality;
+    rawScore += factors.reportHistory * this.weights.reportHistory;
+    rawScore += factors.timeInCommunity * this.weights.timeInCommunity;
+    rawScore += factors.aiFraudProbability * this.weights.aiFraudProbability;
+    rawScore += factors.verificationLevel * this.weights.verificationLevel;
+    rawScore += factors.communityEndorsements * this.weights.communityEndorsements;
 
-  static calculateTrustScore(factors: TrustFactors): TrustScore {
-    let baseScore = 50; // Start with neutral score
-
-    // Transaction success component (0-25 points)
-    const transactionScore = Math.min(factors.successfulTransactions * 2, 25);
-    baseScore += transactionScore * this.WEIGHTS.successfulTransactions;
-
-    // Feedback quality component (0-20 points)
-    const feedbackScore = (factors.feedbackQuality / 100) * 20;
-    baseScore += feedbackScore * this.WEIGHTS.feedbackQuality;
-
-    // Report history penalty (negative impact)
-    const reportPenalty = Math.min(factors.reportHistory * 10, 30);
-    baseScore += reportPenalty * this.WEIGHTS.reportHistory;
-
-    // Time in community component (0-15 points)
-    const timeScore = Math.min(factors.timeInCommunity / 30, 15); // Max at 30 days
-    baseScore += timeScore * this.WEIGHTS.timeInCommunity;
-
-    // Verification level bonus (0-10 points)
-    const verificationScore = 10;
-    baseScore += verificationScore * this.WEIGHTS.verificationLevel;
-
-    // Vouch balance component (0-10 points)
-    const vouchBalance = Math.max(0, factors.vouchCount - factors.devouchCount);
-    const vouchScore = Math.min(vouchBalance * 2, 10);
-    baseScore += vouchScore * this.WEIGHTS.vouchBalance;
-
-    // Apply verification multiplier
-    const multiplier = this.VERIFICATION_MULTIPLIERS[factors.verificationLevel];
-    let finalScore = baseScore * multiplier;
-
-    // Apply AI risk adjustment if available
-    if (factors.aiRiskScore !== undefined) {
-      const aiAdjustment = (1 - factors.aiRiskScore / 100) * 0.1; // Max 10% adjustment
-      finalScore *= (1 + aiAdjustment);
-    }
-
-    // Ensure score stays within bounds
-    finalScore = Math.max(0, Math.min(100, finalScore));
+    // Normalize to 0-100 scale
+    const score = Math.max(0, Math.min(100, rawScore * 10 + 50));
 
     // Determine trust level
-    const level = this.TRUST_LEVELS.find(
-      l => finalScore >= l.min && finalScore <= l.max
-    )?.level || 'bronze';
+    let level: TrustScoreResult['level'];
+    if (score >= 80) level = 'elite';
+    else if (score >= 65) level = 'veteran';
+    else if (score >= 50) level = 'trusted';
+    else if (score >= 30) level = 'new';
+    else level = 'untrusted';
 
-    // Calculate trend (simplified - would need historical data)
-    const trend = finalScore > 60 ? 'increasing' : finalScore < 40 ? 'decreasing' : 'stable';
+    // Risk assessment
+    let riskLevel: 'low' | 'medium' | 'high' | 'critical';
+    if (factors.aiFraudProbability > 0.8) {
+      riskLevel = 'critical';
+      reasons.push('High AI fraud probability detected');
+    } else if (factors.reportHistory > 5) {
+      riskLevel = 'high';
+      reasons.push('Multiple negative reports');
+    } else if (score < 40) {
+      riskLevel = 'medium';
+      reasons.push('Low trust score');
+    } else {
+      riskLevel = 'low';
+    }
 
     return {
-      score: Math.round(finalScore),
+      score,
       level,
       factors,
       lastUpdated: new Date(),
-      nextUpdate: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      trend,
+      riskAssessment: {
+        level: riskLevel,
+        reasons
+      }
     };
   }
 
-  static shouldUpdateScore(lastUpdate: Date): boolean {
-    const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
-    return hoursSinceUpdate >= 24; // Update every 24 hours
+  updateTrustScore(userId: string, newFactors: Partial<TrustScoreFactors>): TrustScoreResult {
+    // In a real implementation, this would fetch existing factors from database
+    // and update them with new values
+    const existingFactors: TrustScoreFactors = {
+      successfulTransactions: 0,
+      feedbackQuality: 0,
+      reportHistory: 0,
+      timeInCommunity: 0,
+      aiFraudProbability: 0,
+      verificationLevel: 0,
+      communityEndorsements: 0,
+      ...newFactors
+    };
+
+    return this.calculateTrustScore(existingFactors);
   }
 
-  static getInsurableTrustLevels(): string[] {
-    return ['silver', 'gold', 'platinum', 'diamond'];
+  // Real-time trust score monitoring
+  async monitorTrustScore(userId: string): Promise<void> {
+    // This would integrate with real-time systems to update scores
+    // when new transactions, reports, or activities occur
+    console.log(`Monitoring trust score for user: ${userId}`);
   }
 }
+
+export const trustScoringEngine = new TrustScoringEngine();
