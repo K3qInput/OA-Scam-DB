@@ -34,8 +34,14 @@ export default function Login() {
       const loginData = {
         username,
         password,
-        deviceRiskScore,
-        fingerprint
+        deviceFingerprint: fingerprint,
+        sessionData: {
+          screenResolution: `${window.screen.width}x${window.screen.height}`,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          language: navigator.language,
+          platform: navigator.platform,
+          riskScore: deviceRiskScore
+        }
       };
 
       console.log('Attempting login with:', {

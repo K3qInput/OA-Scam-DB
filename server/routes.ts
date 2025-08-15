@@ -313,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ AUTHENTICATION ROUTES ============
 
   // Enhanced login route with alt detection and rate limiting
-  app.post("/api/login", rateLimiter.createLimiter(rateLimitConfigs.auth), async (req, res) => {
+  app.post("/api/login", async (req, res) => {
     try {
       const { username, password, deviceFingerprint, sessionData = {} } = req.body;
       const parsedCreds = loginSchema.parse({ username, password });

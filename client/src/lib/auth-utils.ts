@@ -8,15 +8,15 @@ interface DecodedToken {
 }
 
 export const getToken = (): string | null => {
-  return localStorage.getItem('token');
+  return localStorage.getItem('auth_token');
 };
 
 export const setToken = (token: string): void => {
-  localStorage.setItem('token', token);
+  localStorage.setItem('auth_token', token);
 };
 
 export const removeToken = (): void => {
-  localStorage.removeItem('token');
+  localStorage.removeItem('auth_token');
 };
 
 export const isTokenExpired = (token: string): boolean => {
@@ -69,7 +69,7 @@ export const logout = (): void => {
 
 // Enhanced API request utility with better error handling and auth
 export const apiRequest = async (method: string, url: string, data?: any) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('auth_token');
   const headers: any = {
     'Content-Type': 'application/json',
   };
