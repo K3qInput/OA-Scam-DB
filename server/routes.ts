@@ -205,13 +205,13 @@ const requireRole = (roles: string[]) => {
 };
 
 // Discord OAuth configuration
-const configureDiscordAuth = (app: Express) => {
+const configureDiscordAuth = async (app: Express) => {
   if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
     console.log("Discord OAuth not configured - missing client ID or secret");
     return;
   }
 
-  const DiscordStrategy = require("passport-discord").Strategy;
+  const { Strategy: DiscordStrategy } = await import("passport-discord");
 
   passport.use(new DiscordStrategy({
     clientID: process.env.DISCORD_CLIENT_ID,
@@ -298,12 +298,12 @@ const createAuditLog = async (userId: string, action: string, entityType: string
   });
 };
 
-export function registerRoutes(app: Express): Server {
+export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize rate limiting middleware for beta testing
   const rateLimiter = new RateLimitMiddleware(storage);
 
   // Configure Discord OAuth
-  configureDiscordAuth(app);
+  await configureDiscordAuth(app);
 
   // Health check
   app.get("/api/health", (req, res) => {
@@ -313,7 +313,7 @@ export function registerRoutes(app: Express): Server {
   // ============ AUTHENTICATION ROUTES ============
 
   // Enhanced login route with alt detection and rate limiting
-  app.post("/api/auth/login", rateLimiter.createLimiter(rateLimitConfigs.auth), async (req, res) => {
+  app.post("/api/login", rateLimiter.createLimiter(rateLimitConfigs.auth), async (req, res) => {
     try {
       const { username, password, deviceFingerprint, sessionData = {} } = req.body;
       const parsedCreds = loginSchema.parse({ username, password });
@@ -412,14 +412,14 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Discord OAuth routes
-  app.get("/auth/discord", (req, res, next) => {
+  app.get("/api/auth/discord", (req, res, next) => {
     if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
       return res.redirect("/login?error=discord_not_configured");
     }
     passport.authenticate("discord")(req, res, next);
   });
 
-  app.get("/auth/discord/callback",
+  app.get("/api/auth/discord/callback",
     passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
     async (req: any, res) => {
       const user = req.user;
