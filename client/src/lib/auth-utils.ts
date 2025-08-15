@@ -67,48 +67,41 @@ export const logout = (): void => {
   window.location.href = '/login';
 };
 
-export const apiRequest = async (url: string, options: RequestInit = {}): Promise<any> => {
-  const token = getToken();
-
-  const defaultHeaders: Record<string, string> = {
+// Enhanced API request utility with better error handling and auth
+export const apiRequest = async (method: string, url: string, data?: any) => {
+  const token = localStorage.getItem('token');
+  const headers: any = {
     'Content-Type': 'application/json',
   };
 
   if (token) {
-    defaultHeaders.Authorization = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const config: RequestInit = {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers,
-    },
+    method,
+    headers,
   };
 
-  try {
-    const response = await fetch(url, config);
-
-    if (response.status === 401) {
-      logout();
-      throw new Error('Unauthorized');
-    }
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('API request failed:', error);
-    throw error;
+  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    config.body = JSON.stringify(data);
   }
+
+  const response = await fetch(url, config);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return response;
 };
 
-function isUnauthorizedError(error: any): boolean {
-  return error && error.message === "Unauthorized";
-}
+// Enhanced API request utility with better error handling and auth
+
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;

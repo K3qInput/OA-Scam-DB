@@ -197,3 +197,38 @@ export class ReputationInsuranceSystem {
 }
 
 export const insuranceSystem = new ReputationInsuranceSystem();
+
+// Route handlers
+export const insuranceRoutes = {
+  async getPolicies(req: any, res: any) {
+    try {
+      const policies = await insuranceSystem.getUserPolicies(req.user.id);
+      res.json(policies);
+    } catch (error) {
+      console.error('Get insurance policies error:', error);
+      res.status(500).json({ message: 'Failed to fetch insurance policies' });
+    }
+  },
+
+  async purchasePolicy(req: any, res: any) {
+    try {
+      const policyData = req.body;
+      const policy = await insuranceSystem.purchasePolicy(req.user.id, policyData);
+      res.status(201).json(policy);
+    } catch (error) {
+      console.error('Purchase insurance policy error:', error);
+      res.status(400).json({ message: 'Failed to purchase insurance policy' });
+    }
+  },
+
+  async submitClaim(req: any, res: any) {
+    try {
+      const claimData = req.body;
+      const claim = await insuranceSystem.submitClaim(req.user.id, claimData);
+      res.status(201).json(claim);
+    } catch (error) {
+      console.error('Submit insurance claim error:', error);
+      res.status(400).json({ message: 'Failed to submit insurance claim' });
+    }
+  }
+};

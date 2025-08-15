@@ -132,3 +132,114 @@ export class ImpersonationDetectionSystem {
 }
 
 export const impersonationDetector = new ImpersonationDetectionSystem();
+
+// Route handlers
+export const impersonationRoutes = {
+  async getHeatmap(req: any, res: any) {
+    try {
+      const { userId } = req.query;
+      const username = req.user?.username || 'demo_user';
+      
+      const heatmap = await impersonationDetector.scanForImpersonation(username);
+      
+      res.json(heatmap);
+    } catch (error) {
+      console.error('Get impersonation heatmap error:', error);
+      res.status(500).json({ message: 'Failed to fetch impersonation heatmap' });
+    }
+  },
+
+  async getAlerts(req: any, res: any) {
+    try {
+      const { search, platform } = req.query;
+      
+      // Mock alerts data
+      const alerts = [
+        {
+          id: '1',
+          platform: 'Discord',
+          username: 'fake_admin_user',
+          profileUrl: 'https://discord.com/users/fake123',
+          similarity: 95,
+          detectionMethod: 'AI Pattern Recognition',
+          location: 'Global',
+          createdAt: new Date().toISOString(),
+          status: 'active',
+          screenshots: []
+        },
+        {
+          id: '2',
+          platform: 'Twitter',
+          username: 'admin_fake',
+          profileUrl: 'https://twitter.com/admin_fake',
+          similarity: 87,
+          detectionMethod: 'Username Similarity',
+          location: 'US',
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
+          status: 'active',
+          screenshots: []
+        }
+      ];
+
+      let filteredAlerts = alerts;
+      
+      if (search) {
+        filteredAlerts = filteredAlerts.filter(alert => 
+          alert.username.toLowerCase().includes(search.toLowerCase()) ||
+          alert.platform.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      if (platform && platform !== 'all') {
+        filteredAlerts = filteredAlerts.filter(alert => 
+          alert.platform.toLowerCase() === platform.toLowerCase()
+        );
+      }
+
+      res.json(filteredAlerts);
+    } catch (error) {
+      console.error('Get impersonation alerts error:', error);
+      res.status(500).json({ message: 'Failed to fetch impersonation alerts' });
+    }
+  },
+
+  async reportImpersonation(req: any, res: any) {
+    try {
+      const reportData = req.body;
+      
+      // Mock report creation
+      const report = {
+        id: 'report_' + Date.now(),
+        ...reportData,
+        reportedBy: req.user.id,
+        createdAt: new Date(),
+        status: 'pending'
+      };
+
+      res.status(201).json(report);
+    } catch (error) {
+      console.error('Report impersonation error:', error);
+      res.status(400).json({ message: 'Failed to report impersonation' });
+    }
+  },
+
+  async updateAlertStatus(req: any, res: any) {
+    try {
+      const { alertId } = req.params;
+      const { status } = req.body;
+      
+      // Mock update
+      const updatedAlert = {
+        id: alertId,
+        status,
+        updatedAt: new Date(),
+        updatedBy: req.user.id
+      };
+
+      res.json(updatedAlert);
+    } catch (error) {
+      console.error('Update alert status error:', error);
+      res.status(400).json({ message: 'Failed to update alert status' });
+    }
+  }
+};
