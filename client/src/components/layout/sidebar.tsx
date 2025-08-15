@@ -155,6 +155,7 @@ function Sidebar({ className }: SidebarProps) {
             </div>
           </div>
         </nav>
+      </div>
 
       {/* Footer */}
       <div className="flex-shrink-0 p-2 border-t border-gray-700">

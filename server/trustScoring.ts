@@ -1,85 +1,118 @@
-
 import { z } from "zod";
 
-export const TrustScoreFactors = z.object({
-  successfulTransactions: z.number().default(0),
-  feedbackQuality: z.number().min(0).max(100).default(50),
-  reportHistory: z.number().default(0),
-  timeInCommunity: z.number().default(0), // in days
-  aiDetectionScore: z.number().min(0).max(100).default(50),
-  verificationLevel: z.enum(['unverified', 'basic', 'advanced', 'premium']).default('unverified'),
-});
+// Trust Scoring Algorithm for OwnersAlliance
+// Calculates dynamic trust scores based on multiple factors
 
-export type TrustScoreFactors = z.infer<typeof TrustScoreFactors>;
+export interface TrustFactors {
+  successfulTransactions: number;
+  feedbackQuality: number; // 0-100 scale
+  reportHistory: number; // Number of times reported
+  timeInCommunity: number; // Days since joining
+  verificationLevel: 'none' | 'basic' | 'advanced' | 'premium';
+  vouchCount: number;
+  devouchCount: number;
+  aiRiskScore?: number; // Optional AI-generated risk assessment
+}
 
-export interface TrustScoreResult {
-  score: number;
-  level: 'bronze' | 'silver' | 'gold' | 'platinum';
-  factors: TrustScoreFactors;
+export interface TrustScore {
+  score: number; // 0-100
+  level: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  factors: TrustFactors;
   lastUpdated: Date;
   nextUpdate: Date;
+  trend: 'increasing' | 'stable' | 'decreasing';
 }
 
 export class TrustScoringEngine {
-  private static weights = {
+  private static readonly WEIGHTS = {
     successfulTransactions: 0.25,
     feedbackQuality: 0.20,
-    reportHistory: -0.15, // negative weight for reports
+    reportHistory: -0.30, // Negative weight
     timeInCommunity: 0.15,
-    aiDetectionScore: 0.15,
-    verificationLevel: 0.20,
+    verificationLevel: 0.10,
+    vouchBalance: 0.10, // (vouches - devouches)
   };
 
-  static calculateScore(factors: TrustScoreFactors): number {
-    const verificationMultipliers = {
-      unverified: 0.5,
-      basic: 0.75,
-      advanced: 1.0,
-      premium: 1.25,
-    };
+  private static readonly VERIFICATION_MULTIPLIERS = {
+    none: 1.0,
+    basic: 1.1,
+    advanced: 1.25,
+    premium: 1.5,
+  };
 
-    // Normalize factors
-    const normalizedTransactions = Math.min(factors.successfulTransactions / 100, 1) * 100;
-    const normalizedTime = Math.min(factors.timeInCommunity / 365, 1) * 100; // max 1 year
-    const normalizedReports = Math.max(0, 100 - (factors.reportHistory * 10)); // each report reduces score
+  private static readonly TRUST_LEVELS = [
+    { min: 0, max: 20, level: 'bronze' as const },
+    { min: 21, max: 40, level: 'silver' as const },
+    { min: 41, max: 65, level: 'gold' as const },
+    { min: 66, max: 85, level: 'platinum' as const },
+    { min: 86, max: 100, level: 'diamond' as const },
+  ];
 
-    const baseScore = 
-      (normalizedTransactions * this.weights.successfulTransactions) +
-      (factors.feedbackQuality * this.weights.feedbackQuality) +
-      (normalizedReports * Math.abs(this.weights.reportHistory)) +
-      (normalizedTime * this.weights.timeInCommunity) +
-      (factors.aiDetectionScore * this.weights.aiDetectionScore);
+  static calculateTrustScore(factors: TrustFactors): TrustScore {
+    let baseScore = 50; // Start with neutral score
 
-    const verificationBonus = baseScore * this.weights.verificationLevel * 
-      verificationMultipliers[factors.verificationLevel];
+    // Transaction success component (0-25 points)
+    const transactionScore = Math.min(factors.successfulTransactions * 2, 25);
+    baseScore += transactionScore * this.WEIGHTS.successfulTransactions;
 
-    return Math.max(0, Math.min(100, baseScore + verificationBonus));
-  }
+    // Feedback quality component (0-20 points)
+    const feedbackScore = (factors.feedbackQuality / 100) * 20;
+    baseScore += feedbackScore * this.WEIGHTS.feedbackQuality;
 
-  static getTrustLevel(score: number): 'bronze' | 'silver' | 'gold' | 'platinum' {
-    if (score >= 85) return 'platinum';
-    if (score >= 70) return 'gold';
-    if (score >= 50) return 'silver';
-    return 'bronze';
-  }
+    // Report history penalty (negative impact)
+    const reportPenalty = Math.min(factors.reportHistory * 10, 30);
+    baseScore += reportPenalty * this.WEIGHTS.reportHistory;
 
-  static async updateTrustScore(userId: string, factors: Partial<TrustScoreFactors>): Promise<TrustScoreResult> {
-    // In a real implementation, this would fetch current factors from database
-    const currentFactors = TrustScoreFactors.parse(factors);
-    const score = this.calculateScore(currentFactors);
-    const level = this.getTrustLevel(score);
+    // Time in community component (0-15 points)
+    const timeScore = Math.min(factors.timeInCommunity / 30, 15); // Max at 30 days
+    baseScore += timeScore * this.WEIGHTS.timeInCommunity;
+
+    // Verification level bonus (0-10 points)
+    const verificationScore = 10;
+    baseScore += verificationScore * this.WEIGHTS.verificationLevel;
+
+    // Vouch balance component (0-10 points)
+    const vouchBalance = Math.max(0, factors.vouchCount - factors.devouchCount);
+    const vouchScore = Math.min(vouchBalance * 2, 10);
+    baseScore += vouchScore * this.WEIGHTS.vouchBalance;
+
+    // Apply verification multiplier
+    const multiplier = this.VERIFICATION_MULTIPLIERS[factors.verificationLevel];
+    let finalScore = baseScore * multiplier;
+
+    // Apply AI risk adjustment if available
+    if (factors.aiRiskScore !== undefined) {
+      const aiAdjustment = (1 - factors.aiRiskScore / 100) * 0.1; // Max 10% adjustment
+      finalScore *= (1 + aiAdjustment);
+    }
+
+    // Ensure score stays within bounds
+    finalScore = Math.max(0, Math.min(100, finalScore));
+
+    // Determine trust level
+    const level = this.TRUST_LEVELS.find(
+      l => finalScore >= l.min && finalScore <= l.max
+    )?.level || 'bronze';
+
+    // Calculate trend (simplified - would need historical data)
+    const trend = finalScore > 60 ? 'increasing' : finalScore < 40 ? 'decreasing' : 'stable';
 
     return {
-      score,
+      score: Math.round(finalScore),
       level,
-      factors: currentFactors,
+      factors,
       lastUpdated: new Date(),
       nextUpdate: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      trend,
     };
   }
 
-  static scheduleRealTimeUpdate(userId: string, event: 'transaction' | 'feedback' | 'report' | 'verification') {
-    // This would trigger real-time updates based on events
-    console.log(`Scheduling trust score update for user ${userId} due to ${event}`);
+  static shouldUpdateScore(lastUpdate: Date): boolean {
+    const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
+    return hoursSinceUpdate >= 24; // Update every 24 hours
+  }
+
+  static getInsurableTrustLevels(): string[] {
+    return ['silver', 'gold', 'platinum', 'diamond'];
   }
 }

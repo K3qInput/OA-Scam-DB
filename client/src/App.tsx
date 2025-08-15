@@ -1,182 +1,77 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { Route, Switch } from "wouter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/use-auth";
+import { AuthProvider } from "@/hooks/use-auth";
 import Login from "@/pages/login";
-import SimpleLogin from "@/pages/simple-login";
-import DiscordLogin from "@/pages/discord-login";
 import Dashboard from "@/pages/dashboard";
-import CaseDetails from "@/pages/case-details";
 import NewCase from "@/pages/new-case";
-import Contact from "@/pages/contact";
-import StaffManagement from "@/pages/staff-management";
-import TribunalProceedings from "@/pages/tribunal-proceedings";
-import ContactManagement from "@/pages/contact-management";
-import StaffAssignments from "@/pages/staff-assignments";
-import Vouches from "@/pages/vouches";
-import VouchSystem from "@/pages/vouch-system";
-import Disputes from "@/pages/disputes";
-import AltDetection from "@/pages/alt-detection";
-import SecurityDashboard from "@/pages/admin/SecurityDashboard";
-import Utilities from "@/pages/utilities";
-import AiTools from "@/pages/ai-tools";
-import Marketplace from "@/pages/marketplace";
-import AdminPanel from "@/pages/admin-panel";
-import ThreatIntel from "@/pages/threat-intel";
-import AdminModeration from "@/pages/admin-moderation";
-import ContentManagement from "@/pages/content-management";
-import AdvancedAnalytics from "@/pages/advanced-analytics";
-import MemberVerification from "@/pages/member-verification";
-import ReputationProfiles from "@/pages/reputation-profiles";
-import ReportVault from "@/pages/report-vault";
-import BlacklistDatabase from "@/pages/blacklist-database";
-import StaffTransparency from "@/pages/staff-transparency";
-import CommunityEvents from "@/pages/community-events";
-import ResourceHub from "@/pages/resource-hub";
-import Settings from "@/pages/settings";
+import CaseDetails from "@/pages/case-details";
 import Profile from "@/pages/profile";
+import Settings from "@/pages/settings";
+import Contact from "@/pages/contact";
+import Disputes from "@/pages/disputes";
+import Vouches from "@/pages/vouches";
+import AltDetection from "@/pages/alt-detection";
+import AdminPanel from "@/pages/admin-panel";
+import StaffManagement from "@/pages/staff-management";
+import StaffAssignments from "@/pages/staff-assignments";
+import TribunalProceedings from "@/pages/tribunal-proceedings";
+import CustomRoles from "@/pages/custom-roles";
+import LiveActivityFeed from "@/pages/live-activity-feed";
+import ReputationInsurance from "@/pages/reputation-insurance";
+import ImpersonationHeatmap from "@/pages/impersonation-heatmap";
+import ProofOfOwnership from "@/pages/proof-of-ownership";
+import MemberVerification from "@/pages/member-verification";
+import AITools from "@/pages/ai-tools";
+import Marketplace from "@/pages/marketplace";
+import ReportVault from "@/pages/report-vault";
 import NotFound from "@/pages/not-found";
-import ReputationInsurance from './pages/reputation-insurance';
-import ImpersonationHeatmap from './pages/impersonation-heatmap';
-import ProofOfOwnership from './pages/proof-of-ownership';
-import CustomRoles from './pages/custom-roles';
-import LiveActivityFeed from './pages/live-activity-feed';
 
-
-function Router() {
-  // Check if user has token and redirect accordingly
-  const hasToken = typeof window !== 'undefined' && localStorage.getItem("auth_token");
-  console.log("Router: Has token:", !!hasToken);
-
-  return (
-    <Switch>
-      <Route path="/login">
-        <DiscordLogin />
-      </Route>
-      <Route path="/">
-        <DiscordLogin />
-      </Route>
-      <Route path="/dashboard">
-        {hasToken ? <Dashboard /> : <DiscordLogin />}
-      </Route>
-      <Route path="/cases/:id">
-        {hasToken ? <CaseDetails /> : <DiscordLogin />}
-      </Route>
-      <Route path="/new-case">
-        {hasToken ? <NewCase /> : <DiscordLogin />}
-      </Route>
-      <Route path="/contact">
-        <Contact />
-      </Route>
-      <Route path="/staff-management">
-        {hasToken ? <StaffManagement /> : <DiscordLogin />}
-      </Route>
-      <Route path="/tribunal-proceedings">
-        {hasToken ? <TribunalProceedings /> : <DiscordLogin />}
-      </Route>
-      <Route path="/contact-management">
-        {hasToken ? <ContactManagement /> : <DiscordLogin />}
-      </Route>
-      <Route path="/staff-assignments">
-        {hasToken ? <StaffAssignments /> : <DiscordLogin />}
-      </Route>
-      <Route path="/vouches">
-        {hasToken ? <Vouches /> : <DiscordLogin />}
-      </Route>
-      <Route path="/vouch-system">
-        {hasToken ? <VouchSystem /> : <DiscordLogin />}
-      </Route>
-      <Route path="/admin">
-        {hasToken ? <AdminPanel /> : <DiscordLogin />}
-      </Route>
-      <Route path="/disputes">
-        {hasToken ? <Disputes /> : <DiscordLogin />}
-      </Route>
-      <Route path="/alt-detection">
-        {hasToken ? <AltDetection /> : <DiscordLogin />}
-      </Route>
-      <Route path="/security-dashboard">
-        {hasToken ? <SecurityDashboard /> : <DiscordLogin />}
-      </Route>
-      <Route path="/utilities">
-        {hasToken ? <Utilities /> : <DiscordLogin />}
-      </Route>
-      <Route path="/ai-tools">
-        {hasToken ? <AiTools /> : <DiscordLogin />}
-      </Route>
-      <Route path="/marketplace">
-        {hasToken ? <Marketplace /> : <DiscordLogin />}
-      </Route>
-      <Route path="/threat-intel">
-        {hasToken ? <ThreatIntel /> : <DiscordLogin />}
-      </Route>
-      <Route path="/admin-moderation">
-        {hasToken ? <AdminModeration /> : <DiscordLogin />}
-      </Route>
-      <Route path="/content-management">
-        {hasToken ? <ContentManagement /> : <DiscordLogin />}
-      </Route>
-      <Route path="/advanced-analytics">
-        {hasToken ? <AdvancedAnalytics /> : <DiscordLogin />}
-      </Route>
-      <Route path="/member-verification">
-        {hasToken ? <MemberVerification /> : <DiscordLogin />}
-      </Route>
-      <Route path="/reputation-profiles">
-        {hasToken ? <ReputationProfiles /> : <DiscordLogin />}
-      </Route>
-      <Route path="/report-vault">
-        {hasToken ? <ReportVault /> : <DiscordLogin />}
-      </Route>
-      <Route path="/blacklist-database">
-        {hasToken ? <BlacklistDatabase /> : <DiscordLogin />}
-      </Route>
-      <Route path="/staff-transparency">
-        {hasToken ? <StaffTransparency /> : <DiscordLogin />}
-      </Route>
-      <Route path="/community-events">
-        {hasToken ? <CommunityEvents /> : <DiscordLogin />}
-      </Route>
-      <Route path="/resource-hub">
-        {hasToken ? <ResourceHub /> : <DiscordLogin />}
-      </Route>
-      <Route path="/settings">
-        {hasToken ? <Settings /> : <DiscordLogin />}
-      </Route>
-      <Route path="/profile">
-        {hasToken ? <Profile /> : <DiscordLogin />}
-      </Route>
-      <Route path="/reputation-insurance">
-        {hasToken ? <ReputationInsurance /> : <DiscordLogin />}
-      </Route>
-      <Route path="/impersonation-heatmap">
-        {hasToken ? <ImpersonationHeatmap /> : <DiscordLogin />}
-      </Route>
-      <Route path="/proof-of-ownership">
-        {hasToken ? <ProofOfOwnership /> : <DiscordLogin />}
-      </Route>
-      <Route path="/custom-roles">
-        {hasToken ? <CustomRoles /> : <DiscordLogin />}
-      </Route>
-      <Route path="/live-activity-feed">
-        {hasToken ? <LiveActivityFeed /> : <DiscordLogin />}
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
-          <Toaster />
-          <Router />
+      <AuthProvider>
+        <div className="min-h-screen bg-gray-950">
+          <Switch>
+            <Route path="/login" component={Login} />
+            <Route path="/" component={Dashboard} />
+            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/new-case" component={NewCase} />
+            <Route path="/case/:id" component={CaseDetails} />
+            <Route path="/profile" component={Profile} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/contact" component={Contact} />
+            <Route path="/disputes" component={Disputes} />
+            <Route path="/vouches" component={Vouches} />
+            <Route path="/alt-detection" component={AltDetection} />
+            <Route path="/admin" component={AdminPanel} />
+            <Route path="/admin-panel" component={AdminPanel} />
+            <Route path="/staff-management" component={StaffManagement} />
+            <Route path="/staff-assignments" component={StaffAssignments} />
+            <Route path="/tribunal-proceedings" component={TribunalProceedings} />
+            <Route path="/custom-roles" component={CustomRoles} />
+            <Route path="/live-activity-feed" component={LiveActivityFeed} />
+            <Route path="/reputation-insurance" component={ReputationInsurance} />
+            <Route path="/impersonation-heatmap" component={ImpersonationHeatmap} />
+            <Route path="/proof-of-ownership" component={ProofOfOwnership} />
+            <Route path="/member-verification" component={MemberVerification} />
+            <Route path="/ai-tools" component={AITools} />
+            <Route path="/marketplace" component={Marketplace} />
+            <Route path="/report-vault" component={ReportVault} />
+            <Route component={NotFound} />
+          </Switch>
         </div>
-      </TooltipProvider>
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
