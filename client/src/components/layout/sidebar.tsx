@@ -24,7 +24,8 @@ import {
   Wrench,
   MapPin,
   Activity, // Added for Live Activity Feed
-  Award // Added for Proof of Ownership
+  Award, // Added for Proof of Ownership
+  User // Added for User profile link
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@shared/schema";
@@ -75,7 +76,7 @@ function Sidebar({ className }: SidebarProps) {
           <div className="space-y-1">
             <SidebarLink href="/dashboard" icon={<Home className="w-4 h-4" />} text="Dashboard" />
             <SidebarLink href="/new-case" icon={<Plus className="w-4 h-4" />} text="New Case" />
-            <SidebarLink href="/profile" icon={<Users className="w-4 h-4" />} text="Profile" />
+            <SidebarLink href="/profile" icon={<User className="w-4 h-4" />} text="Profile" />
           </div>
 
           {/* Admin Panel */}
@@ -86,7 +87,7 @@ function Sidebar({ className }: SidebarProps) {
               </h3>
               <div className="space-y-1">
                 <SidebarLink href="/admin" icon={<Settings className="w-4 h-4" />} text="Admin Panel" />
-                <SidebarLink href="/custom-roles" icon={<Shield className="w-4 h-4" />} text="Role Builder" />
+                <SidebarLink href="/custom-roles" icon={<Zap className="w-4 h-4" />} text="Role Builder" />
                 <SidebarLink href="/live-activity-feed" icon={<Activity className="w-4 h-4" />} text="Live Activity" />
                 <SidebarLink href="/admin-moderation" icon={<Shield className="w-4 h-4" />} text="Moderation Center" />
               </div>
