@@ -1127,7 +1127,6 @@ export type UserReputation = typeof userReputation.$inferSelect;
 export type InsertUserReputation = z.infer<typeof insertUserReputationSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
-export type LoginData = z.infer<typeof loginSchema>;
 
 
 
@@ -1361,6 +1360,67 @@ export const aiToolRatings = pgTable("ai_tool_ratings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Insurance System
+export const insurancePolicies = pgTable('insurance_policies', {
+  id: text('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: text('user_id').notNull(),
+  coverageAmount: integer('coverage_amount').notNull(),
+  premium: integer('premium').notNull(),
+  trustScoreThreshold: integer('trust_score_threshold').notNull(),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+});
+
+export const insuranceClaims = pgTable('insurance_claims', {
+  id: text('id').primaryKey().default(sql`gen_random_uuid()`),
+  policyId: text('policy_id').notNull(),
+  reason: text('reason').notNull(),
+  evidenceUrls: text('evidence_urls').array(),
+  status: text('status').notNull().default('pending'),
+  payoutAmount: integer('payout_amount'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  reviewedAt: timestamp('reviewed_at'),
+});
+
+// Impersonation Detection
+export const impersonationAlerts = pgTable('impersonation_alerts', {
+  id: text('id').primaryKey().default(sql`gen_random_uuid()`),
+  platform: text('platform').notNull(),
+  username: text('username').notNull(),
+  profileUrl: text('profile_url').notNull(),
+  similarity: integer('similarity').notNull(),
+  detectionMethod: text('detection_method').notNull(),
+  location: text('location'),
+  screenshots: text('screenshots').array(),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  resolvedAt: timestamp('resolved_at'),
+});
+
+// Proof of Ownership
+export const ownershipClaims = pgTable('ownership_claims', {
+  id: text('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: text('user_id').notNull(),
+  type: text('type').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  verificationMethod: text('verification_method').notNull(),
+  proofUrls: text('proof_urls').array(),
+  status: text('status').notNull().default('pending'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  verifiedAt: timestamp('verified_at'),
+});
+
+export const ownershipBadges = pgTable('ownership_badges', {
+  id: text('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: text('user_id').notNull(),
+  claimId: text('claim_id').notNull(),
+  name: text('name').notNull(),
+  imageUrl: text('image_url').notNull(),
+  verifiedAt: timestamp('verified_at').defaultNow().notNull(),
+});
+
 // ============= RELATIONS FOR NEW TABLES =============
 
 // AI Tools Relations
@@ -1592,6 +1652,33 @@ export const insertVerificationRequestSchema = createInsertSchema(verificationRe
   createdAt: true,
 });
 
+// Insert schemas for new insurance, impersonation, and ownership tables
+export const insertInsurancePolicySchema = createInsertSchema(insurancePolicies).omit({
+  id: true,
+  createdAt: true,
+  expiresAt: true,
+});
+
+export const insertInsuranceClaimSchema = createInsertSchema(insuranceClaims).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertImpersonationAlertSchema = createInsertSchema(impersonationAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOwnershipClaimSchema = createInsertSchema(ownershipClaims).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOwnershipBadgeSchema = createInsertSchema(ownershipBadges).omit({
+  id: true,
+  verifiedAt: true,
+});
+
 // ============= TYPES FOR NEW TABLES =============
 
 // AI Tools types
@@ -1627,3 +1714,19 @@ export type InsertCollaborationMessage = z.infer<typeof insertCollaborationMessa
 // Verification and community types
 export type VerificationRequest = typeof verificationRequests.$inferSelect;
 export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
+
+// Insurance types
+export type InsurancePolicy = typeof insurancePolicies.$inferSelect;
+export type InsertInsurancePolicy = z.infer<typeof insertInsurancePolicySchema>;
+export type InsuranceClaim = typeof insuranceClaims.$inferSelect;
+export type InsertInsuranceClaim = z.infer<typeof insertInsuranceClaimSchema>;
+
+// Impersonation types
+export type ImpersonationAlert = typeof impersonationAlerts.$inferSelect;
+export type InsertImpersonationAlert = z.infer<typeof insertImpersonationAlertSchema>;
+
+// Ownership types
+export type OwnershipClaim = typeof ownershipClaims.$inferSelect;
+export type InsertOwnershipClaim = z.infer<typeof insertOwnershipClaimSchema>;
+export type OwnershipBadge = typeof ownershipBadges.$inferSelect;
+export type InsertOwnershipBadge = z.infer<typeof insertOwnershipBadgeSchema>;

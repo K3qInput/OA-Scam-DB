@@ -158,9 +158,9 @@ export default function AltDetectionPage() {
   };
 
   const getConfidenceColor = (score: number) => {
-    if (score >= 80) return "text-red-600 bg-red-100 dark:bg-red-900";
-    if (score >= 60) return "text-orange-600 bg-orange-100 dark:bg-orange-900";
-    if (score >= 40) return "text-yellow-600 bg-yellow-100 dark:bg-yellow-900";
+    if (score >= 90) return "text-red-600 bg-red-100 dark:bg-red-900";
+    if (score >= 75) return "text-orange-600 bg-orange-100 dark:bg-orange-900";
+    if (score >= 60) return "text-yellow-600 bg-yellow-100 dark:bg-yellow-900";
     return "text-green-600 bg-green-100 dark:bg-green-900";
   };
 
@@ -174,11 +174,23 @@ export default function AltDetectionPage() {
     }
   };
 
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "critical": return "text-red-400";
+      case "high": return "text-orange-400";
+      case "medium": return "text-yellow-400";
+      case "low": return "text-blue-400";
+      default: return "text-gray-400";
+    }
+  };
+
   const detectionMethods = [
     { value: "ip_match", label: "IP Address Match" },
     { value: "device_fingerprint", label: "Device Fingerprint" },
     { value: "behavior_pattern", label: "Behavior Pattern" },
+    { value: "email_similarity", label: "Email Similarity" },
     { value: "manual_report", label: "Manual Report" },
+    { value: "cross_platform_match", label: "Cross-Platform Match" },
   ];
 
   return (

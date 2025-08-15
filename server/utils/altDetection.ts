@@ -250,6 +250,34 @@ export class AltDetectionEngine {
       const userHours = userSessions.map((s: UserSession) => s.createdAt.getHours());
       const otherHours = otherSessions.map((s: UserSession) => s.createdAt.getHours());
       
+      // Check for similar time patterns
+      const userActiveHours = [...new Set(userHours)];
+      const otherActiveHours = [...new Set(otherHours)];
+      const commonHours = userActiveHours.filter(hour => otherActiveHours.includes(hour));
+      
+      if (commonHours.length >= 3) {
+        behaviorScore += 15;
+        matches.push('active_hours_match');
+      }
+      
+      // Check for session duration patterns
+      const userSessionDurations = userSessions.map((s: UserSession) => {
+        const endTime = s.lastActivity || new Date();
+        return (endTime.getTime() - s.createdAt.getTime()) / (1000 * 60); // minutes
+      });
+      const otherSessionDurations = otherSessions.map((s: UserSession) => {
+        const endTime = s.lastActivity || new Date();
+        return (endTime.getTime() - s.createdAt.getTime()) / (1000 * 60);
+      });
+      
+      const avgUserDuration = userSessionDurations.reduce((a, b) => a + b, 0) / userSessionDurations.length;
+      const avgOtherDuration = otherSessionDurations.reduce((a, b) => a + b, 0) / otherSessionDurations.length;
+      
+      if (Math.abs(avgUserDuration - avgOtherDuration) < 30) { // Within 30 minutes
+        behaviorScore += 10;
+        matches.push('session_duration_match');
+      }
+      
       if (userHours.length > 0 && otherHours.length > 0) {
         const hourOverlap = userHours.filter(h => otherHours.includes(h)).length;
         const overlapRatio = hourOverlap / Math.max(userHours.length, otherHours.length);
@@ -349,22 +377,41 @@ export class AltDetectionEngine {
         maxConfidence = Math.min(maxConfidence + (detectionMethods.length * 10), 100);
       }
       
-      // Determine status and severity
+      // Determine status and severity with enhanced logic
       let status = 'pending';
       let severity = 'medium';
       let actionTaken = 'none';
       
-      if (maxConfidence >= 90) {
+      // Enhanced severity determination
+      if (maxConfidence >= 95) {
+        status = 'confirmed';
+        severity = 'critical';
+        actionTaken = 'immediate_ban';
+      } else if (maxConfidence >= 90) {
         status = 'confirmed';
         severity = 'critical';
         actionTaken = 'verification_required';
-      } else if (maxConfidence >= 75) {
+      } else if (maxConfidence >= 80) {
+        severity = 'high';
+        actionTaken = 'manual_review';
+      } else if (maxConfidence >= 70) {
         severity = 'high';
         actionTaken = 'verification_required';
       } else if (maxConfidence >= 60) {
         severity = 'medium';
-      } else {
+        actionTaken = 'monitoring';
+      } else if (maxConfidence >= 40) {
         severity = 'low';
+        actionTaken = 'flagged';
+      } else {
+        severity = 'minimal';
+        actionTaken = 'none';
+      }
+      
+      // Auto-escalate if multiple detection methods agree
+      if (detectionMethods.length >= 3 && maxConfidence >= 70) {
+        severity = severity === 'low' ? 'medium' : severity === 'medium' ? 'high' : 'critical';
+        actionTaken = actionTaken === 'none' ? 'monitoring' : actionTaken === 'monitoring' ? 'verification_required' : actionTaken;
       }
       
       const report: InsertAltDetectionReport = {

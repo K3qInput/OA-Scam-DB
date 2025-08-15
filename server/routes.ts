@@ -50,6 +50,11 @@ import RateLimitMiddleware, { rateLimitConfigs } from './middleware/rateLimiting
 import { eq, sql } from 'drizzle-orm';
 import { cases, users } from '@shared/schema';
 import { db } from './db';
+import { aiAnalysisRoutes } from './ai-analysis';
+import { emailService } from './email';
+import { insuranceRoutes } from './insurance';
+import { impersonationRoutes } from './impersonation';
+import { ownershipRoutes } from './ownership';
 
 // AI Tool Processing Function
 async function processAiTool(tool: any, inputData: any): Promise<any> {
@@ -1163,10 +1168,10 @@ export function registerRoutes(app: Express): Server {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const totalToday = await db.select({ count: sql<number>`count(*)` }).from(cases)
         .where(sql`DATE(${cases.createdAt}) = DATE(${today.toISOString()})`);
-      
+
       const pendingReview = await db.select({ count: sql<number>`count(*)` }).from(cases)
         .where(eq(cases.status, "pending"));
 
@@ -2062,6 +2067,23 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: "Failed to fetch analytics data" });
     }
   });
+
+  // ============= INSURANCE API ROUTES =============
+  app.get("/api/insurance/policies", authenticateToken, insuranceRoutes.getPolicies);
+  app.post("/api/insurance/policies", authenticateToken, insuranceRoutes.purchasePolicy);
+  app.post("/api/insurance/claims", authenticateToken, insuranceRoutes.submitClaim);
+
+  // ============= IMPERSONATION API ROUTES =============
+  app.get("/api/impersonation/heatmap", authenticateToken, impersonationRoutes.getHeatmap);
+  app.get("/api/impersonation/alerts", authenticateToken, impersonationRoutes.getAlerts);
+  app.post("/api/impersonation/report", authenticateToken, impersonationRoutes.reportImpersonation);
+  app.patch("/api/impersonation/alerts/:alertId", authenticateToken, impersonationRoutes.updateAlertStatus);
+
+  // ============= OWNERSHIP API ROUTES =============
+  app.get("/api/ownership/claims", authenticateToken, ownershipRoutes.getClaims);
+  app.post("/api/ownership/claims", authenticateToken, ownershipRoutes.submitClaim);
+  app.get("/api/ownership/badges", authenticateToken, ownershipRoutes.getBadges);
+  app.patch("/api/ownership/claims/:claimId/verify", authenticateToken, ownershipRoutes.verifyClaim);
 
   const httpServer = createServer(app);
   return httpServer;

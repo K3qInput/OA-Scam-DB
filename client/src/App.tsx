@@ -38,6 +38,10 @@ import ResourceHub from "@/pages/resource-hub";
 import Settings from "@/pages/settings";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
+import ReputationInsurance from './pages/reputation-insurance';
+import ImpersonationHeatmap from './pages/impersonation-heatmap';
+import ProofOfOwnership from './pages/proof-of-ownership';
+
 
 function Router() {
   // Check if user has token and redirect accordingly
@@ -142,6 +146,9 @@ function Router() {
       <Route path="/profile">
         {hasToken ? <Profile /> : <DiscordLogin />}
       </Route>
+      <Route path="/reputation-insurance" element={<ReputationInsurance />} />
+      <Route path="/impersonation-heatmap" element={<ImpersonationHeatmap />} />
+      <Route path="/proof-of-ownership" element={<ProofOfOwnership />} />
       <Route component={NotFound} />
     </Switch>
   );
