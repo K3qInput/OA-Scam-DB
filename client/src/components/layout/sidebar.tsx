@@ -25,7 +25,7 @@ import {
   MapPin,
   Activity, // Added for Live Activity Feed
   Award, // Added for Proof of Ownership
-  User, // Added for User profile link
+  User as UserIcon, // Added for User profile link
   BarChart3,
   Scale,
   FileCheck,
@@ -104,7 +104,7 @@ function Sidebar({ className }: SidebarProps) {
           <SidebarLink href="/tribunal-proceedings" icon={<Gavel className="w-5 h-5" />} text="Tribunal" />
           <SidebarLink href="/community-events" icon={<Calendar className="w-5 h-5" />} text="Events" />
 
-          {(typedUser?.role === 'admin' || typedUser?.role === 'super_admin') && (
+          {typedUser?.role === 'admin' && (
             <>
               <div className="pt-4 pb-2">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 lg:px-4">

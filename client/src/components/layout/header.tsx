@@ -13,9 +13,8 @@ import { Bell, Search, Menu, LogOut, User, Settings, Clock } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import NotificationSystem from "@/components/notification-system";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { CurrentTime } from "@/components/real-time-timestamp";
-import Link from "next/link";
 
 
 interface HeaderProps {

@@ -8,7 +8,7 @@ export const insuranceRoutes = {
   // Get user's insurance policies
   async getPolicies(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
@@ -29,7 +29,7 @@ export const insuranceRoutes = {
   // Purchase insurance policy
   async purchasePolicy(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
@@ -61,7 +61,7 @@ export const insuranceRoutes = {
   // Submit insurance claim
   async submitClaim(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
@@ -152,6 +152,19 @@ export class ReputationInsuranceSystem {
     return policy;
   }
 
+  async getUserPolicies(userId: string): Promise<InsurancePolicy[]> {
+    // Mock implementation - in real app, query database
+    return [];
+  }
+
+  async purchasePolicy(userId: string, policyData: any): Promise<InsurancePolicy> {
+    return this.createPolicy(userId, policyData.trustScore || 50);
+  }
+
+  async submitClaim(userId: string, claimData: any): Promise<InsuranceClaim> {
+    return this.fileClaim(claimData.policyId, claimData.reportId, claimData.evidence || []);
+  }
+
   private calculatePremium(trustScore: number): number {
     // Higher trust score = lower premium
     const basePremium = 100;
@@ -198,9 +211,9 @@ export class ReputationInsuranceSystem {
 
 export const insuranceSystem = new ReputationInsuranceSystem();
 
-// Route handlers
-export const insuranceRoutes = {
-  async getPolicies(req: any, res: any) {
+// Additional route handlers for the insurance system class
+export const additionalInsuranceHandlers = {
+  async getPoliciesFromSystem(req: any, res: any) {
     try {
       const policies = await insuranceSystem.getUserPolicies(req.user.id);
       res.json(policies);
@@ -210,7 +223,7 @@ export const insuranceRoutes = {
     }
   },
 
-  async purchasePolicy(req: any, res: any) {
+  async purchasePolicyFromSystem(req: any, res: any) {
     try {
       const policyData = req.body;
       const policy = await insuranceSystem.purchasePolicy(req.user.id, policyData);
@@ -221,7 +234,7 @@ export const insuranceRoutes = {
     }
   },
 
-  async submitClaim(req: any, res: any) {
+  async submitClaimToSystem(req: any, res: any) {
     try {
       const claimData = req.body;
       const claim = await insuranceSystem.submitClaim(req.user.id, claimData);
