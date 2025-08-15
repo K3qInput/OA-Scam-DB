@@ -41,6 +41,8 @@ import NotFound from "@/pages/not-found";
 import ReputationInsurance from './pages/reputation-insurance';
 import ImpersonationHeatmap from './pages/impersonation-heatmap';
 import ProofOfOwnership from './pages/proof-of-ownership';
+import CustomRoles from './pages/custom-roles';
+import LiveActivityFeed from './pages/live-activity-feed';
 
 
 function Router() {
@@ -146,9 +148,21 @@ function Router() {
       <Route path="/profile">
         {hasToken ? <Profile /> : <DiscordLogin />}
       </Route>
-      <Route path="/reputation-insurance" element={<ReputationInsurance />} />
-      <Route path="/impersonation-heatmap" element={<ImpersonationHeatmap />} />
-      <Route path="/proof-of-ownership" element={<ProofOfOwnership />} />
+      <Route path="/reputation-insurance">
+        {hasToken ? <ReputationInsurance /> : <DiscordLogin />}
+      </Route>
+      <Route path="/impersonation-heatmap">
+        {hasToken ? <ImpersonationHeatmap /> : <DiscordLogin />}
+      </Route>
+      <Route path="/proof-of-ownership">
+        {hasToken ? <ProofOfOwnership /> : <DiscordLogin />}
+      </Route>
+      <Route path="/custom-roles">
+        {hasToken ? <CustomRoles /> : <DiscordLogin />}
+      </Route>
+      <Route path="/live-activity-feed">
+        {hasToken ? <LiveActivityFeed /> : <DiscordLogin />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

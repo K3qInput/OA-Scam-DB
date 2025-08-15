@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { 
-  loginSchema, 
-  insertCaseSchema, 
+import {
+  loginSchema,
+  insertCaseSchema,
   insertEvidenceSchema,
   insertAppealSchema,
   insertPasswordResetRequestSchema,
@@ -382,14 +382,14 @@ export function registerRoutes(app: Express): Server {
         // Don't fail login if alt detection fails
       }
 
-      await createAuditLog(user.id, "login", "user", user.id, null, { 
+      await createAuditLog(user.id, "login", "user", user.id, null, {
         altDetection: altDetectionResult,
         deviceFingerprint,
         riskScore: sessionData.riskScore
       }, req);
 
-      res.json({ 
-        token, 
+      res.json({
+        token,
         user: {
           id: user.id,
           username: user.username,
@@ -420,7 +420,7 @@ export function registerRoutes(app: Express): Server {
     passport.authenticate("discord")(req, res, next);
   });
 
-  app.get("/auth/discord/callback", 
+  app.get("/auth/discord/callback",
     passport.authenticate("discord", { failureRedirect: "/login?error=discord_failed" }),
     async (req: any, res) => {
       const user = req.user;
@@ -472,13 +472,13 @@ export function registerRoutes(app: Express): Server {
         console.error('Alt detection error during Discord login:', error);
       }
 
-      await createAuditLog(user.id, "discord_login", "user", user.id, null, { 
+      await createAuditLog(user.id, "discord_login", "user", user.id, null, {
         altDetection: altDetectionResult,
         discordId: user.discordId
       }, req);
 
       // Beta testing: Include security analysis in redirect
-      const securityParams = altDetectionResult ? 
+      const securityParams = altDetectionResult ?
         `&security_analysis=${encodeURIComponent(JSON.stringify(altDetectionResult))}` : '';
 
       // Redirect to frontend with token and security analysis
@@ -688,7 +688,7 @@ export function registerRoutes(app: Express): Server {
 
       // Get voucher's reputation for weight calculation
       const voucherReputation = await storage.getUserReputation(req.user.id);
-      const weight = voucherReputation?.trustLevel === "platinum" ? 3 : 
+      const weight = voucherReputation?.trustLevel === "platinum" ? 3 :
                     voucherReputation?.trustLevel === "gold" ? 2 : 1;
 
       const vouch = await storage.createVouch({
@@ -752,7 +752,7 @@ export function registerRoutes(app: Express): Server {
 
       // Get voter's reputation for weight calculation
       const voterReputation = await storage.getUserReputation(req.user.id);
-      const weight = voterReputation?.trustLevel === "platinum" ? 3 : 
+      const weight = voterReputation?.trustLevel === "platinum" ? 3 :
                     voterReputation?.trustLevel === "gold" ? 2 : 1;
 
       const vote = await storage.createDisputeVote({
@@ -889,7 +889,7 @@ export function registerRoutes(app: Express): Server {
       const uniqueUsers = Array.from(new Set(matchingSessions.map(s => s.userId)));
 
       const isValid = uniqueUsers.length <= 1 || uniqueUsers.includes(req.user.id);
-      const riskLevel = uniqueUsers.length > 3 ? 'high' : 
+      const riskLevel = uniqueUsers.length > 3 ? 'high' :
                        uniqueUsers.length > 1 ? 'medium' : 'low';
 
       res.json({
@@ -897,7 +897,7 @@ export function registerRoutes(app: Express): Server {
         riskLevel,
         associatedUsers: uniqueUsers.length,
         sessions: matchingSessions.length,
-        lastSeen: matchingSessions.length > 0 ? 
+        lastSeen: matchingSessions.length > 0 ?
           Math.max(...matchingSessions.map(s => new Date(s.lastActivity).getTime())) : null
       });
     } catch (error) {
@@ -1132,7 +1132,7 @@ export function registerRoutes(app: Express): Server {
           user: "john_doe"
         },
         {
-          id: "activity-2", 
+          id: "activity-2",
           type: "case_resolved",
           description: "Identity theft case resolved",
           timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
@@ -1307,7 +1307,7 @@ export function registerRoutes(app: Express): Server {
 
       const filteredUsers = Array.from(
         new Map(allUsers.map(user => [user?.id, user])).values()
-      ).filter((user: any) => 
+      ).filter((user: any) =>
         user && (
           user.username?.toLowerCase().includes(searchTerm) ||
           user.firstName?.toLowerCase().includes(searchTerm) ||
@@ -2084,6 +2084,92 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/ownership/claims", authenticateToken, ownershipRoutes.submitClaim);
   app.get("/api/ownership/badges", authenticateToken, ownershipRoutes.getBadges);
   app.patch("/api/ownership/claims/:claimId/verify", authenticateToken, ownershipRoutes.verifyClaim);
+
+  // ============= NEW FEATURE ROUTES =============
+
+  // Trust scoring endpoints
+  app.get("/api/trust-score/:userId", async (req, res) => {
+    const { userId } = req.params;
+    // Mock trust score data
+    res.json({
+      score: 85,
+      level: "gold",
+      factors: {
+        successfulTransactions: 25,
+        feedbackQuality: 90,
+        reportHistory: 0,
+        timeInCommunity: 180,
+        verificationLevel: "advanced"
+      },
+      lastUpdated: new Date(),
+      nextUpdate: new Date(Date.now() + 24 * 60 * 60 * 1000)
+    });
+  });
+
+  // Live activity feed endpoint
+  app.get("/api/activity-feed", async (req, res) => {
+    const { filter, limit = 50 } = req.query;
+
+    // Mock activity data
+    const activities = [
+      {
+        id: '1',
+        type: 'report',
+        title: 'New Scam Report',
+        description: 'User reported potential Discord scam involving crypto trading',
+        severity: 'high',
+        user: 'UserA#1234',
+        timestamp: new Date(Date.now() - 5 * 60000),
+        automated: false,
+      },
+      {
+        id: '2',
+        type: 'ai_alert',
+        title: 'AI Fraud Detection',
+        description: 'Suspicious pattern detected: User creating multiple accounts',
+        severity: 'critical',
+        user: 'SuspiciousUser#5678',
+        timestamp: new Date(Date.now() - 10 * 60000),
+        automated: true,
+      },
+    ];
+
+    res.json(activities.slice(0, parseInt(limit as string)));
+  });
+
+  // Custom roles endpoints
+  app.get("/api/custom-roles", async (req, res) => {
+    // Mock roles data
+    res.json([
+      {
+        id: 'moderator',
+        name: 'Moderator',
+        description: 'Standard moderation permissions',
+        color: '#3B82F6',
+        permissions: ['view_reports', 'handle_cases', 'ban_users'],
+        userCount: 5,
+        createdAt: new Date(),
+      }
+    ]);
+  });
+
+  app.post("/api/custom-roles", async (req, res) => {
+    const { name, description, color, permissions } = req.body;
+
+    // Mock role creation
+    const newRole = {
+      id: name.toLowerCase().replace(/\s+/g, '_'),
+      name,
+      description,
+      color,
+      permissions,
+      userCount: 0,
+      createdAt: new Date(),
+    };
+
+    res.json(newRole);
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;

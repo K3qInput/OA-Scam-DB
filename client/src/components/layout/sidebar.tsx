@@ -22,7 +22,9 @@ import {
   BookOpen,
   Brain,
   Wrench,
-  MapPin
+  MapPin,
+  Activity, // Added for Live Activity Feed
+  Award // Added for Proof of Ownership
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@shared/schema";
@@ -45,6 +47,14 @@ function Sidebar({ className }: SidebarProps) {
       : "text-gray-300 hover:bg-gray-800 hover:text-white"
   );
 
+  // Helper for rendering sidebar links, to avoid repetition
+  const SidebarLink = ({ href, icon, text }: { href: string; icon: React.ReactNode; text: string }) => (
+    <Link href={href} className={linkClass(href)}>
+      {icon}
+      <span className="hidden lg:inline">{text}</span>
+    </Link>
+  );
+
   return (
     <aside className={cn("bg-gray-900 border-r border-gray-700 w-16 lg:w-64 min-h-screen flex flex-col", className)}>
       {/* Header */}
@@ -62,40 +72,18 @@ function Sidebar({ className }: SidebarProps) {
         {/* Navigation */}
         <nav className="space-y-2">
           {/* Core Navigation */}
-          <Link href="/dashboard" className={linkClass("/dashboard")}>
-            <Home className="w-5 h-5" />
-            <span className="hidden lg:inline">Dashboard</span>
-          </Link>
-
-          <Link href="/new-case" className={linkClass("/new-case")}>
-            <Plus className="w-5 h-5" />
-            <span className="hidden lg:inline">New Case</span>
-          </Link>
-
-          <Link href="/profile" className={linkClass("/profile")}>
-            <Users className="w-5 h-5" />
-            <span className="hidden lg:inline">Profile</span>
-          </Link>
-
-          <Link href="/settings" className={linkClass("/settings")}>
-            <Settings className="w-5 h-5" />
-            <span className="hidden lg:inline">Settings</span>
-          </Link>
+          <SidebarLink href="/dashboard" icon={<Home className="w-5 h-5" />} text="Dashboard" />
+          <SidebarLink href="/new-case" icon={<Plus className="w-5 h-5" />} text="New Case" />
+          <SidebarLink href="/profile" icon={<Users className="w-5 h-5" />} text="Profile" />
+          <SidebarLink href="/settings" icon={<Settings className="w-5 h-5" />} text="Settings" />
 
           {/* Tools & Services */}
           <div className="pt-6">
             <h3 className="hidden lg:block px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Tools & Services
             </h3>
-            <Link href="/ai-tools" className={linkClass("/ai-tools")}>
-              <Zap className="w-5 h-5" />
-              <span className="hidden lg:inline">AI Tools</span>
-            </Link>
-
-            <Link href="/marketplace" className={linkClass("/marketplace")}>
-              <Briefcase className="w-5 h-5" />
-              <span className="hidden lg:inline">Freelancer Marketplace</span>
-            </Link>
+            <SidebarLink href="/ai-tools" icon={<Zap className="w-5 h-5" />} text="AI Tools" />
+            <SidebarLink href="/marketplace" icon={<Briefcase className="w-5 h-5" />} text="Freelancer Marketplace" />
           </div>
 
           {/* Contact & Support */}
@@ -103,16 +91,10 @@ function Sidebar({ className }: SidebarProps) {
             <h3 className="hidden lg:block px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Contact & Support
             </h3>
-            <Link href="/contact" className={linkClass("/contact")}>
-              <Mail className="w-5 h-5" />
-              <span className="hidden lg:inline">Contact Us</span>
-            </Link>
+            <SidebarLink href="/contact" icon={<Mail className="w-5 h-5" />} text="Contact Us" />
 
             {typedUser && typedUser.role && ["admin", "tribunal_head", "senior_staff", "staff"].includes(typedUser.role) && (
-              <Link href="/contact-management" className={linkClass("/contact-management")}>
-                <MessageSquare className="w-5 h-5" />
-                <span className="hidden lg:inline">Manage Contacts</span>
-              </Link>
+              <SidebarLink href="/contact-management" icon={<MessageSquare className="w-5 h-5" />} text="Manage Contacts" />
             )}
           </div>
 
@@ -122,15 +104,8 @@ function Sidebar({ className }: SidebarProps) {
               <h3 className="hidden lg:block px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                 Staff Management
               </h3>
-              <Link href="/staff-management" className={linkClass("/staff-management")}>
-                <Users className="w-5 h-5" />
-                <span className="hidden lg:inline">Staff Members</span>
-              </Link>
-
-              <Link href="/staff-assignments" className={linkClass("/staff-assignments")}>
-                <UserCheck className="w-5 h-5" />
-                <span className="hidden lg:inline">Assignments</span>
-              </Link>
+              <SidebarLink href="/staff-management" icon={<Users className="w-5 h-5" />} text="Staff Members" />
+              <SidebarLink href="/staff-assignments" icon={<UserCheck className="w-5 h-5" />} text="Assignments" />
             </div>
           )}
 
@@ -140,10 +115,7 @@ function Sidebar({ className }: SidebarProps) {
               <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                 Tribunal Operations
               </h3>
-              <Link href="/tribunal-proceedings" className={linkClass("/tribunal-proceedings")}>
-                <Gavel className="w-5 h-5" />
-                Proceedings
-              </Link>
+              <SidebarLink href="/tribunal-proceedings" icon={<Gavel className="w-5 h-5" />} text="Proceedings" />
             </div>
           )}
 
@@ -152,25 +124,10 @@ function Sidebar({ className }: SidebarProps) {
             <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Community
             </h3>
-            <Link href="/vouches" className={linkClass("/vouches")}>
-              <UserCheck className="w-5 h-5" />
-              Vouches
-            </Link>
-
-            <Link href="/vouch-system" className={linkClass("/vouch-system")}>
-              <ThumbsUp className="w-5 h-5" />
-              Vouch System
-            </Link>
-
-            <Link href="/disputes" className={linkClass("/disputes")}>
-              <Gavel className="w-5 h-5" />
-              Disputes
-            </Link>
-
-            <Link href="/alt-detection" className={linkClass("/alt-detection")}>
-              <AlertTriangle className="w-5 h-5" />
-              Alt Detection
-            </Link>
+            <SidebarLink href="/vouches" icon={<UserCheck className="w-5 h-5" />} text="Vouches" />
+            <SidebarLink href="/vouch-system" icon={<ThumbsUp className="w-5 h-5" />} text="Vouch System" />
+            <SidebarLink href="/disputes" icon={<Gavel className="w-5 h-5" />} text="Disputes" />
+            <SidebarLink href="/alt-detection" icon={<AlertTriangle className="w-5 h-5" />} text="Alt Detection" />
           </div>
 
           {/* Trust & Security */}
@@ -178,56 +135,18 @@ function Sidebar({ className }: SidebarProps) {
             <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Trust & Security
             </h3>
-            <Link href="/member-verification" className={linkClass("/member-verification")}>
-              <Shield className="w-5 h-5" />
-              Member Verification
-            </Link>
-
-            <Link href="/reputation-profiles" className={linkClass("/reputation-profiles")}>
-              <Star className="w-5 h-5" />
-              Reputation Profiles
-            </Link>
-
-            <Link href="/report-vault" className={linkClass("/report-vault")}>
-              <AlertTriangle className="w-5 h-5" />
-              Report Vault
-            </Link>
-
-            <Link href="/blacklist-database" className={linkClass("/blacklist-database")}>
-              <Shield className="w-5 h-5" />
-              Blacklist Database
-            </Link>
-
-            <Link href="/staff-transparency" className={linkClass("/staff-transparency")}>
-              <Users className="w-5 h-5" />
-              Staff Transparency
-            </Link>
-
-            <Link href="/threat-intel" className={linkClass("/threat-intel")}>
-              <Shield className="w-5 h-5" />
-              Threat Intelligence
-            </Link>
-
-            <Link href="/reputation-insurance" className={linkClass("/reputation-insurance")}>
-              <Shield className="w-5 h-5" />
-              Reputation Insurance
-            </Link>
-
-            <Link href="/impersonation-heatmap" className={linkClass("/impersonation-heatmap")}>
-              <MapPin className="w-5 h-5" />
-              Impersonation Map
-            </Link>
-
-            <Link href="/proof-of-ownership" className={linkClass("/proof-of-ownership")}>
-              <Shield className="w-5 h-5" />
-              Proof of Ownership
-            </Link>
+            <SidebarLink href="/member-verification" icon={<Shield className="w-5 h-5" />} text="Member Verification" />
+            <SidebarLink href="/reputation-profiles" icon={<Star className="w-5 h-5" />} text="Reputation Profiles" />
+            <SidebarLink href="/report-vault" icon={<AlertTriangle className="w-5 h-5" />} text="Report Vault" />
+            <SidebarLink href="/blacklist-database" icon={<Shield className="w-5 h-5" />} text="Blacklist Database" />
+            <SidebarLink href="/staff-transparency" icon={<Users className="w-5 h-5" />} text="Staff Transparency" />
+            <SidebarLink href="/threat-intel" icon={<Shield className="w-5 h-5" />} text="Threat Intelligence" />
+            <SidebarLink href="/reputation-insurance" icon={<Shield className="w-5 h-5" />} text="Reputation Insurance" />
+            <SidebarLink href="/impersonation-heatmap" icon={<MapPin className="w-5 h-5" />} text="Impersonation Map" />
+            <SidebarLink href="/proof-of-ownership" icon={<Shield className="w-5 h-5" />} text="Proof of Ownership" />
 
             {typedUser && typedUser.role && ["admin", "tribunal_head", "senior_staff"].includes(typedUser.role) && (
-              <Link href="/security-dashboard" className={linkClass("/security-dashboard")}>
-                <Shield className="w-5 h-5" />
-                Security Dashboard
-              </Link>
+              <SidebarLink href="/security-dashboard" icon={<Shield className="w-5 h-5" />} text="Security Dashboard" />
             )}
           </div>
 
@@ -236,15 +155,8 @@ function Sidebar({ className }: SidebarProps) {
             <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Collaboration & Networking
             </h3>
-            <Link href="/marketplace" className={linkClass("/marketplace")}>
-              <ShoppingCart className="w-5 h-5" />
-              Project Marketplace
-            </Link>
-
-            <Link href="/community-events" className={linkClass("/community-events")}>
-              <Calendar className="w-5 h-5" />
-              Community Events
-            </Link>
+            <SidebarLink href="/marketplace" icon={<ShoppingCart className="w-5 h-5" />} text="Project Marketplace" />
+            <SidebarLink href="/community-events" icon={<Calendar className="w-5 h-5" />} text="Community Events" />
           </div>
 
           {/* Server Owner Utilities */}
@@ -252,15 +164,8 @@ function Sidebar({ className }: SidebarProps) {
             <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Server Owner Utilities
             </h3>
-            <Link href="/resource-hub" className={linkClass("/resource-hub")}>
-              <BookOpen className="w-5 h-5" />
-              Resource Hub
-            </Link>
-
-            <Link href="/utilities" className={linkClass("/utilities")}>
-              <Wrench className="w-5 h-5" />
-              Utilities
-            </Link>
+            <SidebarLink href="/resource-hub" icon={<BookOpen className="w-5 h-5" />} text="Resource Hub" />
+            <SidebarLink href="/utilities" icon={<Wrench className="w-5 h-5" />} text="Utilities" />
           </div>
 
           {/* AI & Automation */}
@@ -268,10 +173,7 @@ function Sidebar({ className }: SidebarProps) {
             <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               AI & Automation
             </h3>
-            <Link href="/ai-tools" className={linkClass("/ai-tools")}>
-              <Brain className="w-5 h-5" />
-              AI Tools
-            </Link>
+            <SidebarLink href="/ai-tools" icon={<Brain className="w-5 h-5" />} text="AI Tools" />
           </div>
 
           {/* Admin Only */}
@@ -281,32 +183,39 @@ function Sidebar({ className }: SidebarProps) {
                 <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                   Administration
                 </h3>
-                <Link href="/admin" className={linkClass("/admin")}>
-                  <Settings className="w-5 h-5" />
-                  Admin Panel
-                </Link>
+                <SidebarLink href="/admin" icon={<Settings className="w-5 h-5" />} text="Admin Panel" />
               </div>
 
               <div className="pt-6">
                 <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                   World's Best Moderation
                 </h3>
-                <Link href="/admin-moderation" className={linkClass("/admin-moderation")}>
-                  <Shield className="w-5 h-5" />
-                  Staff Moderation Center
-                </Link>
-
-                <Link href="/content-management" className={linkClass("/content-management")}>
-                  <FileText className="w-5 h-5" />
-                  Content Management
-                </Link>
-
-                <Link href="/advanced-analytics" className={linkClass("/advanced-analytics")}>
-                  <BarChart className="w-5 h-5" />
-                  Advanced Analytics
-                </Link>
+                <SidebarLink href="/admin-moderation" icon={<Shield className="w-5 h-5" />} text="Staff Moderation Center" />
+                <SidebarLink href="/content-management" icon={<FileText className="w-5 h-5" />} text="Content Management" />
+                <SidebarLink href="/advanced-analytics" icon={<BarChart className="w-5 h-5" />} text="Advanced Analytics" />
               </div>
             </>
+          )}
+          
+          {/* New Features - Custom Role Builder Admin Feature & Live Activity Feed */}
+          {typedUser && typedUser.role && typedUser.role === "admin" && (
+            <div className="pt-6">
+              <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Advanced Features
+              </h3>
+              <div className="space-y-1">
+                <SidebarLink 
+                  href="/custom-roles" 
+                  icon={<Settings className="w-5 h-5" />}
+                  text="Custom Roles"
+                />
+                <SidebarLink 
+                  href="/live-activity-feed" 
+                  icon={<Activity className="w-5 h-5" />}
+                  text="Live Activity Feed"
+                />
+              </div>
+            </div>
           )}
         </nav>
       </div>
