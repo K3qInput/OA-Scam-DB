@@ -17,10 +17,10 @@ interface RateLimitRecord {
 export class RateLimitMiddleware {
   private storage: IStorage;
   private limits: Map<string, RateLimitRecord> = new Map();
-  
+
   constructor(storage: IStorage) {
     this.storage = storage;
-    
+
     // Clean up expired entries every 5 minutes
     setInterval(() => {
       this.cleanup();
@@ -40,12 +40,12 @@ export class RateLimitMiddleware {
     if (keyGenerator) {
       return keyGenerator(req);
     }
-    
+
     // Default key: IP + User ID (if authenticated) + Route
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const userId = (req as any).user?.id || 'anonymous';
     const route = req.route?.path || req.path;
-    
+
     return `${ip}:${userId}:${route}`;
   }
 
@@ -54,9 +54,9 @@ export class RateLimitMiddleware {
       try {
         const key = this.getKey(req, options.keyGenerator);
         const now = Date.now();
-        
+
         let record = this.limits.get(key);
-        
+
         if (!record || now > record.resetTime) {
           // Create new record
           record = {
@@ -64,7 +64,7 @@ export class RateLimitMiddleware {
             resetTime: now + options.windowMs
           };
           this.limits.set(key, record);
-          
+
           // Log rate limit event for beta testing analysis
           await this.storage.createSecurityEvent?.({
             eventType: 'rate_limit_reset',
@@ -80,10 +80,10 @@ export class RateLimitMiddleware {
             },
             resolved: true
           });
-          
+
           return next();
         }
-        
+
         if (record.count >= options.max) {
           // Rate limit exceeded
           await this.storage.createSecurityEvent?.({
@@ -103,7 +103,7 @@ export class RateLimitMiddleware {
             },
             resolved: false
           });
-          
+
           res.status(429).json({
             message: options.message || 'Too many requests, please try again later',
             retryAfter: Math.ceil((record.resetTime - now) / 1000),
@@ -113,18 +113,18 @@ export class RateLimitMiddleware {
           });
           return;
         }
-        
+
         // Increment count
         record.count++;
         this.limits.set(key, record);
-        
+
         // Set rate limit headers
         res.set({
           'X-RateLimit-Limit': options.max.toString(),
           'X-RateLimit-Remaining': (options.max - record.count).toString(),
           'X-RateLimit-Reset': new Date(record.resetTime).toISOString()
         });
-        
+
         next();
       } catch (error) {
         console.error('Rate limiting error:', error);
@@ -137,7 +137,7 @@ export class RateLimitMiddleware {
   // Beta testing: Get rate limiting statistics
   public getStats(): { key: string; count: number; resetTime: number }[] {
     const stats: { key: string; count: number; resetTime: number }[] = [];
-    
+
     for (const [key, record] of Array.from(this.limits.entries())) {
       stats.push({
         key,
@@ -145,7 +145,7 @@ export class RateLimitMiddleware {
         resetTime: record.resetTime
       });
     }
-    
+
     return stats.sort((a, b) => b.count - a.count);
   }
 
@@ -162,31 +162,29 @@ export class RateLimitMiddleware {
 
 // Common rate limiting configurations for beta testing
 export const rateLimitConfigs = {
-  // Strict limits for authentication to prevent brute force
+  // Authentication endpoints - more lenient for development
   auth: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per 15 minutes
-    message: 'Too many authentication attempts, please try again later',
-    keyGenerator: (req: Request) => {
-      const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-      return `auth:${ip}`;
-    }
+    max: 50, // Limit each IP to 50 requests per windowMs (increased for development)
+    message: "Too many authentication attempts, please try again later.",
+    standardHeaders: true,
+    legacyHeaders: false,
   },
-  
+
   // API rate limiting for general use
   api: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // 100 requests per 15 minutes
     message: 'API rate limit exceeded, please try again later',
   },
-  
+
   // Stricter limits for sensitive operations
   sensitive: {
     windowMs: 5 * 60 * 1000, // 5 minutes
     max: 10, // 10 requests per 5 minutes
     message: 'Sensitive operation rate limit exceeded',
   },
-  
+
   // Very strict limits for account creation/registration
   registration: {
     windowMs: 60 * 60 * 1000, // 1 hour

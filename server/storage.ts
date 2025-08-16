@@ -142,7 +142,7 @@ export interface IStorage {
   createAltDetectionReport(report: InsertAltDetectionReport): Promise<AltDetectionReport>;
   getAltDetectionReports(): Promise<AltDetectionReport[]>;
   updateAltDetectionReport(id: string, report: Partial<InsertAltDetectionReport>): Promise<AltDetectionReport>;
-  
+
   // Security operations
   createSecurityEvent?(event: InsertSecurityEvent): Promise<SecurityEvent>;
   getSecurityEvents?(): Promise<SecurityEvent[]>;
@@ -176,7 +176,7 @@ export interface IStorage {
   // Audit log operations
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(): Promise<AuditLog[]>;
-  
+
   // Dashboard statistics
   getDashboardStatistics(): Promise<any>;
 
@@ -274,7 +274,7 @@ export class MemStorage implements IStorage {
     // Create default admin user
     const adminId = "admin-1";
     const adminPasswordHash = await bcrypt.hash("admin123", 10);
-    
+
     const adminUser: User = {
       id: adminId,
       username: "admin",
@@ -313,9 +313,9 @@ export class MemStorage implements IStorage {
       sortOrder: 1,
       createdAt: new Date(),
     };
-    
+
     const codeCheckCategory: AiToolCategory = {
-      id: "cat-2", 
+      id: "cat-2",
       name: "Code Checker",
       description: "AI tools for code analysis and review",
       icon: "code",
@@ -327,7 +327,7 @@ export class MemStorage implements IStorage {
 
     const buildVisualizerCategory: AiToolCategory = {
       id: "cat-3",
-      name: "Build Visualizer", 
+      name: "Build Visualizer",
       description: "AI tools for visualizing builds and structures",
       icon: "cube",
       targetRole: "builder",
@@ -509,7 +509,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existingUser) {
       throw new Error("User not found");
     }
-    
+
     const updatedUser: User = {
       ...existingUser,
       ...userData,
@@ -520,12 +520,20 @@ Complex cases should be escalated to senior staff or tribunal.`,
   }
 
   async authenticateUser(username: string, password: string): Promise<User | null> {
-    const user = await this.getUserByUsername(username);
-    if (!user || !user.passwordHash) {
+    const user = Array.from(this.users.values()).find(u => u.username === username);
+    if (!user || !user.isActive) {
+      console.log(`Authentication failed: User ${username} not found or inactive`);
       return null;
     }
-    
+
+    // For OAuth users without passwords, deny login
+    if (!user.passwordHash) {
+      console.log(`Authentication failed: User ${username} has no password hash (OAuth user)`);
+      return null;
+    }
+
     const isValid = await bcrypt.compare(password, user.passwordHash);
+    console.log(`Authentication for ${username}: ${isValid ? 'SUCCESS' : 'FAILED'}`);
     return isValid ? user : null;
   }
 
@@ -534,26 +542,26 @@ Complex cases should be escalated to senior staff or tribunal.`,
   // Case operations
   async getCases(filters?: { status?: string; type?: string; search?: string; limit?: number; offset?: number }): Promise<Case[]> {
     let result = Array.from(this.cases.values());
-    
+
     if (filters?.status) {
       result = result.filter(case_ => case_.status === filters.status);
     }
-    
+
     if (filters?.type) {
       result = result.filter(case_ => case_.type === filters.type);
     }
-    
+
     if (filters?.search) {
       const searchLower = filters.search.toLowerCase();
-      result = result.filter(case_ => 
+      result = result.filter(case_ =>
         case_.title.toLowerCase().includes(searchLower) ||
         case_.description.toLowerCase().includes(searchLower)
       );
     }
-    
+
     const offset = filters?.offset || 0;
     const limit = filters?.limit || 50;
-    
+
     return result.slice(offset, offset + limit);
   }
 
@@ -569,7 +577,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
   async createCase(caseData: InsertCase): Promise<Case> {
     const id = this.generateId();
     const caseNumber = `CASE-${Date.now()}`;
-    
+
     const case_: Case = {
       id,
       caseNumber,
@@ -591,7 +599,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
       updatedAt: new Date(),
       resolvedAt: null,
     };
-    
+
     this.cases.set(id, case_);
     return case_;
   }
@@ -601,13 +609,13 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existingCase) {
       throw new Error("Case not found");
     }
-    
+
     const updatedCase: Case = {
       ...existingCase,
       ...caseData,
       updatedAt: new Date(),
     };
-    
+
     this.cases.set(id, updatedCase);
     return updatedCase;
   }
@@ -697,7 +705,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existing) {
       throw new Error("Password reset request not found");
     }
-    
+
     const updated: PasswordResetRequest = {
       ...existing,
       ...requestData,
@@ -782,7 +790,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
   }
 
   async getStaffMembers(): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => 
+    return Array.from(this.users.values()).filter(user =>
       user.role && ["admin", "tribunal_head", "senior_staff", "staff"].includes(user.role)
     );
   }
@@ -921,7 +929,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existing) {
       throw new Error("Alt detection report not found");
     }
-    
+
     const updated: AltDetectionReport = {
       ...existing,
       ...reportData,
@@ -1054,7 +1062,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existing) {
       throw new Error("Utility document not found");
     }
-    
+
     const updated: UtilityDocument = {
       ...existing,
       ...documentData,
@@ -1121,7 +1129,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
   }
 
   async getAuditLogs(): Promise<AuditLog[]> {
-    return Array.from(this.auditLogs.values()).sort((a, b) => 
+    return Array.from(this.auditLogs.values()).sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -1132,7 +1140,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     const totalUsers = this.users.size;
     const pendingCases = Array.from(this.cases.values()).filter(c => c.status === "pending").length;
     const resolvedCases = Array.from(this.cases.values()).filter(c => c.status === "resolved").length;
-    
+
     return {
       totalCases,
       totalUsers,
@@ -1216,7 +1224,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existing) {
       throw new Error("AI tool usage not found");
     }
-    
+
     const updated: AiToolUsage = {
       ...existing,
       ...usageData,
@@ -1273,17 +1281,17 @@ Complex cases should be escalated to senior staff or tribunal.`,
 
   async getFreelancerProfiles(filters?: { skills?: string[]; verified?: boolean }): Promise<FreelancerProfile[]> {
     let profiles = Array.from(this.freelancerProfiles.values()).filter(profile => profile.isActive);
-    
+
     if (filters?.verified !== undefined) {
       profiles = profiles.filter(profile => profile.isVerified === filters.verified);
     }
-    
+
     if (filters?.skills && filters.skills.length > 0) {
-      profiles = profiles.filter(profile => 
+      profiles = profiles.filter(profile =>
         filters.skills!.some(skill => profile.skills.includes(skill))
       );
     }
-    
+
     return profiles;
   }
 
@@ -1292,7 +1300,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existing) {
       throw new Error("Freelancer profile not found");
     }
-    
+
     const updated: FreelancerProfile = {
       ...existing,
       ...profileData,
@@ -1334,21 +1342,21 @@ Complex cases should be escalated to senior staff or tribunal.`,
 
   async getProjects(filters?: { status?: string; skills?: string[]; clientId?: string }): Promise<Project[]> {
     let projects = Array.from(this.projects.values());
-    
+
     if (filters?.status) {
       projects = projects.filter(project => project.status === filters.status);
     }
-    
+
     if (filters?.clientId) {
       projects = projects.filter(project => project.clientId === filters.clientId);
     }
-    
+
     if (filters?.skills && filters.skills.length > 0) {
-      projects = projects.filter(project => 
+      projects = projects.filter(project =>
         filters.skills!.some(skill => project.skills.includes(skill))
       );
     }
-    
+
     return projects;
   }
 
@@ -1361,7 +1369,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     if (!existing) {
       throw new Error("Project not found");
     }
-    
+
     const updated: Project = {
       ...existing,
       ...projectData,
@@ -1433,7 +1441,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
     const memberSpaces = Array.from(this.collaborationMembers.values())
       .filter(member => member.userId === userId && member.isActive)
       .map(member => member.spaceId);
-    
+
     return Array.from(this.collaborationSpaces.values())
       .filter(space => space.ownerId === userId || memberSpaces.includes(space.id));
   }
@@ -1504,11 +1512,11 @@ Complex cases should be escalated to senior staff or tribunal.`,
 
   async getCollaborationMessages(spaceId: string, taskId?: string): Promise<CollaborationMessage[]> {
     let messages = Array.from(this.collaborationMessages.values()).filter(msg => msg.spaceId === spaceId);
-    
+
     if (taskId) {
       messages = messages.filter(msg => msg.taskId === taskId);
     }
-    
+
     return messages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
@@ -1552,13 +1560,13 @@ Complex cases should be escalated to senior staff or tribunal.`,
   }
 
   async getSecurityEvents(): Promise<SecurityEvent[]> {
-    return Array.from(this.securityEvents.values()).sort((a, b) => 
+    return Array.from(this.securityEvents.values()).sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
   async getUserSessions(): Promise<UserSession[]> {
-    return Array.from(this.userSessions.values()).sort((a, b) => 
+    return Array.from(this.userSessions.values()).sort((a, b) =>
       new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
     );
   }
@@ -1572,7 +1580,7 @@ Complex cases should be escalated to senior staff or tribunal.`,
   }
 
   // ============= MODERATION STORAGE METHODS =============
-  
+
   async getModerationLogs(): Promise<any[]> {
     // Return mock moderation logs for now
     return [];
@@ -1673,12 +1681,12 @@ async function initializeDefaultData() {
     const existingAdmin = await storage.getUserByUsername("admin");
     if (!existingAdmin) {
       console.log("Creating default admin user...");
-      
+
       // Create default admin user
       await storage.createUser({
         username: "admin",
         email: "admin@ownersalliance.com",
-        passwordHash: await bcrypt.hash("password", 10),
+        passwordHash: await bcrypt.hash("admin123", 10),
         role: "admin",
         firstName: "System",
         lastName: "Administrator",
@@ -1704,10 +1712,10 @@ async function initializeDefaultData() {
     const existingStaff = await storage.getUserByUsername("staff");
     if (!existingStaff) {
       console.log("Creating default staff user...");
-      
+
       await storage.createUser({
         username: "staff",
-        email: "staff@ownersalliance.com", 
+        email: "staff@ownersalliance.com",
         passwordHash: await bcrypt.hash("password", 10),
         role: "staff",
         firstName: "John",
